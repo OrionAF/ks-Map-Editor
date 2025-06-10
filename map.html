@@ -96,7 +96,6 @@
         fillColor   = '#444',
         borderColor = '#000',
         textColor   = '#fff',
-        fontSize    = 10,
         detailScale = 0.5,
         minPct      = 1,
         maxPct      = 1000,
@@ -192,8 +191,8 @@
     return buildingMap.get(`${x},${y}`) || null;
   }
 
-  // --- 1) GRID DRAWING ---
-  // --- MODIFIED --- No longer needs to worry about being covered.
+// --- 1) GRID DRAWING ---
+  // --- MODIFIED --- Now with fully automatic font sizing for coordinates.
   function drawTile(x, y) {
     tileCount++;
     const [sx,sy] = worldToScreen(x,y);
@@ -206,15 +205,45 @@
     ctx.fillStyle   = fillColor; ctx.fill();
     ctx.strokeStyle = borderColor; ctx.lineWidth = strokeW; ctx.stroke();
 
-    // --- MODIFIED --- Logic now checks the building's property directly.
+    // --- NEW: DYNAMIC COORDINATE TEXT LOGIC ---
+    // First, check if a building is hiding the coordinates
     const building = getBuildingAt(x, y);
-    if (cam.scale > 0.7 && (!building || !building.hideCoordinates)) {
-      ctx.fillStyle = textColor;
-      ctx.font = `${fontSize}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`${x}, ${y}`, sx, sy);
+    if (building && building.hideCoordinates) {
+        return; // Stop here if coordinates should be hidden
     }
+    
+    // 1. Determine the available space on the screen for this tile.
+    const availableWidth = tileW * cam.scale;
+    const availableHeight = tileH * cam.scale;
+
+    // 2. Create the text string.
+    const text = `X${x} Y${y}`;
+
+    // 3. Calculate the optimal font size to fit the text.
+    // We use a ratio of the available space vs. the text length.
+    // The '1.8' is a tuning factor that generally works well.
+    const padding = 0.8; // Use 80% of the tile's width for text
+    let optimalFontSize = Math.min(
+      availableHeight * padding * 0.5, // Don't let height be the only factor
+      (availableWidth * padding / text.length) * 1.8
+    );
+
+    // 4. Enforce min/max sizes for legibility.
+    optimalFontSize = Math.max(8, optimalFontSize);  // Never smaller than 8px
+    optimalFontSize = Math.min(14, optimalFontSize); // Never larger than 14px
+
+    // 5. Only draw the text if it's large enough to be readable.
+    // This replaces the old `cam.scale > 0.7` check with a more robust one.
+    if (optimalFontSize < 9) {
+        return;
+    }
+
+    // 6. Draw the text with the calculated dynamic font size.
+    ctx.fillStyle = textColor;
+    ctx.font = `${optimalFontSize}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, sx, sy);
   }
 
   // --- NEW --- Draws a large, merged tile for performance when zoomed out
