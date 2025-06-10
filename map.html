@@ -144,7 +144,7 @@
   fetch('baseMap.json')
     .then(r=>r.ok? r.json(): Promise.reject(r.status))
     .then(d=>{
-      baseMap = d;
+      Object.assign(baseMap, d);
       preProcessBuildings();
       resize();
     })
@@ -350,13 +350,11 @@
     cam.y = canvas.height*0.5 - ly*cam.scale;
   }
 
-  // --- MODIFIED --- This function is now much smarter.
+  // --- BUG FIX --- This function now relies on the robust clampCamera to center the content.
   function zoomToFit() {
     cam.scale = minFitScale;
-    // The true center of an N x N map is at coordinate (N-1)/2, (N-1)/2
-    const mapCenter = (N - 1) / 2;
-    centerOn(mapCenter, mapCenter); // Use our helper to center on the middle of the map
-    render(); // We must call render manually after changing camera
+    clampCamera(); // Let the robust clamping function handle the centering.
+    render();
   }
 
   // resize & initial center
@@ -364,7 +362,6 @@
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // --- BUG FIX --- Correctly use (N-1) for the span of an N-tile grid.
     const mapTotalWidth = (N - 1) * tileW;
     const mapTotalHeight = (N - 1) * tileH;
     
@@ -385,32 +382,36 @@
   }
   window.addEventListener('resize', resize);
 
-  // FIX: Replaced faulty camera clamping logic with one that correctly handles the
-  // non-symmetrical Y-axis of the isometric projection.
+  // --- BUG FIX --- The camera clamping logic has been completely replaced with a robust version
+  // that correctly handles both zoomed-in and zoomed-out states.
   function clampCamera() {
     const s = cam.scale;
+    const mapScreenWidth = (N - 1) * tileW * s;
+    const mapScreenHeight = (N - 1) * tileH * s;
 
-    // The map's total size in world coordinates
-    const mapWorldWidth = (N - 1) * tileW;
-    const mapWorldHeight = (N - 1) * tileH;
+    // --- Horizontal Clamping ---
+    if (mapScreenWidth < canvas.width) {
+      // If map is narrower than the screen, center it.
+      // The visual center of the isometric diamond is at its horizontal midpoint.
+      cam.x = canvas.width / 2;
+    } else {
+      // If map is wider, clamp its edges to the screen edges.
+      const mapEdgeX = mapScreenWidth / 2;
+      cam.x = Math.max(canvas.width - mapEdgeX, Math.min(mapEdgeX, cam.x));
+    }
 
-    // The size of the map on the screen at the current zoom level
-    const mapScreenWidth = mapWorldWidth * s;
-    const mapScreenHeight = mapWorldHeight * s;
-    
-    // Horizontal clamping: The map is horizontally centered around the world origin.
-    // We treat its left and right edges as symmetrical.
-    const mapEdgeX = mapScreenWidth / 2;
-    const minX = canvas.width - mapEdgeX;
-    const maxX = mapEdgeX;
-    cam.x = Math.max(minX, Math.min(maxX, cam.x));
-
-    // Vertical clamping: The map is NOT vertically centered. Its world coordinates
-    // range from -mapWorldHeight at the top to 0 at the bottom.
-    // The camera's allowed Y position is between [canvas.height - mapScreenHeight] and [0].
-    const minY = canvas.height - mapScreenHeight;
-    const maxY = 0;
-    cam.y = Math.max(minY, Math.min(maxY, cam.y));
+    // --- Vertical Clamping ---
+    if (mapScreenHeight < canvas.height) {
+      // If map is shorter than the screen, center it.
+      // The visual center of the isometric diamond is offset vertically.
+      cam.y = (canvas.height / 2) + (mapScreenHeight / 2);
+    } else {
+      // If map is taller, clamp its edges. The map's local Y coordinates range
+      // from -mapScreenHeight (top) to 0 (bottom). We want to keep the viewport
+      // [0, height] within the map's displayed range [cam.y - mapScreenHeight, cam.y].
+      // This means cam.y >= height and cam.y - mapScreenHeight <= 0.
+      cam.y = Math.max(canvas.height, Math.min(mapScreenHeight, cam.y));
+    }
   }
 
   // --- RENDER LOOP (on-demand) ---
@@ -657,8 +658,8 @@
 
       // --- TUNING --- Zoom to 450% on search, which is much better for small tiles.
       cam.scale = 4.5; 
-      clampCamera();
       centerOn(x,y);
+      clampCamera();
       render();
     }
   }
