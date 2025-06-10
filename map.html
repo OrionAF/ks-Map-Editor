@@ -96,7 +96,7 @@
         fillColor   = '#444',
         borderColor = '#000',
         textColor   = '#fff',
-        detailScale = 0.5,
+        detailScale = 2.5,
         minPct      = 1,
         maxPct      = 1000,
         selectionColor = '#ff0';
@@ -203,7 +203,7 @@
     
     const availableWidth = tileW * cam.scale;
     const availableHeight = tileH * cam.scale;
-    const text = `X${x} Y${y}`;
+    const text = `${x}, ${y}`;
     const padding = 0.8;
     let optimalFontSize = Math.min(
       availableHeight * padding * 0.5,
@@ -292,17 +292,14 @@
     const rightTile  = { x: x0 + w - 1, y: y0 };
     const topTile    = { x: x0 + w - 1, y: y0 + h - 1 };
     const leftTile   = { x: x0, y: y0 + h - 1 };
-
     const [sbx, sby] = worldToScreen(bottomTile.x, bottomTile.y);
     const [srx, sry] = worldToScreen(rightTile.x, rightTile.y);
     const [stx, sty] = worldToScreen(topTile.x, topTile.y);
     const [slx, sly] = worldToScreen(leftTile.x, leftTile.y);
-    
     const p_bottom = { x: sbx, y: sby + tileH/2 };
     const p_right  = { x: srx + tileW/2, y: sry };
     const p_top    = { x: stx, y: sty - tileH/2 };
     const p_left   = { x: slx - tileW/2, y: sly };
-
     ctx.beginPath();
     ctx.moveTo(p_bottom.x, p_bottom.y);
     ctx.lineTo(p_right.x,  p_right.y);
@@ -340,7 +337,7 @@
         const coordFontSize = Math.max(8, optimalFontSize * 0.6);
         ctx.font = `${coordFontSize}px sans-serif`;
         // Draw the coordinate text below the main name
-        ctx.fillText(`(${b.x}, ${b.y})`, centerX, centerY + optimalFontSize * 0.6);
+        ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.9);
       }
     }
   }
@@ -571,10 +568,10 @@
       case '-': changeZoomBy(-1); break;
       case 'q': changeZoomBy(+1); break;
       case 'e': changeZoomBy(-1); break;
-      case 'ArrowUp': cam.y += 50; clampCamera(); render(); break;
-      case 'ArrowDown': cam.y -= 50; clampCamera(); render(); break;
-      case 'ArrowLeft': cam.x += 50; clampCamera(); render(); break;
-      case 'ArrowRight': cam.x -= 50; clampCamera(); render(); break;
+      case 'ArrowUp':    cam.y += tileW * 2; clampCamera(); render(); break;
+      case 'ArrowDown':  cam.y -= tileW * 2; clampCamera(); render(); break;
+      case 'ArrowLeft':  cam.x += tileW * 2; clampCamera(); render(); break;
+      case 'ArrowRight': cam.x -= tileW * 2; clampCamera(); render(); break;
     }
   });
 
@@ -585,14 +582,14 @@
     cam.x = canvas.width*0.5 - lx*cam.scale;
     cam.y = canvas.height*0.5 - ly*cam.scale;
   }
-  // --- MODIFIED --- Search now selects the building at the target, if one exists
   function doSearch() {
     const x = +inpX.value, y = +inpY.value;
     if (x>=0&&y>=0&&x<=N&&y<=N) {
       const building = getBuildingAt(x, y);
-      selection = building || { x, y }; // Select building or the tile itself
+      selection = building || { x, y };
 
-      cam.scale = 1.5;
+      // --- TUNING --- Zoom to 450% on search, which is much better for small tiles.
+      cam.scale = 4.5; 
       clampCamera();
       centerOn(x,y);
       render();
