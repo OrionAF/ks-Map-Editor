@@ -159,8 +159,6 @@
       lastFPS = 0,
       lastTiles = 0;
   let selection = null; 
-
-  // --- NEW --- This variable will hold our calculated minimum scale.
   let minFitScale = 0.01; 
 
   // coord transforms
@@ -342,59 +340,61 @@
     }
   }
 
-  // --- NEW --- A dedicated function to center the map and fit it to the screen.
+  // --- NEW --- This helper function is what we'll use for all centering logic.
+  function centerOn(x,y) {
+    const lx = (x - y)*(tileW/2),
+          ly = -((x + y)*(tileH/2));
+    cam.x = canvas.width*0.5 - lx*cam.scale;
+    cam.y = canvas.height*0.5 - ly*cam.scale;
+  }
+
+  // --- MODIFIED --- This function is now much smarter.
   function zoomToFit() {
     cam.scale = minFitScale;
-    // Center the camera on the world origin (0,0)
-    cam.x = canvas.width / 2;
-    cam.y = canvas.height / 2;
-    clampCamera(); // Run clamp just in case of unusual aspect ratios
-    render();
+    // The true center of an N x N map is at coordinate (N-1)/2, (N-1)/2
+    const mapCenter = (N - 1) / 2;
+    centerOn(mapCenter, mapCenter); // Use our helper to center on the middle of the map
+    render(); // We must call render manually after changing camera
   }
 
   // resize & initial center
-  // --- MODIFIED --- This function now correctly calculates the fit-to-screen scale.
   function resize() {
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // 1. Calculate the total screen dimensions of the entire map.
-    // The map's total width is N*tileW, and height is N*tileH.
     const mapTotalWidth = N * tileW;
     const mapTotalHeight = N * tileH;
     
-    // 2. Calculate the scale required to fit width and height separately.
     const scaleX = canvas.width / mapTotalWidth;
     const scaleY = canvas.height / mapTotalHeight;
 
-    // 3. The true "fit" scale is the SMALLER of the two, with some padding.
-    const padding = 0.95; // Use 95% of the screen space
+    const padding = 0.95;
     minFitScale = Math.min(scaleX, scaleY) * padding;
     
-    // 4. On the very first load, or if resizing makes the current view too big, zoom to fit.
-    if (cam.scale === 1 || cam.scale < minFitScale) {
+    // On the very first load, the scale is 1. Zoom to fit.
+    if (cam.scale === 1) {
         zoomToFit();
     } else {
-        // Otherwise, just re-render with the current settings.
+        // On subsequent resizes, just clamp and render.
         clampCamera();
         render();
     }
   }
   window.addEventListener('resize', resize);
-  // --- We no longer call resize() here, it will be called by the `fetch.then` block ---
 
+  // --- MODIFIED --- The faulty clamping logic has been removed.
   function clampCamera() {
     const s = cam.scale;
-    // --- MODIFIED --- Clamping is now more robust.
-    // At minimum scale, the camera must be centered.
-    if (s <= minFitScale) {
-        cam.x = canvas.width / 2;
-        cam.y = canvas.height / 2;
-        return;
-    }
-    const halfW = N*(tileW/2)*s, fullH = N*tileH*s;
-    cam.x = Math.min(halfW, Math.max(canvas.width-halfW, cam.x));
-    cam.y = Math.min(fullH, Math.max(canvas.height,       cam.y));
+    const mapEdgeX = N*(tileW/2)*s;
+    const mapEdgeY = N*(tileH/2)*s;
+
+    const minX = canvas.width - mapEdgeX;
+    const maxX = mapEdgeX;
+    const minY = canvas.height - mapEdgeY;
+    const maxY = mapEdgeY;
+    
+    cam.x = Math.max(minX, Math.min(maxX, cam.x));
+    cam.y = Math.max(minY, Math.min(maxY, cam.y));
   }
 
   // --- RENDER LOOP (on-demand) ---
@@ -403,7 +403,7 @@
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     const [centerX, centerY] = screenToWorld(canvas.width/2, canvas.height/2);
-    centerTileEl.textContent = `Center: X${centerX} Y${centerY}`;
+    centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
     const pct = Math.round(cam.scale*100);
     zoomLevelEl.textContent = `Zoom: ${pct}%`;
     zoomSlider.value = Math.min(pct, zoomSlider.max);
