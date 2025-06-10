@@ -91,7 +91,7 @@
 <script>
 // —— CONFIG ——
   const N           = 1201,
-        tileW       = 40, tileH = 40,
+        tileW       = 25, tileH = 25,
         strokeW     = 2,
         fillColor   = '#444',
         borderColor = '#000',
@@ -127,10 +127,8 @@
 
   // data layers
   let baseMap = { unoccupiableTiles:[], defaultBuildings:[] };
-  // --- NEW --- This Map will store our pre-processed data for instant lookups.
   const buildingMap = new Map();
 
-  // --- NEW --- This function populates our fast lookup map.
   function preProcessBuildings() {
     buildingMap.clear();
     const allBuildings = [...baseMap.defaultBuildings, ...userBuildings];
@@ -148,13 +146,11 @@
     .then(r=>r.ok? r.json(): Promise.reject(r.status))
     .then(d=>{
       baseMap = d;
-      // --- MODIFIED --- We now pre-process the data right after fetching it.
       preProcessBuildings();
       render();
     })
     .catch(e=>{ console.error(e); alert('BaseMap load error'); });
   
-  // We will add user buildings later, but when we do, we'll need to call preProcessBuildings() again.
   let userBuildings = [];
 
   // camera + stats state …
@@ -181,17 +177,12 @@
     return [x,y];
   }
 
-    // --- NEW --- Memoization cache to speed up building lookups.
-  const buildingAtCache = new Map();
-
   // --- MODIFIED: THE PERFORMANCE HOTSPOT ---
-  // --- This function is now incredibly fast! ---
   function getBuildingAt(x, y) {
-    // It's a direct, instantaneous lookup instead of a slow loop.
     return buildingMap.get(`${x},${y}`) || null;
   }
 
-// --- 1) GRID DRAWING ---
+  // --- 1) GRID DRAWING ---
   // --- MODIFIED --- Now with fully automatic font sizing for coordinates.
   function drawTile(x, y) {
     tileCount++;
@@ -205,40 +196,28 @@
     ctx.fillStyle   = fillColor; ctx.fill();
     ctx.strokeStyle = borderColor; ctx.lineWidth = strokeW; ctx.stroke();
 
-    // --- NEW: DYNAMIC COORDINATE TEXT LOGIC ---
-    // First, check if a building is hiding the coordinates
     const building = getBuildingAt(x, y);
     if (building && building.hideCoordinates) {
-        return; // Stop here if coordinates should be hidden
+        return;
     }
     
-    // 1. Determine the available space on the screen for this tile.
     const availableWidth = tileW * cam.scale;
     const availableHeight = tileH * cam.scale;
-
-    // 2. Create the text string.
     const text = `X${x} Y${y}`;
-
-    // 3. Calculate the optimal font size to fit the text.
-    // We use a ratio of the available space vs. the text length.
-    // The '1.8' is a tuning factor that generally works well.
-    const padding = 0.8; // Use 80% of the tile's width for text
+    const padding = 0.8;
     let optimalFontSize = Math.min(
-      availableHeight * padding * 0.5, // Don't let height be the only factor
+      availableHeight * padding * 0.5,
       (availableWidth * padding / text.length) * 1.8
     );
 
-    // 4. Enforce min/max sizes for legibility.
-    optimalFontSize = Math.max(8, optimalFontSize);  // Never smaller than 8px
-    optimalFontSize = Math.min(14, optimalFontSize); // Never larger than 14px
-
-    // 5. Only draw the text if it's large enough to be readable.
-    // This replaces the old `cam.scale > 0.7` check with a more robust one.
-    if (optimalFontSize < 9) {
+    // --- FIX --- Removed the hardcoded min/max font sizes.
+    // The logic now relies on the legibility check below.
+    
+    // --- MODIFIED --- Lowered the legibility threshold for smaller tiles.
+    if (optimalFontSize < 5) {
         return;
     }
 
-    // 6. Draw the text with the calculated dynamic font size.
     ctx.fillStyle = textColor;
     ctx.font = `${optimalFontSize}px sans-serif`;
     ctx.textAlign = 'center';
@@ -303,7 +282,7 @@
   }
 
   // --- 2) BUILDING FOOTPRINT DRAWING ---
-  // --- MODIFIED --- Now with dynamic text placement and sizing.
+  // --- MODIFIED --- Re-added the missing coordinate drawing logic.
   function drawBuildingFootprint(b, highlightStyle = null) {
     const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
     const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
@@ -335,33 +314,34 @@
     ctx.lineWidth = highlightStyle ? strokeW * 2 : strokeW;
     ctx.stroke();
 
-    // --- NEW: DYNAMIC TEXT LOGIC ---
     if (cam.scale > 0.4 && b.displayName) {
-      // 1. Calculate the available screen space inside the building
       const availableWidth = p_right.x - p_left.x;
       const availableHeight = p_bottom.y - p_top.y;
       
-      // Don't draw if too small to be legible
       if (availableWidth < 30 || availableHeight < 15) return;
 
-      // 2. Estimate an optimal font size.
-      // We take a ratio of the available width vs the text length.
-      // The '1.5' is a magic factor that works well for typical fonts.
-      // We also cap the font size to prevent it from getting ridiculously large.
-      const padding = 0.9; // Use 90% of the width for padding
+      const padding = 0.9;
       let optimalFontSize = Math.min(availableHeight * padding, (availableWidth * padding / b.displayName.length) * 1.5);
-      optimalFontSize = Math.min(48, optimalFontSize); // Cap max size
+      optimalFontSize = Math.min(48, optimalFontSize);
 
-      // 3. Find the geometric center for the text
       const centerX = (p_left.x + p_right.x) / 2;
       const centerY = (p_top.y + p_bottom.y) / 2;
 
-      // 4. Draw the text
+      // Draw the main display name
       ctx.fillStyle = textColor;
       ctx.font = `bold ${optimalFontSize}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(b.displayName, centerX, centerY);
+      
+      // --- FIX --- Re-added the missing logic to draw coordinates.
+      if (b.displayCoordinates) {
+        // Use a smaller, non-bold font for the coordinates
+        const coordFontSize = Math.max(8, optimalFontSize * 0.6);
+        ctx.font = `${coordFontSize}px sans-serif`;
+        // Draw the coordinate text below the main name
+        ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.6);
+      }
     }
   }
 
@@ -398,17 +378,13 @@
     const power = Math.max(0,Math.floor(Math.log2(ratio)));
     const groupSize = Math.pow(2,power);
     
-    // --- MODIFIED --- The old buildingAtCache is no longer needed and has been removed.
     tileCount = 0;
 
     ctx.save();
     ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
 
-    // --- RENDER ORDER (Unchanged) ---
-    // 1) Draw base grid (now much faster)
     drawGrid(groupSize);
 
-    // 2) Draw Unoccupiable Tiles (UOTs)
     ctx.fillStyle = '#fff';
     baseMap.unoccupiableTiles.forEach(([x,y])=>{
       if (getBuildingAt(x, y)) return;
@@ -422,11 +398,9 @@
       ctx.fill();
     });
 
-    // 3) Draw buildings
     baseMap.defaultBuildings.forEach(b => drawBuildingFootprint(b));
     userBuildings.forEach(b => drawBuildingFootprint(b));
 
-    // 4) Draw selection highlight
     if (selection) {
       if (selection.w) {
         drawBuildingFootprint(selection, selectionColor);
@@ -446,7 +420,6 @@
 
     ctx.restore();
 
-    // stats capture
     const now = performance.now(),
           dt  = now - lastFrame;
     lastFrame = now;
