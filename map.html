@@ -52,9 +52,8 @@
 </head>
 <body>
   <div id="searchBox">
-    <!-- Updated max values for new map size -->
-    X: <input id="inpX" type="number" min="0" max="1279" value="0">
-    Y: <input id="inpY" type="number" min="0" max="1279" value="0">
+    X: <input id="inpX" type="number" min="0" max="1199" value="0">
+    Y: <input id="inpY" type="number" min="0" max="1199" value="0">
     <button id="btnGo">Go</button>
     <div id="zoomLevel">Zoom: 100%</div>
     <button id="zoomDec">−</button>
@@ -90,7 +89,8 @@
 
 <script>
 // —— CONFIG ——
-  const N           = 1280,
+  // --- FIX 1: Revert to original map size ---
+  const N           = 1200,
         tileW       = 10, tileH = 10,
         strokeW     = 1,
         borderColor = '#000',
@@ -106,10 +106,11 @@
     badlands: 'rgb(191, 208, 152)'
   };
   
+  // --- FIX 2: Align biome boundaries to be multiples of 16 ---
   const biomeRegions = {
-      fertile:  { x1: 480, y1: 480, x2: 799, y2: 799 },
-      plains:   { x1: 320, y1: 320, x2: 959, y2: 959 },
-      badlands: { x1: 0,   y1: 0,   x2: 1279,y2: 1279}
+      fertile:  { x1: 480, y1: 480, x2: 719, y2: 719 }, // 240x240 region (15*16)
+      plains:   { x1: 320, y1: 320, x2: 879, y2: 879 }, // 560x560 region (35*16)
+      badlands: { x1: 0,   y1: 0,   x2: 1199,y2: 1199}
   };
   // ——————————
 
@@ -154,8 +155,9 @@
     }
   }
 
+  // --- FIX 3: Use only compatible chunk levels (up to 16x16) ---
   function preCalculateChunks() {
-    const numLevels = 6;
+    const numLevels = 4; // Levels 0-3 for chunk sizes 2, 4, 8, 16
     for (let level = 0; level < numLevels; level++) {
       const chunkSize = Math.pow(2, level + 1);
       const levelMap = new Map();
@@ -172,7 +174,7 @@
 
 
   fetch('baseMap.json')
-    .then(r=>r.ok? r.json(): Promise.resolve({ unoccupiableTiles:[], defaultBuildings:[] })) // Handle missing file
+    .then(r=>r.ok? r.json(): Promise.resolve({ unoccupiableTiles:[], defaultBuildings:[] }))
     .then(d=>{
       Object.assign(baseMap, d);
       preProcessBuildings();
@@ -316,8 +318,8 @@
     ctx.beginPath();
     ctx.moveTo(p_bottom.x, p_bottom.y);
     ctx.lineTo(p_right.x,  p_right.y);
-    ctx.lineTo(p_top.x,    p_top.y);
-    ctx.lineTo(p_left.x,   p_left.y);
+    ctx.lineTo(p_top.x,    p_top_y);
+    ctx.lineTo(p_left.x,   p_left_y);
     ctx.closePath();
     ctx.fillStyle = fill; ctx.fill();
     ctx.strokeStyle = border; 
@@ -356,12 +358,9 @@
     cam.x = canvas.width*0.5 - lx*cam.scale;
     cam.y = canvas.height*0.5 - ly*cam.scale;
   }
-
-  // --- FIX: Re-implement zoomToFit to be explicit and stateless ---
+  
   function zoomToFit() {
-    // 1. Set the scale to the pre-calculated minimum fit scale.
     cam.scale = minFitScale;
-    // 2. Explicitly center the camera on the middle of the map.
     const mapCenter = (N - 1) / 2;
     centerOn(mapCenter, mapCenter);
   }
@@ -370,7 +369,6 @@
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // The total screen dimensions of the isometric diamond grid
     const mapTotalWidth = (N - 1) * tileW;
     const mapTotalHeight = (N - 1) * tileH;
     
@@ -380,41 +378,35 @@
     const padding = 0.95;
     minFitScale = Math.min(scaleX, scaleY) * padding;
     
-    if (cam.scale === 1) { // First time setup
-        zoomToFit(); // Start by fitting the map to the screen
+    if (cam.scale === 1) {
+        zoomToFit();
     } else {
-        clampCamera(); // On subsequent resizes, just clamp the view
+        clampCamera();
     }
   }
   window.addEventListener('resize', resize);
 
   function clampCamera() {
     const s = cam.scale;
-    
     const mapScreenWidth = (N - 1) * tileW * s;
     const mapScreenHeight = (N - 1) * tileH * s;
     
-    // Horizontal clamping
+    const mapCenter = (N - 1) / 2;
+    const [mapCenterX_screen, mapCenterY_screen] = worldToScreen(mapCenter, mapCenter);
+
     if (mapScreenWidth < canvas.width) {
-      // Center map horizontally if it's narrower than the screen
-      const mapCenter = (N - 1) / 2;
-      const [lx, ly] = worldToScreen(mapCenter, mapCenter);
-      cam.x = canvas.width / 2 - lx * s;
+      cam.x = canvas.width / 2 - mapCenterX_screen * s;
     } else {
-      // Keep map edges from going off-screen
-      const mapHalfWidth = mapScreenWidth / 2;
-      cam.x = Math.max(canvas.width - mapHalfWidth, Math.min(mapHalfWidth, cam.x));
+      const worldEdgeX = mapScreenWidth / 2;
+      cam.x = Math.max(canvas.width - worldEdgeX, Math.min(worldEdgeX, cam.x));
     }
-    
-    // Vertical clamping
+
     if (mapScreenHeight < canvas.height) {
-      // Center map vertically if it's shorter than the screen
-      const mapCenter = (N - 1) / 2;
-      const [lx, ly] = worldToScreen(mapCenter, mapCenter);
-      cam.y = canvas.height / 2 - ly * s;
+      cam.y = canvas.height / 2 - mapCenterY_screen * s;
     } else {
-      // Keep map edges from going off-screen
-      cam.y = Math.max(canvas.height - mapScreenHeight, Math.min(0, cam.y - mapScreenHeight)) + mapScreenHeight;
+      const worldTopEdgeY = mapCenterY_screen * s - mapScreenHeight / 2;
+      const worldBottomEdgeY = mapCenterY_screen * s + mapScreenHeight / 2;
+      cam.y = Math.max(canvas.height - worldBottomEdgeY, Math.min(-worldTopEdgeY, cam.y));
     }
   }
 
@@ -624,14 +616,13 @@
     if (e.touches.length<2) touchMode = null;
   });
   
+  // --- FIX 4: Rebalance zoom levels for the 4 chunk levels ---
   function getChunkLevelForZoom(pct) {
-    if (pct <= 3) return 5;
-    if (pct <= 7) return 4;
-    if (pct <= 15) return 3;
-    if (pct <= 30) return 2;
-    if (pct <= 60) return 1;
-    if (pct <= 120) return 0; // Use chunks up to 120% zoom
-    return -1;
+    if (pct <= 10) return 3; // 16x16 chunks
+    if (pct <= 20) return 2; // 8x8 chunks
+    if (pct <= 40) return 1; // 4x4 chunks
+    if (pct <= 80) return 0; // 2x2 chunks
+    return -1; // individual tiles
   }
 
   function mainLoop(now) {
