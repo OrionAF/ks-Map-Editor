@@ -147,8 +147,22 @@
     }
   }
 
-  // MODIFIED: Replaced flawed "dominant biome" voting with a deterministic center-point sample.
+  // MODIFIED: Complete overhaul of chunk calculation to be area-based for perfect accuracy.
   function preCalculateChunks() {
+    // Define the exact biome regions as rectangles
+    const biomeRegions = {
+      fertile:  { x1: 450, y1: 450, x2: 749, y2: 749 },
+      plains:   { x1: 300, y1: 300, x2: 899, y2: 899 },
+      badlands: { x1: 0,   y1: 0,   x2: 1199,y2: 1199}
+    };
+
+    // Helper function to calculate the intersection area of two rectangles
+    function getIntersectionArea(rect1, rect2) {
+      const x_overlap = Math.max(0, Math.min(rect1.x2, rect2.x2) - Math.max(rect1.x1, rect2.x1));
+      const y_overlap = Math.max(0, Math.min(rect1.y2, rect2.y2) - Math.max(rect1.y1, rect2.y1));
+      return x_overlap * y_overlap;
+    }
+
     const numLevels = 6;
     for (let level = 0; level < numLevels; level++) {
       const chunkSize = Math.pow(2, level + 1);
@@ -156,15 +170,33 @@
       
       for (let x = 0; x < N; x += chunkSize) {
         for (let y = 0; y < N; y += chunkSize) {
-          // Calculate the center coordinates of the chunk
-          const centerX = x + chunkSize / 2;
-          const centerY = y + chunkSize / 2;
+          const chunkRect = { x1: x, y1: y, x2: x + chunkSize, y2: y + chunkSize };
           
-          // Determine the biome of that single center point
-          const chunkBiome = getBiomeForTile(centerX, centerY);
+          // Calculate how much of the chunk is covered by each biome
+          const areas = {
+            fertile: getIntersectionArea(chunkRect, biomeRegions.fertile),
+            plains: getIntersectionArea(chunkRect, biomeRegions.plains),
+            badlands: getIntersectionArea(chunkRect, biomeRegions.badlands)
+          };
+
+          // The plains and badlands areas include the inner layers, so we subtract them
+          // to get the true area of just that biome's "ring".
+          areas.plains -= areas.fertile;
+          areas.badlands -= (areas.plains + areas.fertile);
+
+          // Find which biome has the largest area within the chunk
+          let dominantBiome = 'badlands';
+          let maxArea = areas.badlands;
+
+          if (areas.plains > maxArea) {
+            maxArea = areas.plains;
+            dominantBiome = 'plains';
+          }
+          if (areas.fertile > maxArea) {
+            dominantBiome = 'fertile';
+          }
           
-          // Store the chunk info with the determined biome
-          levelMap.set(`${x},${y}`, { x, y, size: chunkSize, biome: chunkBiome });
+          levelMap.set(`${x},${y}`, { x, y, size: chunkSize, biome: dominantBiome });
         }
       }
       chunkLevels.push(levelMap);
