@@ -90,8 +90,9 @@
 <script>
 // —— CONFIG ——
   const N           = 1200,
+        // MODIFIED: Tile size and stroke width have been reduced
         tileW       = 10, tileH = 10,
-        strokeW     = 2,
+        strokeW     = 1,
         borderColor = '#000',
         textColor   = '#fff',
         detailScale = 2.5,
@@ -217,12 +218,8 @@
         return;
     }
     
-    // --- BUG FIX --- Calculate font size in WORLD space, not screen space.
-    // The font size was being "double scaled" because it was calculated with cam.scale
-    // and then scaled AGAIN by the canvas transform. The fix is to remove cam.scale
-    // from the calculation and let the transform handle all scaling.
-    const availableWidth = tileW; // No * cam.scale
-    const availableHeight = tileH; // No * cam.scale
+    const availableWidth = tileW;
+    const availableHeight = tileH;
     const text = `${x}, ${y}`;
     const padding = 0.8;
     let optimalFontSize = Math.min(
@@ -230,7 +227,6 @@
       (availableWidth * padding / text.length) * 1.8
     );
     
-    // The legibility check must now happen based on the ON-SCREEN size of the font.
     if ((optimalFontSize * cam.scale) < 5) {
         return;
     }
@@ -541,10 +537,11 @@
       case '-': changeZoomBy(-1); break;
       case 'q': changeZoomBy(+1); break;
       case 'e': changeZoomBy(-1); break;
-      case 'ArrowUp':    cam.y += tileW * 2; clampCamera(); break;
-      case 'ArrowDown':  cam.y -= tileW * 2; clampCamera(); break;
-      case 'ArrowLeft':  cam.x += tileW * 2; clampCamera(); break;
-      case 'ArrowRight': cam.x -= tileW * 2; clampCamera(); break;
+      // MODIFIED: Increased panning speed multiplier to feel better with smaller tiles
+      case 'ArrowUp':    cam.y += tileW * 5; clampCamera(); break;
+      case 'ArrowDown':  cam.y -= tileW * 5; clampCamera(); break;
+      case 'ArrowLeft':  cam.x += tileW * 5; clampCamera(); break;
+      case 'ArrowRight': cam.x -= tileW * 5; clampCamera(); break;
     }
   });
 
@@ -554,7 +551,8 @@
       const building = getBuildingAt(x, y);
       selection = building || { x, y };
 
-      cam.scale = 4.5; 
+      // MODIFIED: Increased zoom scale to make small tiles clearly visible on search
+      cam.scale = 12; 
       centerOn(x,y);
       clampCamera();
     }
