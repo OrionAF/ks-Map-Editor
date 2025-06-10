@@ -94,11 +94,14 @@
         strokeW     = 1,
         borderColor = '#000',
         textColor   = '#fff',
-        // MODIFIED: Adjusted detail scale to match the smaller tile size
         detailScale = 1.5,
         maxPct      = 1000,
         selectionColor = '#ff0';
   
+  // NEW: A base scale to make "100%" zoom user-friendly rather than a 1:1 pixel scale.
+  // At baseScale = 5, a 10px tile will be 50px on screen at 100% zoom.
+  const baseScale = 5;
+
   const biomeColors = {
     fertile:  'rgb(109, 159, 62)',
     plains:   'rgb(158, 180, 103)',
@@ -371,11 +374,11 @@
     const padding = 0.95;
     minFitScale = Math.min(scaleX, scaleY) * padding;
     
+    // Set initial scale to a user-friendly "100%" view
     if (cam.scale === 1) {
-        zoomToFit();
-    } else {
-        clampCamera();
+        cam.scale = baseScale;
     }
+    clampCamera();
   }
   window.addEventListener('resize', resize);
 
@@ -449,7 +452,7 @@
           wy = (my - cam.y)/cam.scale;
     cam.scale *= factor;
     cam.scale = Math.max(minFitScale,
-      Math.min(maxPct/100, cam.scale));
+      Math.min(maxPct/100 * baseScale, cam.scale)); // Adjust max zoom
     cam.x = mx - wx * cam.scale;
     cam.y = my - wy * cam.scale;
     clampCamera();
@@ -476,15 +479,15 @@
 
   canvas.addEventListener('dblclick', e=>{
     e.preventDefault();
-    const curPct = Math.round(cam.scale*100);
+    const curPct = Math.round((cam.scale / baseScale) * 100);
     let targetPct;
     if (e.button === 2) { 
       targetPct = (cam.scale >= detailScale) ? Math.round(curPct / 1.75) : curPct - 75;
     } else { 
       targetPct = (cam.scale < detailScale) ? curPct + 75 : Math.round(curPct * 1.75);
     }
-    const targetScale = targetPct / 100;
-    animateZoom(Math.max(minFitScale, Math.min(maxPct / 100, targetScale)), e.offsetX, e.offsetY);
+    const targetScale = (targetPct / 100) * baseScale;
+    animateZoom(Math.max(minFitScale, Math.min(maxPct / 100 * baseScale, targetScale)), e.offsetX, e.offsetY);
   });
 
   canvas.addEventListener('contextmenu', e=>e.preventDefault());
@@ -493,8 +496,8 @@
     const cx = canvas.width/2, cy = canvas.height/2;
     const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
     let pct = Number(zoomSlider.value);
-    const targetScale = pct / 100;
-    cam.scale = Math.max(minFitScale, Math.min(maxPct / 100, targetScale));
+    const targetScale = (pct / 100) * baseScale;
+    cam.scale = Math.max(minFitScale, Math.min(maxPct / 100 * baseScale, targetScale));
     cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
     clampCamera();
   });
@@ -502,15 +505,16 @@
   function changeZoomBy(delta) {
     const cx = canvas.width/2, cy = canvas.height/2;
     const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
-    let pct = Math.round(cam.scale*100) + delta;
-    const targetScale = pct / 100;
-    cam.scale = Math.max(minFitScale, Math.min(maxPct / 100, targetScale));
+    let pct = Math.round((cam.scale / baseScale) * 100) + delta;
+    const targetScale = (pct / 100) * baseScale;
+    cam.scale = Math.max(minFitScale, Math.min(maxPct / 100 * baseScale, targetScale));
     cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
     clampCamera();
   }
   zoomDecBtn.addEventListener('click', ()=>changeZoomBy(-1));
   zoomIncBtn.addEventListener('click', ()=>changeZoomBy(+1));
 
+  // MODIFIED: Preset buttons now use the baseScale
   presetBtns.forEach(b => {
     const zoomVal = b.dataset.zoom;
     if (zoomVal === 'Fit') {
@@ -523,8 +527,8 @@
         const cx = canvas.width/2, cy = canvas.height/2;
         const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
         let pct = Number(zoomVal);
-        const targetScale = pct / 100;
-        cam.scale = Math.max(minFitScale, Math.min(maxPct / 100, targetScale));
+        const targetScale = (pct / 100) * baseScale;
+        cam.scale = Math.max(minFitScale, Math.min(maxPct / 100 * baseScale, targetScale));
         cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
         clampCamera();
     });
@@ -591,7 +595,7 @@
       const dist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
       let scaleFactor = dist / startDist;
       let newScale = startScale * scaleFactor;
-      newScale = Math.max(minFitScale, Math.min(maxPct/100, newScale));
+      newScale = Math.max(minFitScale, Math.min(maxPct/100 * baseScale, newScale));
       const wx = (pinchCenter.x - cam.x)/cam.scale, wy = (pinchCenter.y - cam.y)/cam.scale;
       cam.scale = newScale;
       cam.x = pinchCenter.x - wx*newScale;
@@ -610,7 +614,9 @@
 
     const [centerX, centerY] = screenToWorld(canvas.width/2, canvas.height/2);
     centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
-    const pct = Math.round(cam.scale*100);
+    
+    // MODIFIED: UI now displays percentage relative to the baseScale
+    const pct = Math.round((cam.scale / baseScale) * 100);
     zoomLevelEl.textContent = `Zoom: ${pct}%`;
     zoomSlider.value = Math.min(pct, zoomSlider.max);
     
