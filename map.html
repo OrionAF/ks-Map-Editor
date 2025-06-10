@@ -89,7 +89,7 @@
 
 <script>
 // —— CONFIG ——
-  const N           = 1200, // MODIFIED: Map size is now 1200x1200 (coords 0-1199)
+  const N           = 1200,
         tileW       = 25, tileH = 25,
         strokeW     = 2,
         borderColor = '#000',
@@ -98,7 +98,6 @@
         maxPct      = 1000,
         selectionColor = '#ff0';
   
-  // NEW: Biome colors
   const biomeColors = {
     fertile:  'rgb(109, 159, 62)',
     plains:   'rgb(158, 180, 103)',
@@ -184,17 +183,13 @@
     return buildingMap.get(`${x},${y}`) || null;
   }
 
-  // --- NEW --- Determines the biome for a given tile coordinate
   function getBiomeForTile(x, y) {
-    // Check from the inside out (Fertile -> Plains -> Badlands)
     if (x >= 450 && x <= 749 && y >= 450 && y <= 749) {
       return 'fertile';
     }
-    // The next layer encapsulates the first
     else if (x >= 300 && x <= 899 && y >= 300 && y <= 899) {
       return 'plains';
     }
-    // Anything else is badlands
     else {
       return 'badlands';
     }
@@ -211,7 +206,6 @@
     ctx.lineTo(sx - tileW/2, sy      );
     ctx.closePath();
     
-    // MODIFIED: Set fill style based on biome
     const biome = getBiomeForTile(x, y);
     ctx.fillStyle = biomeColors[biome];
     ctx.fill();
@@ -267,7 +261,6 @@
     ctx.lineTo(p_left.x,   p_left.y);
     ctx.closePath();
 
-    // MODIFIED: Use the biome color for the top-left tile of the merged group
     const biome = getBiomeForTile(x, y);
     ctx.fillStyle = biomeColors[biome];
     ctx.fill();
@@ -363,7 +356,6 @@
   function zoomToFit() {
     cam.scale = minFitScale;
     clampCamera();
-    render();
   }
 
   function resize() {
@@ -383,7 +375,6 @@
         zoomToFit();
     } else {
         clampCamera();
-        render();
     }
   }
   window.addEventListener('resize', resize);
@@ -407,70 +398,6 @@
     }
   }
 
-  function render() {
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    const [centerX, centerY] = screenToWorld(canvas.width/2, canvas.height/2);
-    centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
-    const pct = Math.round(cam.scale*100);
-    zoomLevelEl.textContent = `Zoom: ${pct}%`;
-    zoomSlider.value = Math.min(pct, zoomSlider.max);
-    
-    const ratio = detailScale/cam.scale;
-    const power = Math.max(0,Math.floor(Math.log2(ratio)));
-    const groupSize = Math.pow(2,power);
-    
-    tileCount = 0;
-
-    ctx.save();
-    ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
-
-    drawGrid(groupSize);
-
-    // MODIFIED: Set the fill color for unoccupiable tiles to dark gray
-    ctx.fillStyle = '#444';
-    baseMap.unoccupiableTiles.forEach(([x,y])=>{
-      if (getBuildingAt(x, y)) return;
-      const [sx,sy] = worldToScreen(x,y);
-      ctx.beginPath();
-      ctx.moveTo(sx, sy - tileH/2);
-      ctx.lineTo(sx + tileW/2, sy);
-      ctx.lineTo(sx, sy + tileH/2);
-      ctx.lineTo(sx - tileW/2, sy);
-      ctx.closePath();
-      ctx.fill();
-    });
-
-    baseMap.defaultBuildings.forEach(b => drawBuildingFootprint(b));
-    userBuildings.forEach(b => drawBuildingFootprint(b));
-
-    if (selection) {
-      if (selection.w) {
-        drawBuildingFootprint(selection, selectionColor);
-      } else {
-        const [sx, sy] = worldToScreen(selection.x, selection.y);
-        ctx.beginPath();
-        ctx.moveTo(sx, sy - tileH/2);
-        ctx.lineTo(sx + tileW/2, sy);
-        ctx.lineTo(sx, sy + tileH/2);
-        ctx.lineTo(sx - tileW/2, sy);
-        ctx.closePath();
-        ctx.strokeStyle = selectionColor;
-        ctx.lineWidth = strokeW * 1.5;
-        ctx.stroke();
-      }
-    }
-
-    ctx.restore();
-
-    const now = performance.now(),
-          dt  = now - lastFrame;
-    lastFrame = now;
-    lastFPS   = Math.round(1000/dt);
-    lastTiles = tileCount;
-  }
-
   // pan (mouse)
   let dragging=false, lastX, lastY;
   let clickStartX, clickStartY;
@@ -490,7 +417,6 @@
     lastX = e.clientX;
     lastY = e.clientY;
     clampCamera();
-    render();
   });
   window.addEventListener('mouseup', ()=>dragging=false);
 
@@ -513,7 +439,6 @@
         inpX.value = worldX;
         inpY.value = worldY;
       }
-      render();
     }
   });
 
@@ -529,7 +454,6 @@
     cam.x = mx - wx * cam.scale;
     cam.y = my - wy * cam.scale;
     clampCamera();
-    render();
   },{ passive:false });
 
   function animateZoom(targetScale, anchorX, anchorY, duration=150) {
@@ -546,7 +470,6 @@
       cam.x = anchorX - wx * cam.scale;
       cam.y = anchorY - wy * cam.scale;
       clampCamera();
-      render();
       if (t < 1) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
@@ -574,7 +497,7 @@
     const targetScale = pct / 100;
     cam.scale = Math.max(minFitScale, Math.min(maxPct / 100, targetScale));
     cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
-    clampCamera(); render();
+    clampCamera();
   });
 
   function changeZoomBy(delta) {
@@ -584,7 +507,7 @@
     const targetScale = pct / 100;
     cam.scale = Math.max(minFitScale, Math.min(maxPct / 100, targetScale));
     cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
-    clampCamera(); render();
+    clampCamera();
   }
   zoomDecBtn.addEventListener('click', ()=>changeZoomBy(-1));
   zoomIncBtn.addEventListener('click', ()=>changeZoomBy(+1));
@@ -604,7 +527,7 @@
         const targetScale = pct / 100;
         cam.scale = Math.max(minFitScale, Math.min(maxPct / 100, targetScale));
         cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
-        clampCamera(); render();
+        clampCamera();
     });
   });
 
@@ -615,10 +538,10 @@
       case '-': changeZoomBy(-1); break;
       case 'q': changeZoomBy(+1); break;
       case 'e': changeZoomBy(-1); break;
-      case 'ArrowUp':    cam.y += tileW * 2; clampCamera(); render(); break;
-      case 'ArrowDown':  cam.y -= tileW * 2; clampCamera(); render(); break;
-      case 'ArrowLeft':  cam.x += tileW * 2; clampCamera(); render(); break;
-      case 'ArrowRight': cam.x -= tileW * 2; clampCamera(); render(); break;
+      case 'ArrowUp':    cam.y += tileW * 2; clampCamera(); break;
+      case 'ArrowDown':  cam.y -= tileW * 2; clampCamera(); break;
+      case 'ArrowLeft':  cam.x += tileW * 2; clampCamera(); break;
+      case 'ArrowRight': cam.x -= tileW * 2; clampCamera(); break;
     }
   });
 
@@ -631,7 +554,6 @@
       cam.scale = 4.5; 
       centerOn(x,y);
       clampCamera();
-      render();
     }
   }
   btnGo.addEventListener('click', doSearch);
@@ -664,7 +586,7 @@
       const dx = t.clientX - lastX, dy = t.clientY - lastY;
       cam.x += dx; cam.y += dy;
       lastX = t.clientX; lastY = t.clientY;
-      clampCamera(); render();
+      clampCamera();
     }
     else if (touchMode==='pinch' && e.touches.length===2) {
       const [a,b] = e.touches;
@@ -676,7 +598,7 @@
       cam.scale = newScale;
       cam.x = pinchCenter.x - wx*newScale;
       cam.y = pinchCenter.y - wy*newScale;
-      clampCamera(); render();
+      clampCamera();
     }
   }, { passive:false });
 
@@ -684,20 +606,82 @@
     if (e.touches.length<2) touchMode = null;
   });
 
-  // initial draw
-  render();
+  // --- BUG FIX --- Switched from on-demand rendering to a continuous main loop
+  // to provide a real-time FPS counter.
+  function mainLoop(now) {
+    // --- Rendering logic ---
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // FPS loop
-  function fpsLoop(ts) {
-    if (!fpsLoop.t0) fpsLoop.t0 = ts;
-    if (ts - fpsLoop.t0 > 500) {
+    const [centerX, centerY] = screenToWorld(canvas.width/2, canvas.height/2);
+    centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
+    const pct = Math.round(cam.scale*100);
+    zoomLevelEl.textContent = `Zoom: ${pct}%`;
+    zoomSlider.value = Math.min(pct, zoomSlider.max);
+    
+    const ratio = detailScale/cam.scale;
+    const power = Math.max(0,Math.floor(Math.log2(ratio)));
+    const groupSize = Math.pow(2,power);
+    
+    tileCount = 0;
+
+    ctx.save();
+    ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
+
+    drawGrid(groupSize);
+
+    ctx.fillStyle = '#444';
+    baseMap.unoccupiableTiles.forEach(([x,y])=>{
+      if (getBuildingAt(x, y)) return;
+      const [sx,sy] = worldToScreen(x,y);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - tileH/2);
+      ctx.lineTo(sx + tileW/2, sy);
+      ctx.lineTo(sx, sy + tileH/2);
+      ctx.lineTo(sx - tileW/2, sy);
+      ctx.closePath();
+      ctx.fill();
+    });
+
+    baseMap.defaultBuildings.forEach(b => drawBuildingFootprint(b));
+    userBuildings.forEach(b => drawBuildingFootprint(b));
+
+    if (selection) {
+      if (selection.w) {
+        drawBuildingFootprint(selection, selectionColor);
+      } else {
+        const [sx, sy] = worldToScreen(selection.x, selection.y);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - tileH/2);
+        ctx.lineTo(sx + tileW/2, sy);
+        ctx.lineTo(sx, sy + tileH/2);
+        ctx.lineTo(sx - tileW/2, sy);
+        ctx.closePath();
+        ctx.strokeStyle = selectionColor;
+        ctx.lineWidth = strokeW * 1.5;
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+
+    // --- Stats calculation and display ---
+    const dt  = now - lastFrame;
+    lastFrame = now;
+    lastFPS   = Math.round(1000/dt);
+    lastTiles = tileCount;
+    
+    if (!mainLoop.t0) mainLoop.t0 = now;
+    if (now - mainLoop.t0 > 500) {
       statsFPSEl.textContent   = `FPS:   ${lastFPS}`;
       statsTilesEl.textContent = `Tiles: ${lastTiles}`;
-      fpsLoop.t0 = ts;
+      mainLoop.t0 = now;
     }
-    requestAnimationFrame(fpsLoop);
+    
+    requestAnimationFrame(mainLoop);
   }
-  requestAnimationFrame(fpsLoop);
+
+  // Kick off the main loop
+  requestAnimationFrame(mainLoop);
   </script>
 </body>
 </html>
