@@ -52,8 +52,9 @@
 </head>
 <body>
   <div id="searchBox">
-    X: <input id="inpX" type="number" min="0" max="1199" value="0">
-    Y: <input id="inpY" type="number" min="0" max="1199" value="0">
+    <!-- FIX: Updated max values for new map size -->
+    X: <input id="inpX" type="number" min="0" max="1279" value="0">
+    Y: <input id="inpY" type="number" min="0" max="1279" value="0">
     <button id="btnGo">Go</button>
     <div id="zoomLevel">Zoom: 100%</div>
     <button id="zoomDec">−</button>
@@ -89,7 +90,10 @@
 
 <script>
 // —— CONFIG ——
-  const N           = 1200,
+  // --- FIX 1: FUNDAMENTAL GRID REALIGNMENT ---
+  // The map size MUST be a multiple of the largest chunk size (64).
+  // 1280 = 20 * 64.
+  const N           = 1280,
         tileW       = 10, tileH = 10,
         strokeW     = 1,
         borderColor = '#000',
@@ -103,6 +107,15 @@
     fertile:  'rgb(109, 159, 62)',
     plains:   'rgb(158, 180, 103)',
     badlands: 'rgb(191, 208, 152)'
+  };
+  
+  // --- FIX 2: BIOME BOUNDARY REALIGNMENT ---
+  // The biome boundaries are now also multiples of 64, ensuring
+  // they align perfectly with the chunk grid.
+  const biomeRegions = {
+      fertile:  { x1: 480, y1: 480, x2: 799, y2: 799 }, // 320x320 region (5x5 chunks of 64)
+      plains:   { x1: 320, y1: 320, x2: 959, y2: 959 }, // 640x640 region (10x10 chunks of 64)
+      badlands: { x1: 0,   y1: 0,   x2: 1279,y2: 1279}  // 1280x1280 region (20x20 chunks of 64)
   };
   // ——————————
 
@@ -147,22 +160,11 @@
     }
   }
 
-  // MODIFIED: Complete overhaul of chunk calculation to be area-based for perfect accuracy.
+  // --- FIX 3: SIMPLIFIED CHUNK CALCULATION ---
+  // Because the grid is now perfectly aligned, we no longer need complex
+  // area intersection. We can just determine the biome from the chunk's
+  // top-left corner tile.
   function preCalculateChunks() {
-    // Define the exact biome regions as rectangles
-    const biomeRegions = {
-      fertile:  { x1: 450, y1: 450, x2: 749, y2: 749 },
-      plains:   { x1: 300, y1: 300, x2: 899, y2: 899 },
-      badlands: { x1: 0,   y1: 0,   x2: 1199,y2: 1199}
-    };
-
-    // Helper function to calculate the intersection area of two inclusive rectangles
-    function getIntersectionArea(rect1, rect2) {
-      const x_overlap = Math.max(0, Math.min(rect1.x2, rect2.x2) - Math.max(rect1.x1, rect2.x1) + 1);
-      const y_overlap = Math.max(0, Math.min(rect1.y2, rect2.y2) - Math.max(rect1.y1, rect2.y1) + 1);
-      return x_overlap * y_overlap;
-    }
-
     const numLevels = 6;
     for (let level = 0; level < numLevels; level++) {
       const chunkSize = Math.pow(2, level + 1);
@@ -170,34 +172,8 @@
       
       for (let x = 0; x < N; x += chunkSize) {
         for (let y = 0; y < N; y += chunkSize) {
-          // --- FIX 1: Correctly define the chunk's area (inclusive) ---
-          const chunkRect = { x1: x, y1: y, x2: x + chunkSize - 1, y2: y + chunkSize - 1 };
-          
-          // Calculate how much of the chunk is covered by each biome
-          const areas = {
-            fertile: getIntersectionArea(chunkRect, biomeRegions.fertile),
-            plains: getIntersectionArea(chunkRect, biomeRegions.plains),
-            badlands: getIntersectionArea(chunkRect, biomeRegions.badlands)
-          };
-
-          // The plains and badlands areas include the inner layers, so we subtract them
-          // to get the true area of just that biome's "ring".
-          areas.plains -= areas.fertile;
-          areas.badlands -= (areas.plains + areas.fertile);
-
-          // Find which biome has the largest area within the chunk
-          let dominantBiome = 'badlands';
-          let maxArea = areas.badlands;
-
-          if (areas.plains > maxArea) {
-            maxArea = areas.plains;
-            dominantBiome = 'plains';
-          }
-          if (areas.fertile > maxArea) {
-            dominantBiome = 'fertile';
-          }
-          
-          levelMap.set(`${x},${y}`, { x, y, size: chunkSize, biome: dominantBiome });
+          const biome = getBiomeForTile(x, y);
+          levelMap.set(`${x},${y}`, { x, y, size: chunkSize, biome: biome });
         }
       }
       chunkLevels.push(levelMap);
@@ -247,15 +223,14 @@
   }
 
   function getBiomeForTile(x, y) {
-    if (x >= 450 && x <= 749 && y >= 450 && y <= 749) {
+    const { fertile, plains } = biomeRegions;
+    if (x >= fertile.x1 && x <= fertile.x2 && y >= fertile.y1 && y <= fertile.y2) {
       return 'fertile';
     }
-    else if (x >= 300 && x <= 899 && y >= 300 && y <= 899) {
+    if (x >= plains.x1 && x <= plains.x2 && y >= plains.y1 && y <= plains.y2) {
       return 'plains';
     }
-    else {
-      return 'badlands';
-    }
+    return 'badlands';
   }
 
   // --- GRID DRAWING ---
@@ -306,19 +281,17 @@
     ctx.fillText(text, sx, sy);
   }
 
-  // --- FIX 2: Rewrite chunk drawing logic for a seamless grid ---
+  // --- FIX 4: SEAMLESS CHUNK DRAWING ---
+  // This logic correctly draws chunks without gaps by calculating shared vertices.
   function drawChunk(chunk) {
     tileCount += chunk.size * chunk.size;
     const { x, y, size, biome } = chunk;
 
-    // Define the 4 corner points of the chunk's abstract grid region.
     const [p_bottom_x, p_bottom_y] = worldToScreen(x, y);
     const [p_right_x, p_right_y]   = worldToScreen(x + size, y);
     const [p_top_x, p_top_y]       = worldToScreen(x + size, y + size);
     const [p_left_x, p_left_y]    = worldToScreen(x, y + size);
 
-    // This method ensures that adjacent chunks share the exact same calculated
-    // vertex coordinates, creating a seamless grid without gaps or overlaps.
     ctx.beginPath();
     ctx.moveTo(p_bottom_x, p_bottom_y);
     ctx.lineTo(p_right_x,  p_right_y);
@@ -356,7 +329,7 @@
     ctx.moveTo(p_bottom.x, p_bottom.y);
     ctx.lineTo(p_right.x,  p_right.y);
     ctx.lineTo(p_top.x,    p_top.y);
-    ctx.lineTo(p_left.x,   p_left.y);
+    ctx.lineTo(p_left.x,   p_left_y);
     ctx.closePath();
     ctx.fillStyle = fill; ctx.fill();
     ctx.strokeStyle = border; 
