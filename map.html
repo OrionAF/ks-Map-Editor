@@ -18,9 +18,8 @@
       background:rgba(0,0,0,0.6); padding:8px; border-radius:4px;
     }
     #searchBox input { width:60px; }
-    /* --- MODIFIED --- Made the slider wider for smoother control */
     #searchBox input[type=range] {
-      width:250px; /* Was 180px */
+      width:250px;
       vertical-align:middle; margin:0 6px;
     }
     #searchBox button {
@@ -53,8 +52,8 @@
 </head>
 <body>
   <div id="searchBox">
-    X: <input id="inpX" type="number" min="0" max="1201" value="0">
-    Y: <input id="inpY" type="number" min="0" max="1201" value="0">
+    X: <input id="inpX" type="number" min="0" max="1199" value="0">
+    Y: <input id="inpY" type="number" min="0" max="1199" value="0">
     <button id="btnGo">Go</button>
     <div id="zoomLevel">Zoom: 100%</div>
     <button id="zoomDec">−</button>
@@ -90,15 +89,21 @@
 
 <script>
 // —— CONFIG ——
-  const N           = 1201,
+  const N           = 1200, // MODIFIED: Map size is now 1200x1200 (coords 0-1199)
         tileW       = 25, tileH = 25,
         strokeW     = 2,
-        fillColor   = '#444',
         borderColor = '#000',
         textColor   = '#fff',
         detailScale = 2.5,
         maxPct      = 1000,
         selectionColor = '#ff0';
+  
+  // NEW: Biome colors
+  const biomeColors = {
+    fertile:  'rgb(109, 159, 62)',
+    plains:   'rgb(158, 180, 103)',
+    badlands: 'rgb(191, 208, 152)'
+  };
   // ——————————
 
   // DOM refs
@@ -151,8 +156,6 @@
     .catch(e=>{ console.error(e); alert('BaseMap load error'); });
   
   let userBuildings = [];
-  // FIX: If userBuildings is ever modified at runtime, preProcessBuildings() and render()
-  // must be called again to update the lookup map and redraw the scene.
 
   // camera + stats state …
   const cam = { x:0, y:0, scale:1 };
@@ -177,13 +180,27 @@
     return [x,y];
   }
 
-  // --- MODIFIED: THE PERFORMANCE HOTSPOT ---
   function getBuildingAt(x, y) {
     return buildingMap.get(`${x},${y}`) || null;
   }
 
-  // --- 1) GRID DRAWING ---
-  // --- MODIFIED --- Now with fully automatic font sizing for coordinates.
+  // --- NEW --- Determines the biome for a given tile coordinate
+  function getBiomeForTile(x, y) {
+    // Check from the inside out (Fertile -> Plains -> Badlands)
+    if (x >= 450 && x <= 749 && y >= 450 && y <= 749) {
+      return 'fertile';
+    }
+    // The next layer encapsulates the first
+    else if (x >= 300 && x <= 899 && y >= 300 && y <= 899) {
+      return 'plains';
+    }
+    // Anything else is badlands
+    else {
+      return 'badlands';
+    }
+  }
+
+  // --- GRID DRAWING ---
   function drawTile(x, y) {
     tileCount++;
     const [sx,sy] = worldToScreen(x,y);
@@ -193,7 +210,12 @@
     ctx.lineTo(   sx,        sy + tileH/2);
     ctx.lineTo(sx - tileW/2, sy      );
     ctx.closePath();
-    ctx.fillStyle   = fillColor; ctx.fill();
+    
+    // MODIFIED: Set fill style based on biome
+    const biome = getBiomeForTile(x, y);
+    ctx.fillStyle = biomeColors[biome];
+    ctx.fill();
+
     ctx.strokeStyle = borderColor; ctx.lineWidth = strokeW; ctx.stroke();
 
     const building = getBuildingAt(x, y);
@@ -209,11 +231,7 @@
       availableHeight * padding * 0.5,
       (availableWidth * padding / text.length) * 1.8
     );
-
-    // --- FIX --- Removed the hardcoded min/max font sizes.
-    // The logic now relies on the legibility check below.
     
-    // --- MODIFIED --- Lowered the legibility threshold for smaller tiles.
     if (optimalFontSize < 5) {
         return;
     }
@@ -225,10 +243,8 @@
     ctx.fillText(text, sx, sy);
   }
 
-  // --- NEW --- Draws a large, merged tile for performance when zoomed out
   function drawMergedTile(x, y, size) {
-    tileCount += size * size; // Counting all represented tiles
-    // This logic is identical to drawBuildingFootprint but without a stroke
+    tileCount += size * size;
     const x0 = x, y0 = y, w = size, h = size;
     const rightTile  = { x: x0 + w - 1, y: y0 };
     const topTile    = { x: x0 + w - 1, y: y0 + h - 1 };
@@ -250,24 +266,24 @@
     ctx.lineTo(p_top.x,    p_top.y);
     ctx.lineTo(p_left.x,   p_left.y);
     ctx.closePath();
-    ctx.fillStyle = fillColor; // Use the standard tile fill color
+
+    // MODIFIED: Use the biome color for the top-left tile of the merged group
+    const biome = getBiomeForTile(x, y);
+    ctx.fillStyle = biomeColors[biome];
     ctx.fill();
   }
 
-
-  // --- MODIFIED --- This is now the key to removing internal building grid lines.
   function drawGrid(groupSize) {
     const halfH = tileH/2, s = cam.scale, H = canvas.height;
+    const maxCoord = N - 1;
     const sumMin = Math.max(0, Math.floor((cam.y - H - halfH*s)/(s*halfH)));
-    const sumMax = Math.min(2*N, Math.ceil((cam.y + halfH*s)/(s*halfH)));
+    const sumMax = Math.min(2 * maxCoord, Math.ceil((cam.y + halfH*s)/(s*halfH)));
     
     for (let sum = sumMin; sum <= sumMax; sum++) {
-      const sx = Math.max(0, sum-N), ex = Math.min(sum, N);
+      const sx = Math.max(0, sum - maxCoord), ex = Math.min(sum, maxCoord);
       for (let x = sx; x <= ex; x++) {
         const y = sum - x;
         
-        // --- KEY CHANGE --- Only draw a grid tile if there is NOT a building there.
-        // The building will be drawn later, creating a solid shape.
         if (!getBuildingAt(x, y)) {
             if (groupSize === 1) {
               drawTile(x, y);
@@ -281,8 +297,7 @@
     }
   }
 
-  // --- 2) BUILDING FOOTPRINT DRAWING ---
-  // --- MODIFIED --- Re-added the missing coordinate drawing logic.
+  // --- BUILDING FOOTPRINT DRAWING ---
   function drawBuildingFootprint(b, highlightStyle = null) {
     const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
     const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
@@ -324,25 +339,20 @@
       const centerX = (p_left.x + p_right.x) / 2;
       const centerY = (p_top.y + p_bottom.y) / 2;
 
-      // Draw the main display name
       ctx.fillStyle = textColor;
       ctx.font = `bold ${optimalFontSize}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(b.displayName, centerX, centerY);
       
-      // --- FIX --- Re-added the missing logic to draw coordinates.
       if (b.displayCoordinates) {
-        // Use a smaller, non-bold font for the coordinates
         const coordFontSize = Math.max(8, optimalFontSize * 0.6);
         ctx.font = `${coordFontSize}px sans-serif`;
-        // Draw the coordinate text below the main name
         ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.9);
       }
     }
   }
 
-  // --- NEW --- This helper function is what we'll use for all centering logic.
   function centerOn(x,y) {
     const lx = (x - y)*(tileW/2),
           ly = -((x + y)*(tileH/2));
@@ -350,14 +360,12 @@
     cam.y = canvas.height*0.5 - ly*cam.scale;
   }
 
-  // --- BUG FIX --- This function now relies on the robust clampCamera to center the content.
   function zoomToFit() {
     cam.scale = minFitScale;
-    clampCamera(); // Let the robust clamping function handle the centering.
+    clampCamera();
     render();
   }
 
-  // resize & initial center
   function resize() {
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -371,50 +379,34 @@
     const padding = 0.95;
     minFitScale = Math.min(scaleX, scaleY) * padding;
     
-    // On the very first load, the scale is 1. Zoom to fit.
     if (cam.scale === 1) {
         zoomToFit();
     } else {
-        // On subsequent resizes, just clamp and render.
         clampCamera();
         render();
     }
   }
   window.addEventListener('resize', resize);
 
-  // --- BUG FIX --- The camera clamping logic has been completely replaced with a robust version
-  // that correctly handles both zoomed-in and zoomed-out states.
   function clampCamera() {
     const s = cam.scale;
     const mapScreenWidth = (N - 1) * tileW * s;
     const mapScreenHeight = (N - 1) * tileH * s;
 
-    // --- Horizontal Clamping ---
     if (mapScreenWidth < canvas.width) {
-      // If map is narrower than the screen, center it.
-      // The visual center of the isometric diamond is at its horizontal midpoint.
       cam.x = canvas.width / 2;
     } else {
-      // If map is wider, clamp its edges to the screen edges.
       const mapEdgeX = mapScreenWidth / 2;
       cam.x = Math.max(canvas.width - mapEdgeX, Math.min(mapEdgeX, cam.x));
     }
 
-    // --- Vertical Clamping ---
     if (mapScreenHeight < canvas.height) {
-      // If map is shorter than the screen, center it.
-      // The visual center of the isometric diamond is offset vertically.
       cam.y = (canvas.height / 2) + (mapScreenHeight / 2);
     } else {
-      // If map is taller, clamp its edges. The map's local Y coordinates range
-      // from -mapScreenHeight (top) to 0 (bottom). We want to keep the viewport
-      // [0, height] within the map's displayed range [cam.y - mapScreenHeight, cam.y].
-      // This means cam.y >= height and cam.y - mapScreenHeight <= 0.
       cam.y = Math.max(canvas.height, Math.min(mapScreenHeight, cam.y));
     }
   }
 
-  // --- RENDER LOOP (on-demand) ---
   function render() {
     ctx.setTransform(1,0,0,1,0,0);
     ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -436,7 +428,8 @@
 
     drawGrid(groupSize);
 
-    ctx.fillStyle = '#fff';
+    // MODIFIED: Set the fill color for unoccupiable tiles to dark gray
+    ctx.fillStyle = '#444';
     baseMap.unoccupiableTiles.forEach(([x,y])=>{
       if (getBuildingAt(x, y)) return;
       const [sx,sy] = worldToScreen(x,y);
@@ -501,36 +494,29 @@
   });
   window.addEventListener('mouseup', ()=>dragging=false);
 
-  // FIX: This click handler now correctly distinguishes between a click and a drag.
-  // This was successfully implemented by you in the last version.
   canvas.addEventListener('click', e => {
     const dist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
-    if (dist > 5) { // If mouse moved more than 5px, consider it a drag and do nothing.
+    if (dist > 5) {
       return;
     }
     const [worldX, worldY] = screenToWorld(e.offsetX, e.offsetY);
 
-    if (worldX >= 0 && worldX <= N && worldY >= 0 && worldY <= N) {
+    if (worldX >= 0 && worldX < N && worldY >= 0 && worldY < N) {
       const building = getBuildingAt(worldX, worldY);
       
       if (building) {
         selection = building;
-        inpX.value = building.x; // Update inputs to building origin
+        inpX.value = building.x;
         inpY.value = building.y;
       } else {
         selection = { x: worldX, y: worldY };
         inpX.value = worldX;
         inpY.value = worldY;
       }
-      render(); // Re-render to show new selection
+      render();
     }
   });
 
-
-  // --- All event handlers below remain unchanged ---
-
-  // wheel zoom
-  // --- MODIFIED --- Now uses the dynamic `minFitScale`.
   canvas.addEventListener('wheel', e=>{
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.1 : 0.9;
@@ -538,7 +524,6 @@
     const wx = (mx - cam.x)/cam.scale,
           wy = (my - cam.y)/cam.scale;
     cam.scale *= factor;
-    // --- FIX --- Use the calculated minFitScale instead of the old minPct.
     cam.scale = Math.max(minFitScale,
       Math.min(maxPct/100, cam.scale));
     cam.x = mx - wx * cam.scale;
@@ -547,7 +532,6 @@
     render();
   },{ passive:false });
 
-  // animate zoom
   function animateZoom(targetScale, anchorX, anchorY, duration=150) {
     const startScale = cam.scale;
     const startX = cam.x, startY = cam.y;
@@ -568,8 +552,6 @@
     requestAnimationFrame(step);
   }
 
-  // double-click zoom
-  // --- MODIFIED --- Now uses the dynamic `minFitScale`.
   canvas.addEventListener('dblclick', e=>{
     e.preventDefault();
     const curPct = Math.round(cam.scale*100);
@@ -580,14 +562,11 @@
       targetPct = (cam.scale < detailScale) ? curPct + 75 : Math.round(curPct * 1.75);
     }
     const targetScale = targetPct / 100;
-    // --- FIX --- Use the calculated minFitScale instead of the old minPct.
     animateZoom(Math.max(minFitScale, Math.min(maxPct / 100, targetScale)), e.offsetX, e.offsetY);
   });
 
-  // suppress context menu
   canvas.addEventListener('contextmenu', e=>e.preventDefault());
 
-  // slider control
   zoomSlider.addEventListener('input', () => {
     const cx = canvas.width/2, cy = canvas.height/2;
     const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
@@ -598,7 +577,6 @@
     clampCamera(); render();
   });
 
-  // buttons: +1 / -1
   function changeZoomBy(delta) {
     const cx = canvas.width/2, cy = canvas.height/2;
     const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
@@ -611,15 +589,12 @@
   zoomDecBtn.addEventListener('click', ()=>changeZoomBy(-1));
   zoomIncBtn.addEventListener('click', ()=>changeZoomBy(+1));
 
-  // preset buttons
-  // --- MODIFIED --- The first button is now a "Fit" button.
   presetBtns.forEach(b => {
     const zoomVal = b.dataset.zoom;
-    // --- NEW --- Add a special case for our fit button.
     if (zoomVal === 'Fit') {
-        b.textContent = 'Fit'; // Change the button's text
+        b.textContent = 'Fit';
         b.addEventListener('click', zoomToFit);
-        return; // Skip the rest of the logic for this button
+        return;
     }
 
     b.addEventListener('click', () => {
@@ -633,7 +608,6 @@
     });
   });
 
-  // keyboard shortcuts
   window.addEventListener('keydown', e=>{
     if (e.target.tagName==='INPUT') return;
     switch(e.key) {
@@ -648,15 +622,12 @@
     }
   });
 
-  // search & center+zoom150%
-  // FIX: The redundant second definition of centerOn() was removed from here.
   function doSearch() {
     const x = +inpX.value, y = +inpY.value;
-    if (x>=0&&y>=0&&x<=N&&y<=N) {
+    if (x>=0 && y>=0 && x<N && y<N) {
       const building = getBuildingAt(x, y);
       selection = building || { x, y };
 
-      // --- TUNING --- Zoom to 450% on search, which is much better for small tiles.
       cam.scale = 4.5; 
       centerOn(x,y);
       clampCamera();
@@ -700,7 +671,6 @@
       const dist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
       let scaleFactor = dist / startDist;
       let newScale = startScale * scaleFactor;
-      // FIX: Correctly uses minFitScale. This was successfully implemented by you.
       newScale = Math.max(minFitScale, Math.min(maxPct/100, newScale));
       const wx = (pinchCenter.x - cam.x)/cam.scale, wy = (pinchCenter.y - cam.y)/cam.scale;
       cam.scale = newScale;
@@ -722,7 +692,7 @@
     if (!fpsLoop.t0) fpsLoop.t0 = ts;
     if (ts - fpsLoop.t0 > 500) {
       statsFPSEl.textContent   = `FPS:   ${lastFPS}`;
-      statsTilesEl.textContent = `Tiles: ${lastTiles}`; // This will now show a much larger number when zoomed out
+      statsTilesEl.textContent = `Tiles: ${lastTiles}`;
       fpsLoop.t0 = ts;
     }
     requestAnimationFrame(fpsLoop);
