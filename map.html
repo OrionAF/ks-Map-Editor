@@ -269,13 +269,14 @@
     ctx.lineTo(p_left.x,   p_left.y);
     ctx.closePath();
 
-    const biome = getBiomeForTile(x, y);
+    // MODIFIED: Sample the center of the merged block for a more accurate color
+    const centerX = x + size / 2;
+    const centerY = y + size / 2;
+    const biome = getBiomeForTile(centerX, centerY);
     ctx.fillStyle = biomeColors[biome];
     ctx.fill();
     
-    // MODIFIED: Add a scaled stroke to merged tiles to provide a subtle grid
     ctx.strokeStyle = borderColor;
-    // As the group size gets bigger, the line gets thinner
     ctx.lineWidth = strokeW / (size / 2); 
     ctx.stroke();
   }
@@ -386,7 +387,6 @@
     
     if (cam.scale === 1) {
         cam.scale = baseScale;
-        // MODIFIED: Explicitly center the map on the very first load
         const mapCenter = (N - 1) / 2;
         centerOn(mapCenter, mapCenter);
     }
