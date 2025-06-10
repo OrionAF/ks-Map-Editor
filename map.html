@@ -94,7 +94,6 @@
         strokeW     = 1,
         borderColor = '#000',
         textColor   = '#fff',
-        // MODIFIED: Retuned detailScale to work with a new linear merging formula
         detailScale = 7.5,
         maxPct      = 1000,
         selectionColor = '#ff0';
@@ -220,7 +219,6 @@
         return;
     }
 
-    // MODIFIED: Hide coordinates until zoom level is > 100%
     if (cam.scale <= baseScale) {
         return;
     }
@@ -234,7 +232,6 @@
       (availableWidth * padding / text.length) * 1.8
     );
     
-    // MODIFIED: Further reduce font size for better visual balance
     optimalFontSize *= 0.7;
 
     if ((optimalFontSize * cam.scale) < 5) {
@@ -275,6 +272,12 @@
     const biome = getBiomeForTile(x, y);
     ctx.fillStyle = biomeColors[biome];
     ctx.fill();
+    
+    // MODIFIED: Add a scaled stroke to merged tiles to provide a subtle grid
+    ctx.strokeStyle = borderColor;
+    // As the group size gets bigger, the line gets thinner
+    ctx.lineWidth = strokeW / (size / 2); 
+    ctx.stroke();
   }
 
   function drawGrid(groupSize) {
@@ -383,6 +386,9 @@
     
     if (cam.scale === 1) {
         cam.scale = baseScale;
+        // MODIFIED: Explicitly center the map on the very first load
+        const mapCenter = (N - 1) / 2;
+        centerOn(mapCenter, mapCenter);
     }
     clampCamera();
   }
@@ -625,8 +631,6 @@
     zoomSlider.value = Math.min(pct, zoomSlider.max);
     
     const ratio = detailScale/cam.scale;
-
-    // MODIFIED: Replaced the log2 calculation with a simpler linear one for smoother merging
     const groupSize = Math.max(1, Math.floor(ratio));
     
     tileCount = 0;
