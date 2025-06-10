@@ -94,12 +94,11 @@
         strokeW     = 1,
         borderColor = '#000',
         textColor   = '#fff',
-        detailScale = 1.5,
+        // MODIFIED: Increased detail scale to trigger merging sooner (at a higher zoom level)
+        detailScale = 3.0,
         maxPct      = 1000,
         selectionColor = '#ff0';
   
-  // NEW: A base scale to make "100%" zoom user-friendly rather than a 1:1 pixel scale.
-  // At baseScale = 5, a 10px tile will be 50px on screen at 100% zoom.
   const baseScale = 5;
 
   const biomeColors = {
@@ -374,7 +373,6 @@
     const padding = 0.95;
     minFitScale = Math.min(scaleX, scaleY) * padding;
     
-    // Set initial scale to a user-friendly "100%" view
     if (cam.scale === 1) {
         cam.scale = baseScale;
     }
@@ -452,7 +450,7 @@
           wy = (my - cam.y)/cam.scale;
     cam.scale *= factor;
     cam.scale = Math.max(minFitScale,
-      Math.min(maxPct/100 * baseScale, cam.scale)); // Adjust max zoom
+      Math.min(maxPct/100 * baseScale, cam.scale));
     cam.x = mx - wx * cam.scale;
     cam.y = my - wy * cam.scale;
     clampCamera();
@@ -514,7 +512,6 @@
   zoomDecBtn.addEventListener('click', ()=>changeZoomBy(-1));
   zoomIncBtn.addEventListener('click', ()=>changeZoomBy(+1));
 
-  // MODIFIED: Preset buttons now use the baseScale
   presetBtns.forEach(b => {
     const zoomVal = b.dataset.zoom;
     if (zoomVal === 'Fit') {
@@ -615,7 +612,6 @@
     const [centerX, centerY] = screenToWorld(canvas.width/2, canvas.height/2);
     centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
     
-    // MODIFIED: UI now displays percentage relative to the baseScale
     const pct = Math.round((cam.scale / baseScale) * 100);
     zoomLevelEl.textContent = `Zoom: ${pct}%`;
     zoomSlider.value = Math.min(pct, zoomSlider.max);
