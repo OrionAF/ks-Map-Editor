@@ -132,7 +132,6 @@
   // data layers
   let baseMap = { unoccupiableTiles:[], defaultBuildings:[] };
   const buildingMap = new Map();
-  // NEW: A data structure to hold our pre-calculated chunks
   const chunkLevels = []; 
 
   function preProcessBuildings() {
@@ -148,7 +147,6 @@
     }
   }
 
-  // NEW: Pre-calculates all chunk levels for a symmetrical, performant zoomed-out view
   function preCalculateChunks() {
     const numLevels = 6;
     for (let level = 0; level < numLevels; level++) {
@@ -157,13 +155,12 @@
       
       for (let x = 0; x < N; x += chunkSize) {
         for (let y = 0; y < N; y += chunkSize) {
-          // Sample 5 points to find the dominant biome for the chunk
           const samples = [
-            getBiomeForTile(x, y), // top-left
-            getBiomeForTile(x + chunkSize - 1, y), // top-right
-            getBiomeForTile(x, y + chunkSize - 1), // bottom-left
-            getBiomeForTile(x + chunkSize - 1, y + chunkSize - 1), // bottom-right
-            getBiomeForTile(x + chunkSize / 2, y + chunkSize / 2) // center
+            getBiomeForTile(x, y),
+            getBiomeForTile(x + chunkSize - 1, y),
+            getBiomeForTile(x, y + chunkSize - 1),
+            getBiomeForTile(x + chunkSize - 1, y + chunkSize - 1),
+            getBiomeForTile(x + chunkSize / 2, y + chunkSize / 2)
           ];
           
           const counts = {};
@@ -184,14 +181,17 @@
     }
   }
 
-
+  // MODIFIED: The main rendering loop is now started *after* all data is fetched and processed.
   fetch('baseMap.json')
     .then(r=>r.ok? r.json(): Promise.reject(r.status))
     .then(d=>{
       Object.assign(baseMap, d);
       preProcessBuildings();
-      preCalculateChunks(); // Calculate chunks after loading map
+      preCalculateChunks();
       resize();
+      
+      // NEW: Start the main loop only when everything is ready.
+      requestAnimationFrame(mainLoop);
     })
     .catch(e=>{ console.error(e); alert('BaseMap load error'); });
   
@@ -284,7 +284,6 @@
     ctx.fillText(text, sx, sy);
   }
 
-  // NEW: Draws a single pre-calculated chunk
   function drawChunk(chunk) {
     tileCount += chunk.size * chunk.size;
     const { x, y, size, biome } = chunk;
@@ -508,7 +507,6 @@
     e.preventDefault();
     const curPct = Math.round((cam.scale / baseScale) * 100);
     let targetPct;
-    // Note: The `detailScale` constant is no longer used for this, but the logic can remain.
     if (e.button === 2) { 
       targetPct = curPct - 75;
     } else { 
@@ -635,15 +633,14 @@
     if (e.touches.length<2) touchMode = null;
   });
   
-  // NEW: Determines which chunk level to render based on user-defined zoom percentages
   function getChunkLevelForZoom(pct) {
-    if (pct <= 3) return 5;  // Level 6 (index 5)
-    if (pct <= 7) return 4;  // Level 5 (index 4)
-    if (pct <= 15) return 3; // Level 4 (index 3)
-    if (pct <= 30) return 2; // Level 3 (index 2)
-    if (pct <= 60) return 1; // Level 2 (index 1)
-    if (pct <= 80) return 0; // Level 1 (index 0)
-    return -1; // Render individual tiles
+    if (pct <= 3) return 5;
+    if (pct <= 7) return 4;
+    if (pct <= 15) return 3;
+    if (pct <= 30) return 2;
+    if (pct <= 60) return 1;
+    if (pct <= 80) return 0;
+    return -1;
   }
 
   function mainLoop(now) {
@@ -662,11 +659,9 @@
     ctx.save();
     ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
     
-    // MODIFIED: Complete rendering logic overhaul for chunking
     const chunkLevel = getChunkLevelForZoom(pct);
     
     if (chunkLevel === -1) {
-      // High zoom: Draw individual tiles
       const maxCoord = N - 1;
       const s = cam.scale, H = canvas.height;
       const sumMin = Math.max(0, Math.floor((cam.y - H - tileH/2*s)/(s*tileH/2)));
@@ -679,10 +674,8 @@
         }
       }
     } else {
-      // Low zoom: Draw pre-calculated chunks
       const chunksToDraw = chunkLevels[chunkLevel];
       for (const chunk of chunksToDraw.values()) {
-        // Basic culling could be added here for max performance, but for now we draw all
         drawChunk(chunk);
       }
     }
@@ -736,7 +729,9 @@
     requestAnimationFrame(mainLoop);
   }
 
-  requestAnimationFrame(mainLoop);
+  // MODIFIED: The initial call to start the main loop has been moved inside the fetch promise,
+  // to prevent a race condition where the loop starts before data is loaded.
+  // requestAnimationFrame(mainLoop); 
   </script>
 </body>
 </html>
