@@ -237,7 +237,8 @@
     ctx.fillStyle = biomeColors[biome];
     ctx.fill();
 
-    ctx.strokeStyle = borderColor; ctx.lineWidth = strokeW / cam.scale; ctx.stroke();
+    // --- FIX 1: Set constant line width ---
+    ctx.strokeStyle = borderColor; ctx.lineWidth = strokeW; ctx.stroke();
 
     const building = getBuildingAt(x, y);
     if (building && building.hideCoordinates) {
@@ -290,7 +291,7 @@
     ctx.fill();
 
     ctx.strokeStyle = borderColor;
-    ctx.lineWidth = strokeW / cam.scale;
+    ctx.lineWidth = strokeW;
     ctx.stroke();
   }
 
@@ -315,12 +316,12 @@
     ctx.beginPath();
     ctx.moveTo(p_bottom.x, p_bottom.y);
     ctx.lineTo(p_right.x,  p_right.y);
-    ctx.lineTo(p_top.x,    p_top_y);
+    ctx.lineTo(p_top.x,    p_top.y);
     ctx.lineTo(p_left.x,   p_left_y);
     ctx.closePath();
     ctx.fillStyle = fill; ctx.fill();
     ctx.strokeStyle = border; 
-    ctx.lineWidth = (highlightStyle ? strokeW * 2 : strokeW) / cam.scale;
+    ctx.lineWidth = highlightStyle ? strokeW * 2 : strokeW;
     ctx.stroke();
 
     if (cam.scale > 0.4 && b.displayName) {
@@ -356,7 +357,6 @@
     cam.y = canvas.height*0.5 - ly*cam.scale;
   }
   
-  // --- FIX 1: Simplify zoomToFit to use the robust clampCamera function ---
   function zoomToFit() {
     cam.scale = minFitScale;
     clampCamera();
@@ -383,36 +383,24 @@
   }
   window.addEventListener('resize', resize);
 
-  // --- FIX 2: Re-implement camera clamping with simple, robust math ---
   function clampCamera() {
     const s = cam.scale;
-    // The map's total screen dimensions before scaling
     const mapTotalWidth = (N - 1) * tileW;
     const mapTotalHeight = (N - 1) * tileH;
-    // The map's total screen dimensions after scaling
     const mapScaledWidth = mapTotalWidth * s;
     const mapScaledHeight = mapTotalHeight * s;
 
-    // Horizontal Clamping
     if (mapScaledWidth < canvas.width) {
-      // Center the map horizontally if it's smaller than the canvas
       cam.x = canvas.width / 2;
     } else {
-      // The map's un-transformed bounding box is horizontally centered around 0.
-      const minCamX = canvas.width - (mapScaledWidth / 2);
-      const maxCamX = mapScaledWidth / 2;
-      cam.x = Math.max(minCamX, Math.min(maxCamX, cam.x));
+      const worldHalfWidth = mapScaledWidth / 2;
+      cam.x = Math.max(canvas.width - worldHalfWidth, Math.min(worldHalfWidth, cam.x));
     }
 
-    // Vertical Clamping
     if (mapScaledHeight < canvas.height) {
-      // Center the map vertically. The map's Y-bounds are [-h, 0], so we adjust.
-      cam.y = (canvas.height / 2) + (mapScaledHeight / 2);
+      cam.y = canvas.height/2 + mapScaledHeight/2;
     } else {
-      // The map's un-transformed Y-bounds are [-mapTotalHeight, 0].
-      const minCamY = canvas.height;
-      const maxCamY = mapScaledHeight;
-      cam.y = Math.max(minCamY, Math.min(maxCamY, cam.y));
+      cam.y = Math.max(canvas.height - (mapScaledHeight/2), Math.min(mapScaledHeight/2, cam.y));
     }
   }
 
@@ -644,6 +632,8 @@
     tileCount = 0;
 
     ctx.save();
+    // --- FIX 1: Apply constant line width globally ---
+    ctx.lineWidth = strokeW;
     ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
     
     const [tl_x, tl_y] = screenToWorld(0, 0);
@@ -676,13 +666,22 @@
         }
       }
     } else {
+      // --- FIX 2: Efficiently render only visible chunks ---
       const chunksToDraw = chunkLevels[chunkLevel];
-      for (const chunk of chunksToDraw.values()) {
-        const { x, y, size } = chunk;
-        if (x + size < viewBounds.minX || x > viewBounds.maxX || y + size < viewBounds.minY || y > viewBounds.maxY) {
-          continue;
+      const chunkSize = Math.pow(2, chunkLevel + 1);
+
+      const startChunkX = Math.floor(viewBounds.minX / chunkSize) * chunkSize;
+      const endChunkX = Math.ceil(viewBounds.maxX / chunkSize) * chunkSize;
+      const startChunkY = Math.floor(viewBounds.minY / chunkSize) * chunkSize;
+      const endChunkY = Math.ceil(viewBounds.maxY / chunkSize) * chunkSize;
+      
+      for (let x = startChunkX; x <= endChunkX; x += chunkSize) {
+        for (let y = startChunkY; y <= endChunkY; y += chunkSize) {
+            const chunk = chunksToDraw.get(`${x},${y}`);
+            if (chunk) {
+                drawChunk(chunk);
+            }
         }
-        drawChunk(chunk);
       }
     }
 
@@ -715,7 +714,7 @@
         ctx.lineTo(sx - tileW/2, sy);
         ctx.closePath();
         ctx.strokeStyle = selectionColor;
-        ctx.lineWidth = strokeW * 1.5 / cam.scale;
+        ctx.lineWidth = strokeW * 1.5;
         ctx.stroke();
       }
     }
