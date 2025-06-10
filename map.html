@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Diamond-Tile Map – Isolated Grid & Building Footprints</title>
+  <title>Kingshot map editor & planner</title>
 <style>
     body {
       margin:0; background:#111; overflow:hidden;
@@ -61,10 +61,10 @@
     <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
     <button id="zoomInc">+</button>
     <div id="presetButtons">
-      <button data-zoom="25">25%</button>
-      <button data-zoom="50">50%</button>
-      <button data-zoom="75">75%</button>
-      <button data-zoom="100">100%</button>
+        <button data-zoom="Fit">Fit</button>
+        <button data-zoom="50">50%</button>
+        <button data-zoom="75">75%</button>
+        <button data-zoom="100">100%</button>
     </div>
     <div id="centerTile">Center: X0 Y0</div>
     <button id="infoBtn" title="Show controls">ℹ️</button>
@@ -97,7 +97,6 @@
         borderColor = '#000',
         textColor   = '#fff',
         detailScale = 2.5,
-        minPct      = 1,
         maxPct      = 1000,
         selectionColor = '#ff0';
   // ——————————
@@ -147,7 +146,7 @@
     .then(d=>{
       baseMap = d;
       preProcessBuildings();
-      render();
+      resize();
     })
     .catch(e=>{ console.error(e); alert('BaseMap load error'); });
   
@@ -159,9 +158,10 @@
       tileCount = 0,
       lastFPS = 0,
       lastTiles = 0;
-  
-  // --- MODIFIED --- The selection can now be a single tile OR a whole building object.
   let selection = null; 
+
+  // --- NEW --- This variable will hold our calculated minimum scale.
+  let minFitScale = 0.01; 
 
   // coord transforms
   function worldToScreen(x,y) {
@@ -342,19 +342,56 @@
     }
   }
 
+  // --- NEW --- A dedicated function to center the map and fit it to the screen.
+  function zoomToFit() {
+    cam.scale = minFitScale;
+    // Center the camera on the world origin (0,0)
+    cam.x = canvas.width / 2;
+    cam.y = canvas.height / 2;
+    clampCamera(); // Run clamp just in case of unusual aspect ratios
+    render();
+  }
+
   // resize & initial center
+  // --- MODIFIED --- This function now correctly calculates the fit-to-screen scale.
   function resize() {
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
-    cam.x = canvas.width*0.5;
-    cam.y = canvas.height - tileH/2 - strokeW;
-    clampCamera(); render();
+
+    // 1. Calculate the total screen dimensions of the entire map.
+    // The map's total width is N*tileW, and height is N*tileH.
+    const mapTotalWidth = N * tileW;
+    const mapTotalHeight = N * tileH;
+    
+    // 2. Calculate the scale required to fit width and height separately.
+    const scaleX = canvas.width / mapTotalWidth;
+    const scaleY = canvas.height / mapTotalHeight;
+
+    // 3. The true "fit" scale is the SMALLER of the two, with some padding.
+    const padding = 0.95; // Use 95% of the screen space
+    minFitScale = Math.min(scaleX, scaleY) * padding;
+    
+    // 4. On the very first load, or if resizing makes the current view too big, zoom to fit.
+    if (cam.scale === 1 || cam.scale < minFitScale) {
+        zoomToFit();
+    } else {
+        // Otherwise, just re-render with the current settings.
+        clampCamera();
+        render();
+    }
   }
   window.addEventListener('resize', resize);
-  resize();
+  // --- We no longer call resize() here, it will be called by the `fetch.then` block ---
 
   function clampCamera() {
     const s = cam.scale;
+    // --- MODIFIED --- Clamping is now more robust.
+    // At minimum scale, the camera must be centered.
+    if (s <= minFitScale) {
+        cam.x = canvas.width / 2;
+        cam.y = canvas.height / 2;
+        return;
+    }
     const halfW = N*(tileW/2)*s, fullH = N*tileH*s;
     cam.x = Math.min(halfW, Math.max(canvas.width-halfW, cam.x));
     cam.y = Math.min(fullH, Math.max(canvas.height,       cam.y));
@@ -472,6 +509,7 @@
   // --- All event handlers below remain unchanged ---
 
   // wheel zoom
+  // --- MODIFIED --- Now uses the dynamic `minFitScale`.
   canvas.addEventListener('wheel', e=>{
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.1 : 0.9;
@@ -479,7 +517,9 @@
     const wx = (mx - cam.x)/cam.scale,
           wy = (my - cam.y)/cam.scale;
     cam.scale *= factor;
-    cam.scale = Math.max(minPct/100, Math.min(maxPct/100, cam.scale));
+    // --- FIX --- Use the calculated minFitScale instead of the old minPct.
+    cam.scale = Math.max(minFitScale,
+      Math.min(maxPct/100, cam.scale));
     cam.x = mx - wx * cam.scale;
     cam.y = my - wy * cam.scale;
     clampCamera();
@@ -508,6 +548,7 @@
   }
 
   // double-click zoom
+  // --- MODIFIED --- Now uses the dynamic `minFitScale`.
   canvas.addEventListener('dblclick', e=>{
     e.preventDefault();
     const curPct = Math.round(cam.scale*100);
@@ -517,9 +558,11 @@
     } else { 
       targetPct = (cam.scale < detailScale) ? curPct + 75 : Math.round(curPct * 1.75);
     }
-    targetPct = Math.max(minPct, Math.min(maxPct, targetPct));
-    animateZoom(targetPct/100, e.offsetX, e.offsetY);
+    const targetScale = targetPct / 100;
+    // --- FIX --- Use the calculated minFitScale instead of the old minPct.
+    animateZoom(Math.max(minFitScale, Math.min(maxPct / 100, targetScale)), e.offsetX, e.offsetY);
   });
+
   // suppress context menu
   canvas.addEventListener('contextmenu', e=>e.preventDefault());
 
@@ -528,8 +571,8 @@
     const cx = canvas.width/2, cy = canvas.height/2;
     const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
     let pct = Number(zoomSlider.value);
-    pct = Math.max(minPct, Math.min(maxPct, pct));
-    cam.scale = pct / 100;
+    const targetScale = pct / 100;
+    cam.scale = Math.max(minFitScale, Math.min(maxPct / 100, targetScale));
     cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
     clampCamera(); render();
   });
@@ -539,8 +582,8 @@
     const cx = canvas.width/2, cy = canvas.height/2;
     const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
     let pct = Math.round(cam.scale*100) + delta;
-    pct = Math.max(minPct, Math.min(maxPct, pct));
-    cam.scale = pct / 100;
+    const targetScale = pct / 100;
+    cam.scale = Math.max(minFitScale, Math.min(maxPct / 100, targetScale));
     cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
     clampCamera(); render();
   }
@@ -548,13 +591,22 @@
   zoomIncBtn.addEventListener('click', ()=>changeZoomBy(+1));
 
   // preset buttons
+  // --- MODIFIED --- The first button is now a "Fit" button.
   presetBtns.forEach(b => {
+    const zoomVal = b.dataset.zoom;
+    // --- NEW --- Add a special case for our fit button.
+    if (zoomVal === 'Fit') {
+        b.textContent = 'Fit'; // Change the button's text
+        b.addEventListener('click', zoomToFit);
+        return; // Skip the rest of the logic for this button
+    }
+
     b.addEventListener('click', () => {
         const cx = canvas.width/2, cy = canvas.height/2;
         const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
-        let pct = Number(b.dataset.zoom);
-        pct = Math.max(minPct, Math.min(maxPct, pct));
-        cam.scale = pct / 100;
+        let pct = Number(zoomVal);
+        const targetScale = pct / 100;
+        cam.scale = Math.max(minFitScale, Math.min(maxPct / 100, targetScale));
         cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
         clampCamera(); render();
     });
