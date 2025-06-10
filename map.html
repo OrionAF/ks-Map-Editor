@@ -94,7 +94,6 @@
         strokeW     = 1,
         borderColor = '#000',
         textColor   = '#fff',
-        detailScale = 7.5,
         maxPct      = 1000,
         selectionColor = '#ff0';
   
@@ -133,6 +132,8 @@
   // data layers
   let baseMap = { unoccupiableTiles:[], defaultBuildings:[] };
   const buildingMap = new Map();
+  // NEW: A data structure to hold our pre-calculated chunks
+  const chunkLevels = []; 
 
   function preProcessBuildings() {
     buildingMap.clear();
@@ -147,11 +148,49 @@
     }
   }
 
+  // NEW: Pre-calculates all chunk levels for a symmetrical, performant zoomed-out view
+  function preCalculateChunks() {
+    const numLevels = 6;
+    for (let level = 0; level < numLevels; level++) {
+      const chunkSize = Math.pow(2, level + 1);
+      const levelMap = new Map();
+      
+      for (let x = 0; x < N; x += chunkSize) {
+        for (let y = 0; y < N; y += chunkSize) {
+          // Sample 5 points to find the dominant biome for the chunk
+          const samples = [
+            getBiomeForTile(x, y), // top-left
+            getBiomeForTile(x + chunkSize - 1, y), // top-right
+            getBiomeForTile(x, y + chunkSize - 1), // bottom-left
+            getBiomeForTile(x + chunkSize - 1, y + chunkSize - 1), // bottom-right
+            getBiomeForTile(x + chunkSize / 2, y + chunkSize / 2) // center
+          ];
+          
+          const counts = {};
+          let maxCount = 0;
+          let dominantBiome = samples[0];
+          for (const biome of samples) {
+            counts[biome] = (counts[biome] || 0) + 1;
+            if (counts[biome] > maxCount) {
+              maxCount = counts[biome];
+              dominantBiome = biome;
+            }
+          }
+          
+          levelMap.set(`${x},${y}`, { x, y, size: chunkSize, biome: dominantBiome });
+        }
+      }
+      chunkLevels.push(levelMap);
+    }
+  }
+
+
   fetch('baseMap.json')
     .then(r=>r.ok? r.json(): Promise.reject(r.status))
     .then(d=>{
       Object.assign(baseMap, d);
       preProcessBuildings();
+      preCalculateChunks(); // Calculate chunks after loading map
       resize();
     })
     .catch(e=>{ console.error(e); alert('BaseMap load error'); });
@@ -245,22 +284,25 @@
     ctx.fillText(text, sx, sy);
   }
 
-  function drawMergedTile(x, y, size) {
-    tileCount += size * size;
-    const x0 = x, y0 = y, w = size, h = size;
-    const rightTile  = { x: x0 + w - 1, y: y0 };
-    const topTile    = { x: x0 + w - 1, y: y0 + h - 1 };
-    const leftTile   = { x: x0,         y: y0 + h - 1 };
+  // NEW: Draws a single pre-calculated chunk
+  function drawChunk(chunk) {
+    tileCount += chunk.size * chunk.size;
+    const { x, y, size, biome } = chunk;
 
-    const [sbx, sby] = worldToScreen(x0, y0);
+    const [sx, sy] = worldToScreen(x, y);
+    
+    const rightTile  = { x: x + size - 1, y: y };
+    const topTile    = { x: x + size - 1, y: y + size - 1 };
+    const leftTile   = { x: x,            y: y + size - 1 };
+
     const [srx, sry] = worldToScreen(rightTile.x, rightTile.y);
     const [stx, sty] = worldToScreen(topTile.x, topTile.y);
     const [slx, sly] = worldToScreen(leftTile.x, leftTile.y);
 
-    const p_bottom = { x: sbx,             y: sby + tileH/2 };
-    const p_right  = { x: srx + tileW/2,   y: sry };
-    const p_top    = { x: stx,             y: sty - tileH/2 };
-    const p_left   = { x: slx - tileW/2,   y: sly };
+    const p_bottom = { x: sx,              y: sy + tileH / 2 };
+    const p_right  = { x: srx + tileW / 2, y: sry };
+    const p_top    = { x: stx,             y: sty - tileH / 2 };
+    const p_left   = { x: slx - tileW / 2, y: sly };
 
     ctx.beginPath();
     ctx.moveTo(p_bottom.x, p_bottom.y);
@@ -269,41 +311,14 @@
     ctx.lineTo(p_left.x,   p_left.y);
     ctx.closePath();
 
-    // MODIFIED: Sample the center of the merged block for a more accurate color
-    const centerX = x + size / 2;
-    const centerY = y + size / 2;
-    const biome = getBiomeForTile(centerX, centerY);
     ctx.fillStyle = biomeColors[biome];
     ctx.fill();
-    
+
     ctx.strokeStyle = borderColor;
-    ctx.lineWidth = strokeW / (size / 2); 
+    ctx.lineWidth = strokeW / (size / 2);
     ctx.stroke();
   }
 
-  function drawGrid(groupSize) {
-    const halfH = tileH/2, s = cam.scale, H = canvas.height;
-    const maxCoord = N - 1;
-    const sumMin = Math.max(0, Math.floor((cam.y - H - halfH*s)/(s*halfH)));
-    const sumMax = Math.min(2 * maxCoord, Math.ceil((cam.y + halfH*s)/(s*halfH)));
-    
-    for (let sum = sumMin; sum <= sumMax; sum++) {
-      const sx = Math.max(0, sum - maxCoord), ex = Math.min(sum, maxCoord);
-      for (let x = sx; x <= ex; x++) {
-        const y = sum - x;
-        
-        if (!getBuildingAt(x, y)) {
-            if (groupSize === 1) {
-              drawTile(x, y);
-            } else {
-              if (x % groupSize === 0 && y % groupSize === 0) {
-                drawMergedTile(x, y, groupSize);
-              }
-            }
-        }
-      }
-    }
-  }
 
   function drawBuildingFootprint(b, highlightStyle = null) {
     const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
@@ -493,10 +508,11 @@
     e.preventDefault();
     const curPct = Math.round((cam.scale / baseScale) * 100);
     let targetPct;
+    // Note: The `detailScale` constant is no longer used for this, but the logic can remain.
     if (e.button === 2) { 
-      targetPct = (cam.scale >= detailScale) ? Math.round(curPct / 1.75) : curPct - 75;
+      targetPct = curPct - 75;
     } else { 
-      targetPct = (cam.scale < detailScale) ? curPct + 75 : Math.round(curPct * 1.75);
+      targetPct = curPct + 75;
     }
     const targetScale = (targetPct / 100) * baseScale;
     animateZoom(Math.max(minFitScale, Math.min(maxPct / 100 * baseScale, targetScale)), e.offsetX, e.offsetY);
@@ -618,6 +634,17 @@
   canvas.addEventListener('touchend', e=>{
     if (e.touches.length<2) touchMode = null;
   });
+  
+  // NEW: Determines which chunk level to render based on user-defined zoom percentages
+  function getChunkLevelForZoom(pct) {
+    if (pct <= 3) return 5;  // Level 6 (index 5)
+    if (pct <= 7) return 4;  // Level 5 (index 4)
+    if (pct <= 15) return 3; // Level 4 (index 3)
+    if (pct <= 30) return 2; // Level 3 (index 2)
+    if (pct <= 60) return 1; // Level 2 (index 1)
+    if (pct <= 80) return 0; // Level 1 (index 0)
+    return -1; // Render individual tiles
+  }
 
   function mainLoop(now) {
     ctx.setTransform(1,0,0,1,0,0);
@@ -630,15 +657,35 @@
     zoomLevelEl.textContent = `Zoom: ${pct}%`;
     zoomSlider.value = Math.min(pct, zoomSlider.max);
     
-    const ratio = detailScale/cam.scale;
-    const groupSize = Math.max(1, Math.floor(ratio));
-    
     tileCount = 0;
 
     ctx.save();
     ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
-
-    drawGrid(groupSize);
+    
+    // MODIFIED: Complete rendering logic overhaul for chunking
+    const chunkLevel = getChunkLevelForZoom(pct);
+    
+    if (chunkLevel === -1) {
+      // High zoom: Draw individual tiles
+      const maxCoord = N - 1;
+      const s = cam.scale, H = canvas.height;
+      const sumMin = Math.max(0, Math.floor((cam.y - H - tileH/2*s)/(s*tileH/2)));
+      const sumMax = Math.min(2 * maxCoord, Math.ceil((cam.y + H + tileH/2*s)/(s*tileH/2)));
+      for (let sum = sumMin; sum <= sumMax; sum++) {
+        const sx = Math.max(0, sum - maxCoord), ex = Math.min(sum, maxCoord);
+        for (let x = sx; x <= ex; x++) {
+            const y = sum - x;
+            if (!getBuildingAt(x, y)) drawTile(x, y);
+        }
+      }
+    } else {
+      // Low zoom: Draw pre-calculated chunks
+      const chunksToDraw = chunkLevels[chunkLevel];
+      for (const chunk of chunksToDraw.values()) {
+        // Basic culling could be added here for max performance, but for now we draw all
+        drawChunk(chunk);
+      }
+    }
 
     ctx.fillStyle = '#444';
     baseMap.unoccupiableTiles.forEach(([x,y])=>{
