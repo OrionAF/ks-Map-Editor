@@ -364,8 +364,9 @@
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const mapTotalWidth = N * tileW;
-    const mapTotalHeight = N * tileH;
+    // --- BUG FIX --- Correctly use (N-1) for the span of an N-tile grid.
+    const mapTotalWidth = (N - 1) * tileW;
+    const mapTotalHeight = (N - 1) * tileH;
     
     const scaleX = canvas.width / mapTotalWidth;
     const scaleY = canvas.height / mapTotalHeight;
