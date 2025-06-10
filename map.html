@@ -89,7 +89,6 @@
 
 <script>
 // —— CONFIG ——
-  // --- FIX 1: Revert to original map size ---
   const N           = 1200,
         tileW       = 10, tileH = 10,
         strokeW     = 1,
@@ -106,10 +105,9 @@
     badlands: 'rgb(191, 208, 152)'
   };
   
-  // --- FIX 2: Align biome boundaries to be multiples of 16 ---
   const biomeRegions = {
-      fertile:  { x1: 480, y1: 480, x2: 719, y2: 719 }, // 240x240 region (15*16)
-      plains:   { x1: 320, y1: 320, x2: 879, y2: 879 }, // 560x560 region (35*16)
+      fertile:  { x1: 480, y1: 480, x2: 719, y2: 719 },
+      plains:   { x1: 320, y1: 320, x2: 879, y2: 879 },
       badlands: { x1: 0,   y1: 0,   x2: 1199,y2: 1199}
   };
   // ——————————
@@ -155,9 +153,8 @@
     }
   }
 
-  // --- FIX 3: Use only compatible chunk levels (up to 16x16) ---
   function preCalculateChunks() {
-    const numLevels = 4; // Levels 0-3 for chunk sizes 2, 4, 8, 16
+    const numLevels = 4;
     for (let level = 0; level < numLevels; level++) {
       const chunkSize = Math.pow(2, level + 1);
       const levelMap = new Map();
@@ -359,10 +356,10 @@
     cam.y = canvas.height*0.5 - ly*cam.scale;
   }
   
+  // --- FIX 1: Simplify zoomToFit to use the robust clampCamera function ---
   function zoomToFit() {
     cam.scale = minFitScale;
-    const mapCenter = (N - 1) / 2;
-    centerOn(mapCenter, mapCenter);
+    clampCamera();
   }
 
   function resize() {
@@ -386,27 +383,36 @@
   }
   window.addEventListener('resize', resize);
 
+  // --- FIX 2: Re-implement camera clamping with simple, robust math ---
   function clampCamera() {
     const s = cam.scale;
-    const mapScreenWidth = (N - 1) * tileW * s;
-    const mapScreenHeight = (N - 1) * tileH * s;
-    
-    const mapCenter = (N - 1) / 2;
-    const [mapCenterX_screen, mapCenterY_screen] = worldToScreen(mapCenter, mapCenter);
+    // The map's total screen dimensions before scaling
+    const mapTotalWidth = (N - 1) * tileW;
+    const mapTotalHeight = (N - 1) * tileH;
+    // The map's total screen dimensions after scaling
+    const mapScaledWidth = mapTotalWidth * s;
+    const mapScaledHeight = mapTotalHeight * s;
 
-    if (mapScreenWidth < canvas.width) {
-      cam.x = canvas.width / 2 - mapCenterX_screen * s;
+    // Horizontal Clamping
+    if (mapScaledWidth < canvas.width) {
+      // Center the map horizontally if it's smaller than the canvas
+      cam.x = canvas.width / 2;
     } else {
-      const worldEdgeX = mapScreenWidth / 2;
-      cam.x = Math.max(canvas.width - worldEdgeX, Math.min(worldEdgeX, cam.x));
+      // The map's un-transformed bounding box is horizontally centered around 0.
+      const minCamX = canvas.width - (mapScaledWidth / 2);
+      const maxCamX = mapScaledWidth / 2;
+      cam.x = Math.max(minCamX, Math.min(maxCamX, cam.x));
     }
 
-    if (mapScreenHeight < canvas.height) {
-      cam.y = canvas.height / 2 - mapCenterY_screen * s;
+    // Vertical Clamping
+    if (mapScaledHeight < canvas.height) {
+      // Center the map vertically. The map's Y-bounds are [-h, 0], so we adjust.
+      cam.y = (canvas.height / 2) + (mapScaledHeight / 2);
     } else {
-      const worldTopEdgeY = mapCenterY_screen * s - mapScreenHeight / 2;
-      const worldBottomEdgeY = mapCenterY_screen * s + mapScreenHeight / 2;
-      cam.y = Math.max(canvas.height - worldBottomEdgeY, Math.min(-worldTopEdgeY, cam.y));
+      // The map's un-transformed Y-bounds are [-mapTotalHeight, 0].
+      const minCamY = canvas.height;
+      const maxCamY = mapScaledHeight;
+      cam.y = Math.max(minCamY, Math.min(maxCamY, cam.y));
     }
   }
 
@@ -616,13 +622,12 @@
     if (e.touches.length<2) touchMode = null;
   });
   
-  // --- FIX 4: Rebalance zoom levels for the 4 chunk levels ---
   function getChunkLevelForZoom(pct) {
-    if (pct <= 10) return 3; // 16x16 chunks
-    if (pct <= 20) return 2; // 8x8 chunks
-    if (pct <= 40) return 1; // 4x4 chunks
-    if (pct <= 80) return 0; // 2x2 chunks
-    return -1; // individual tiles
+    if (pct <= 10) return 3;
+    if (pct <= 20) return 2;
+    if (pct <= 40) return 1;
+    if (pct <= 80) return 0;
+    return -1;
   }
 
   function mainLoop(now) {
