@@ -156,7 +156,7 @@
       badlands: { x1: 0,   y1: 0,   x2: 1199,y2: 1199}
     };
 
-    // Helper function to calculate the intersection area of two rectangles
+    // Helper function to calculate the intersection area of two inclusive rectangles
     function getIntersectionArea(rect1, rect2) {
       const x_overlap = Math.max(0, Math.min(rect1.x2, rect2.x2) - Math.max(rect1.x1, rect2.x1) + 1);
       const y_overlap = Math.max(0, Math.min(rect1.y2, rect2.y2) - Math.max(rect1.y1, rect2.y1) + 1);
@@ -170,7 +170,8 @@
       
       for (let x = 0; x < N; x += chunkSize) {
         for (let y = 0; y < N; y += chunkSize) {
-          const chunkRect = { x1: x, y1: y, x2: x + chunkSize, y2: y + chunkSize };
+          // --- FIX 1: Correctly define the chunk's area (inclusive) ---
+          const chunkRect = { x1: x, y1: y, x2: x + chunkSize - 1, y2: y + chunkSize - 1 };
           
           // Calculate how much of the chunk is covered by each biome
           const areas = {
@@ -305,37 +306,31 @@
     ctx.fillText(text, sx, sy);
   }
 
+  // --- FIX 2: Rewrite chunk drawing logic for a seamless grid ---
   function drawChunk(chunk) {
     tileCount += chunk.size * chunk.size;
     const { x, y, size, biome } = chunk;
 
-    const [sx, sy] = worldToScreen(x, y);
-    
-    const rightTile  = { x: x + size - 1, y: y };
-    const topTile    = { x: x + size - 1, y: y + size - 1 };
-    const leftTile   = { x: x,            y: y + size - 1 };
+    // Define the 4 corner points of the chunk's abstract grid region.
+    const [p_bottom_x, p_bottom_y] = worldToScreen(x, y);
+    const [p_right_x, p_right_y]   = worldToScreen(x + size, y);
+    const [p_top_x, p_top_y]       = worldToScreen(x + size, y + size);
+    const [p_left_x, p_left_y]    = worldToScreen(x, y + size);
 
-    const [srx, sry] = worldToScreen(rightTile.x, rightTile.y);
-    const [stx, sty] = worldToScreen(topTile.x, topTile.y);
-    const [slx, sly] = worldToScreen(leftTile.x, leftTile.y);
-
-    const p_bottom = { x: sx,              y: sy + tileH / 2 };
-    const p_right  = { x: srx + tileW / 2, y: sry };
-    const p_top    = { x: stx,             y: sty - tileH / 2 };
-    const p_left   = { x: slx - tileW / 2, y: sly };
-
+    // This method ensures that adjacent chunks share the exact same calculated
+    // vertex coordinates, creating a seamless grid without gaps or overlaps.
     ctx.beginPath();
-    ctx.moveTo(p_bottom.x, p_bottom.y);
-    ctx.lineTo(p_right.x,  p_right.y);
-    ctx.lineTo(p_top.x,    p_top.y);
-    ctx.lineTo(p_left.x,   p_left.y);
+    ctx.moveTo(p_bottom_x, p_bottom_y);
+    ctx.lineTo(p_right_x,  p_right_y);
+    ctx.lineTo(p_top_x,    p_top_y);
+    ctx.lineTo(p_left_x,   p_left_y);
     ctx.closePath();
 
     ctx.fillStyle = biomeColors[biome];
     ctx.fill();
 
     ctx.strokeStyle = borderColor;
-    ctx.lineWidth = strokeW / (size / 2);
+    ctx.lineWidth = strokeW;
     ctx.stroke();
   }
 
