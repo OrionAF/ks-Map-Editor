@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Diamond-Tile Map – Isolated Grid & Building Footprints</title>
+  <style>
+    body {
+      margin:0; background:#111; overflow:hidden;
+      -webkit-user-select:none; user-select:none;
+    }
+    canvas { display:block; cursor:grab; }
+    canvas:active { cursor:grabbing; }
+
+    /* UI Container */
+    #searchBox {
+      position:absolute; top:10px; left:10px; z-index:10;
+      color:#fff; font-family:sans-serif;
+      background:rgba(0,0,0,0.6); padding:8px; border-radius:4px;
+    }
+    #searchBox input { width:60px; }
+    #searchBox input[type=range] {
+      width:180px; vertical-align:middle; margin:0 6px;
+    }
+    #searchBox button {
+      margin:2px 4px 2px 0;
+      -webkit-user-select:none; user-select:none;
+    }
+    #zoomLevel, #centerTile {
+      margin-top:4px; font-size:14px;
+      -webkit-user-select:none; user-select:none;
+    }
+
+    /* Info & Stats panels */
+    #infoBtn, #statsBtn {
+      margin-top:6px; -webkit-user-select:none; user-select:none;
+    }
+    #infoPanel, #statsPanel {
+      max-height:0; overflow:hidden;
+      transition:max-height 0.3s ease;
+      margin-top:6px;
+      background:rgba(58,55,55,0.85);
+      padding:0 6px; border-radius:4px;
+      font-size:13px; color:#ddd;
+    }
+    #infoPanel.open, #statsPanel.open { max-height:120px; }
+    #infoPanel h4 { margin:6px 0 4px; color:#fff; }
+    #infoPanel ul { padding-left:16px; margin:0 }
+    #infoPanel li { margin-bottom:4px; }
+    #statsPanel div { margin:4px 0; color:#fff; }
+  </style>
+</head>
+<body>
+  <div id="searchBox">
+    X: <input id="inpX" type="number" min="0" max="1201" value="0">
+    Y: <input id="inpY" type="number" min="0" max="1201" value="0">
+    <button id="btnGo">Go</button>
+    <div id="zoomLevel">Zoom: 100%</div>
+    <button id="zoomDec">−</button>
+    <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
+    <button id="zoomInc">+</button>
+    <div id="presetButtons">
+      <button data-zoom="25">25%</button>
+      <button data-zoom="50">50%</button>
+      <button data-zoom="75">75%</button>
+      <button data-zoom="100">100%</button>
+    </div>
+    <div id="centerTile">Center: X0 Y0</div>
+    <button id="infoBtn" title="Show controls">ℹ️</button>
+    <div id="infoPanel">
+      <h4>Controls</h4>
+      <ul>
+        <li><strong>Pan</strong>: drag / one-finger touch</li>
+        <li><strong>Zoom</strong>: wheel, slider, +/–, q/e, dblclick</li>
+        <li><strong>Zoom out</strong>: right-dblclick</li>
+        <li><strong>Pinch</strong>: two-finger touch</li>
+        <li><strong>Keyboard</strong>: arrows to pan</li>
+        <li><strong>Search</strong>: enter X/Y then Go (zooms to 150%)</li>
+      </ul>
+    </div>
+    <button id="statsBtn" title="Toggle stats">⚙️</button>
+    <div id="statsPanel">
+      <div id="statsFPS">FPS: –</div>
+      <div id="statsTiles">Tiles: –</div>
+    </div>
+  </div>
+
+  <canvas id="map"></canvas>
+
+  <script>
+  // —— CONFIG —— 
+  const N           = 1201,
+        tileW       = 80, tileH = 80,
+        strokeW     = 2,
+        fillColor   = '#333',
+        borderColor = '#000',
+        textColor   = '#fff',
+        fontSize    = 10,
+        detailScale = 0.5,
+        minPct      = 1,
+        maxPct      = 1000,
+        selectionColor = '#ff0'; 
+  // ——————————
+
+  // DOM refs
+  const canvas       = document.getElementById('map');
+  const ctx          = canvas.getContext('2d');
+  const inpX         = document.getElementById('inpX');
+  const inpY         = document.getElementById('inpY');
+  const btnGo        = document.getElementById('btnGo');
+  const zoomLevelEl  = document.getElementById('zoomLevel');
+  const zoomDecBtn   = document.getElementById('zoomDec');
+  const zoomIncBtn   = document.getElementById('zoomInc');
+  const zoomSlider   = document.getElementById('zoomSlider');
+  const presetBtns   = document.querySelectorAll('#presetButtons button');
+  const centerTileEl = document.getElementById('centerTile');
+  const infoBtn      = document.getElementById('infoBtn');
+  const infoPanel    = document.getElementById('infoPanel');
+  const statsBtn     = document.getElementById('statsBtn');
+  const statsPanel   = document.getElementById('statsPanel');
+  const statsFPSEl   = document.getElementById('statsFPS');
+  const statsTilesEl = document.getElementById('statsTiles');
+
+  // toggle panels
+  infoBtn.addEventListener('click', ()=>infoPanel.classList.toggle('open'));
+  statsBtn.addEventListener('click', ()=>statsPanel.classList.toggle('open'));
+
+  // data layers
+  let baseMap = { unoccupiableTiles:[], defaultBuildings:[] };
+  fetch('baseMap.json')
+    .then(r=>r.ok? r.json(): Promise.reject(r.status))
+    .then(d=>{ baseMap = d; render(); })
+    .catch(e=>{ console.error(e); alert('BaseMap load error'); });
+
+  let userBuildings = [];
+
+  // camera + stats state …
+  const cam = { x:0, y:0, scale:1 };
+  let lastFrame = performance.now(),
+      tileCount = 0,
+      lastFPS = 0,
+      lastTiles = 0;
+  let selectedTile = null;
+
+  // coord transforms
+  function worldToScreen(x,y) {
+    return [(x - y)*(tileW/2), -(x + y)*(tileH/2)];
+  }
+  function screenToWorld(sx,sy) {
+    const lx = (sx - cam.x)/cam.scale,
+          ly = (sy - cam.y)/cam.scale,
+          u  = lx/(tileW/2),
+          v  = -ly/(tileH/2);
+    const x = Math.round((u+v)/2),
+          y = Math.round((v-u)/2);
+    return [x,y];
+  }
+
+  // --- 1) GRID DRAWING (runs every render) ---
+  function drawTile(x,y) {
+    tileCount++; // Counting one tile drawn
+    const [sx,sy] = worldToScreen(x,y);
+    ctx.beginPath();
+    ctx.moveTo(   sx,        sy - tileH/2);
+    ctx.lineTo(sx + tileW/2, sy      );
+    ctx.lineTo(   sx,        sy + tileH/2);
+    ctx.lineTo(sx - tileW/2, sy      );
+    ctx.closePath();
+    ctx.fillStyle   = fillColor; ctx.fill();
+    ctx.strokeStyle = borderColor; ctx.lineWidth = strokeW; ctx.stroke();
+
+    // Only draw text if zoom level is high enough to read it
+    if (cam.scale > 0.7) { 
+      ctx.fillStyle = textColor;
+      ctx.font = `${fontSize}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`X${x}, Y${y}`, sx, sy);
+    }
+  }
+
+  // --- NEW --- Draws a large, merged tile for performance when zoomed out
+  function drawMergedTile(x, y, size) {
+    tileCount += size * size; // Counting all represented tiles
+    // This logic is identical to drawBuildingFootprint but without a stroke
+    const x0 = x, y0 = y, w = size, h = size;
+    const rightTile  = { x: x0 + w - 1, y: y0 };
+    const topTile    = { x: x0 + w - 1, y: y0 + h - 1 };
+    const leftTile   = { x: x0,         y: y0 + h - 1 };
+
+    const [sbx, sby] = worldToScreen(x0, y0);
+    const [srx, sry] = worldToScreen(rightTile.x, rightTile.y);
+    const [stx, sty] = worldToScreen(topTile.x, topTile.y);
+    const [slx, sly] = worldToScreen(leftTile.x, leftTile.y);
+
+    const p_bottom = { x: sbx,             y: sby + tileH/2 };
+    const p_right  = { x: srx + tileW/2,   y: sry };
+    const p_top    = { x: stx,             y: sty - tileH/2 };
+    const p_left   = { x: slx - tileW/2,   y: sly };
+
+    ctx.beginPath();
+    ctx.moveTo(p_bottom.x, p_bottom.y);
+    ctx.lineTo(p_right.x,  p_right.y);
+    ctx.lineTo(p_top.x,    p_top.y);
+    ctx.lineTo(p_left.x,   p_left.y);
+    ctx.closePath();
+    ctx.fillStyle = fillColor; // Use the standard tile fill color
+    ctx.fill();
+  }
+
+
+  // --- MODIFIED --- This function now acts as the LOD manager
+  function drawGrid(groupSize) {
+    const halfH = tileH/2, s = cam.scale, H = canvas.height;
+    const sumMin = Math.max(0, Math.floor((cam.y - H - halfH*s)/(s*halfH)));
+    const sumMax = Math.min(2*N, Math.ceil((cam.y + halfH*s)/(s*halfH)));
+    
+    for (let sum = sumMin; sum <= sumMax; sum++) {
+      const sx = Math.max(0, sum-N),
+            ex = Math.min(sum, N);
+
+      for (let x = sx; x <= ex; x++) {
+        const y = sum - x;
+
+        if (groupSize === 1) {
+          // High detail: draw individual tiles with borders and text
+          drawTile(x, y);
+        } else {
+          // Low detail: draw merged tiles, only from the group's anchor point
+          if (x % groupSize === 0 && y % groupSize === 0) {
+            drawMergedTile(x, y, groupSize);
+          }
+        }
+      }
+    }
+  }
+
+  // --- 2) BUILDING FOOTPRINT DRAWING ---
+  function drawBuildingFootprint(b, style) {
+    // ... (This function remains unchanged)
+    const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
+    const bottomTile = { x: x0,       y: y0 };
+    const rightTile  = { x: x0 + w - 1, y: y0 };
+    const topTile    = { x: x0 + w - 1, y: y0 + h - 1 };
+    const leftTile   = { x: x0,       y: y0 + h - 1 };
+    const [sbx, sby] = worldToScreen(bottomTile.x, bottomTile.y);
+    const [srx, sry] = worldToScreen(rightTile.x, rightTile.y);
+    const [stx, sty] = worldToScreen(topTile.x, topTile.y);
+    const [slx, sly] = worldToScreen(leftTile.x, leftTile.y);
+    const p_bottom = { x: sbx, y: sby + tileH/2 };
+    const p_right  = { x: srx + tileW/2, y: sry };
+    const p_top    = { x: stx, y: sty - tileH/2 };
+    const p_left   = { x: slx - tileW/2, y: sly };
+    ctx.beginPath();
+    ctx.moveTo(p_bottom.x, p_bottom.y);
+    ctx.lineTo(p_right.x,  p_right.y);
+    ctx.lineTo(p_top.x,    p_top.y);
+    ctx.lineTo(p_left.x,   p_left.y);
+    ctx.closePath();
+    ctx.fillStyle = style; ctx.fill();
+    ctx.strokeStyle = style; ctx.stroke();
+  }
+
+  // resize & initial center
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    cam.x = canvas.width*0.5;
+    cam.y = canvas.height - tileH/2 - strokeW;
+    clampCamera(); render();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function clampCamera() {
+    const s = cam.scale;
+    const halfW = N*(tileW/2)*s, fullH = N*tileH*s;
+    cam.x = Math.min(halfW, Math.max(canvas.width-halfW, cam.x));
+    cam.y = Math.min(fullH, Math.max(canvas.height,       cam.y));
+  }
+
+  // --- RENDER LOOP (on-demand) ---
+  function render() {
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const [centerX, centerY] = screenToWorld(canvas.width/2, canvas.height/2);
+    centerTileEl.textContent = `Center: X${centerX} Y${centerY}`;
+
+    const pct = Math.round(cam.scale*100);
+    zoomLevelEl.textContent = `Zoom: ${pct}%`;
+    zoomSlider.value = Math.min(pct, zoomSlider.max);
+
+    // --- MODIFIED --- This calculation is now critical
+    // compute LOD
+    const ratio = detailScale/cam.scale;
+    const power = Math.max(0,Math.floor(Math.log2(ratio)));
+    const groupSize = Math.pow(2,power);
+
+    tileCount = 0; // Reset tile count for this frame
+    ctx.save();
+    ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
+
+    // 1) draw grid (using the LOD groupSize)
+    drawGrid(groupSize);
+
+    // 2) draw unoccupiable water
+    ctx.fillStyle = 'rgba(0,0,255,0.3)';
+    baseMap.unoccupiableTiles.forEach(([x,y])=>{
+      const [sx,sy] = worldToScreen(x,y);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - tileH/2);
+      ctx.lineTo(sx + tileW/2, sy);
+      ctx.lineTo(sx, sy + tileH/2);
+      ctx.lineTo(sx - tileW/2, sy);
+      ctx.closePath();
+      ctx.fill();
+    });
+
+    // 3) draw default buildings
+    baseMap.defaultBuildings.forEach(b=>
+      drawBuildingFootprint(b,'rgba(0,255,0,0.3)')
+    );
+
+    // 4) draw user buildings
+    userBuildings.forEach(b=>
+      drawBuildingFootprint(b,'rgba(255,255,0,0.5)')
+    );
+
+    // 5) Draw highlight for the selected tile
+    if (selectedTile) {
+      const [sx, sy] = worldToScreen(selectedTile.x, selectedTile.y);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - tileH/2);
+      ctx.lineTo(sx + tileW/2, sy);
+      ctx.lineTo(sx, sy + tileH/2);
+      ctx.lineTo(sx - tileW/2, sy);
+      ctx.closePath();
+      ctx.strokeStyle = selectionColor;
+      ctx.lineWidth = strokeW * 1.5;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
+    // stats capture
+    const now = performance.now(),
+          dt  = now - lastFrame;
+    lastFrame = now;
+    lastFPS   = Math.round(1000/dt);
+    lastTiles = tileCount;
+  }
+
+  // pan (mouse)
+  let dragging=false, lastX, lastY;
+  let clickStartX, clickStartY;
+  canvas.addEventListener('mousedown', e=>{
+    if (e.button===0) {
+      dragging=true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      clickStartX = e.clientX;
+      clickStartY = e.clientY;
+    }
+  });
+  window.addEventListener('mousemove', e=>{
+    if (!dragging) return;
+    cam.x += e.clientX - lastX;
+    cam.y += e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    clampCamera();
+    render();
+  });
+  window.addEventListener('mouseup', ()=>dragging=false);
+
+  // Click handler to select tiles
+  canvas.addEventListener('click', e => {
+    const dist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
+    if (dist > 5) return;
+
+    const [worldX, worldY] = screenToWorld(e.offsetX, e.offsetY);
+
+    if (worldX >= 0 && worldX <= N && worldY >= 0 && worldY <= N) {
+      selectedTile = { x: worldX, y: worldY };
+      inpX.value = worldX;
+      inpY.value = worldY;
+      render();
+    }
+  });
+
+  // --- All event handlers below remain unchanged ---
+
+  // wheel zoom
+  canvas.addEventListener('wheel', e=>{
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    const mx = e.offsetX, my = e.offsetY;
+    const wx = (mx - cam.x)/cam.scale,
+          wy = (my - cam.y)/cam.scale;
+    cam.scale *= factor;
+    cam.scale = Math.max(minPct/100, Math.min(maxPct/100, cam.scale));
+    cam.x = mx - wx * cam.scale;
+    cam.y = my - wy * cam.scale;
+    clampCamera();
+    render();
+  },{ passive:false });
+
+  // animate zoom
+  function animateZoom(targetScale, anchorX, anchorY, duration=150) {
+    const startScale = cam.scale;
+    const startX = cam.x, startY = cam.y;
+    const start = performance.now();
+    const wx = (anchorX - startX)/startScale,
+          wy = (anchorY - startY)/startScale;
+
+    function step(now) {
+      const t = Math.min(1, (now - start)/duration);
+      const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+      cam.scale = startScale + (targetScale - startScale)*k;
+      cam.x = anchorX - wx * cam.scale;
+      cam.y = anchorY - wy * cam.scale;
+      clampCamera();
+      render();
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // double-click zoom
+  canvas.addEventListener('dblclick', e=>{
+    e.preventDefault();
+    const curPct = Math.round(cam.scale*100);
+    let targetPct;
+    if (e.button === 2) { 
+      targetPct = (cam.scale >= detailScale) ? Math.round(curPct / 1.75) : curPct - 75;
+    } else { 
+      targetPct = (cam.scale < detailScale) ? curPct + 75 : Math.round(curPct * 1.75);
+    }
+    targetPct = Math.max(minPct, Math.min(maxPct, targetPct));
+    animateZoom(targetPct/100, e.offsetX, e.offsetY);
+  });
+  // suppress context menu
+  canvas.addEventListener('contextmenu', e=>e.preventDefault());
+
+  // slider control
+  zoomSlider.addEventListener('input', () => {
+    const cx = canvas.width/2, cy = canvas.height/2;
+    const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
+    let pct = Number(zoomSlider.value);
+    pct = Math.max(minPct, Math.min(maxPct, pct));
+    cam.scale = pct / 100;
+    cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
+    clampCamera(); render();
+  });
+
+  // buttons: +1 / -1
+  function changeZoomBy(delta) {
+    const cx = canvas.width/2, cy = canvas.height/2;
+    const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
+    let pct = Math.round(cam.scale*100) + delta;
+    pct = Math.max(minPct, Math.min(maxPct, pct));
+    cam.scale = pct / 100;
+    cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
+    clampCamera(); render();
+  }
+  zoomDecBtn.addEventListener('click', ()=>changeZoomBy(-1));
+  zoomIncBtn.addEventListener('click', ()=>changeZoomBy(+1));
+
+  // preset buttons
+  presetBtns.forEach(b => {
+    b.addEventListener('click', () => {
+        const cx = canvas.width/2, cy = canvas.height/2;
+        const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
+        let pct = Number(b.dataset.zoom);
+        pct = Math.max(minPct, Math.min(maxPct, pct));
+        cam.scale = pct / 100;
+        cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
+        clampCamera(); render();
+    });
+  });
+
+  // keyboard shortcuts
+  window.addEventListener('keydown', e=>{
+    if (e.target.tagName==='INPUT') return;
+    switch(e.key) {
+      case '+': case '=': changeZoomBy(+1); break;
+      case '-': changeZoomBy(-1); break;
+      case 'q': changeZoomBy(+1); break;
+      case 'e': changeZoomBy(-1); break;
+      case 'ArrowUp': cam.y += 50; clampCamera(); render(); break;
+      case 'ArrowDown': cam.y -= 50; clampCamera(); render(); break;
+      case 'ArrowLeft': cam.x += 50; clampCamera(); render(); break;
+      case 'ArrowRight': cam.x -= 50; clampCamera(); render(); break;
+    }
+  });
+
+  // search & center+zoom150%
+  function centerOn(x,y) {
+    const lx = (x - y)*(tileW/2),
+          ly = -((x + y)*(tileH/2));
+    cam.x = canvas.width*0.5 - lx*cam.scale;
+    cam.y = canvas.height*0.5 - ly*cam.scale;
+  }
+  function doSearch() {
+    const x = +inpX.value, y = +inpY.value;
+    if (x>=0&&y>=0&&x<=N&&y<=N) {
+      selectedTile = { x, y };
+      cam.scale = 1.5;
+      clampCamera();
+      centerOn(x,y);
+      render();
+    }
+  }
+  btnGo.addEventListener('click', doSearch);
+  [inpX,inpY].forEach(i=>{
+    i.addEventListener('keydown', e=>{ if (e.key==='Enter') doSearch(); });
+  });
+
+  // — TOUCH SUPPORT — 
+  let touchMode = null;
+  let startDist, startScale, pinchCenter;
+  canvas.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if (e.touches.length===1) {
+      touchMode = 'pan';
+      lastX = e.touches[0].clientX;
+      lastY = e.touches[0].clientY;
+    } else if (e.touches.length===2) {
+      touchMode = 'pinch';
+      const [a,b] = e.touches;
+      startDist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
+      startScale= cam.scale;
+      pinchCenter = { x: (a.clientX + b.clientX)/2, y: (a.clientY + b.clientY)/2 };
+    }
+  }, { passive:false });
+
+  canvas.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    if (touchMode==='pan' && e.touches.length===1) {
+      const t = e.touches[0];
+      const dx = t.clientX - lastX, dy = t.clientY - lastY;
+      cam.x += dx; cam.y += dy;
+      lastX = t.clientX; lastY = t.clientY;
+      clampCamera(); render();
+    }
+    else if (touchMode==='pinch' && e.touches.length===2) {
+      const [a,b] = e.touches;
+      const dist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
+      let scaleFactor = dist / startDist;
+      let newScale = startScale * scaleFactor;
+      newScale = Math.max(minPct/100, Math.min(maxPct/100, newScale));
+      const wx = (pinchCenter.x - cam.x)/cam.scale, wy = (pinchCenter.y - cam.y)/cam.scale;
+      cam.scale = newScale;
+      cam.x = pinchCenter.x - wx*newScale;
+      cam.y = pinchCenter.y - wy*newScale;
+      clampCamera(); render();
+    }
+  }, { passive:false });
+
+  canvas.addEventListener('touchend', e=>{
+    if (e.touches.length<2) touchMode = null;
+  });
+
+  // initial draw
+  render();
+
+  // FPS loop
+  function fpsLoop(ts) {
+    if (!fpsLoop.t0) fpsLoop.t0 = ts;
+    if (ts - fpsLoop.t0 > 500) {
+      statsFPSEl.textContent   = `FPS:   ${lastFPS}`;
+      statsTilesEl.textContent = `Tiles: ${lastTiles}`; // This will now show a much larger number when zoomed out
+      fpsLoop.t0 = ts;
+    }
+    requestAnimationFrame(fpsLoop);
+  }
+  requestAnimationFrame(fpsLoop);
+  </script>
+</body>
+</html>
