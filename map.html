@@ -158,8 +158,8 @@
 
     // Helper function to calculate the intersection area of two rectangles
     function getIntersectionArea(rect1, rect2) {
-      const x_overlap = Math.max(0, Math.min(rect1.x2, rect2.x2) - Math.max(rect1.x1, rect2.x1));
-      const y_overlap = Math.max(0, Math.min(rect1.y2, rect2.y2) - Math.max(rect1.y1, rect2.y1));
+      const x_overlap = Math.max(0, Math.min(rect1.x2, rect2.x2) - Math.max(rect1.x1, rect2.x1) + 1);
+      const y_overlap = Math.max(0, Math.min(rect1.y2, rect2.y2) - Math.max(rect1.y1, rect2.y1) + 1);
       return x_overlap * y_overlap;
     }
 
