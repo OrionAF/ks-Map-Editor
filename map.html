@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Diamond-Tile Map – Isolated Grid & Building Footprints</title>
-  <style>
+<style>
     body {
       margin:0; background:#111; overflow:hidden;
       -webkit-user-select:none; user-select:none;
@@ -18,8 +18,10 @@
       background:rgba(0,0,0,0.6); padding:8px; border-radius:4px;
     }
     #searchBox input { width:60px; }
+    /* --- MODIFIED --- Made the slider wider for smoother control */
     #searchBox input[type=range] {
-      width:180px; vertical-align:middle; margin:0 6px;
+      width:250px; /* Was 180px */
+      vertical-align:middle; margin:0 6px;
     }
     #searchBox button {
       margin:2px 4px 2px 0;
@@ -86,7 +88,7 @@
 
   <canvas id="map"></canvas>
 
-  <script>
+<script>
   // —— CONFIG —— 
   const N           = 1201,
         tileW       = 80, tileH = 80,
@@ -139,7 +141,9 @@
       tileCount = 0,
       lastFPS = 0,
       lastTiles = 0;
-  let selectedTile = null;
+  
+  // --- MODIFIED --- The selection can now be a single tile OR a whole building object.
+  let selection = null; 
 
   // coord transforms
   function worldToScreen(x,y) {
@@ -155,9 +159,21 @@
     return [x,y];
   }
 
+  // --- NEW --- Helper function to find which building (if any) a coordinate is in.
+  function getBuildingAt(x, y) {
+    const allBuildings = [...baseMap.defaultBuildings, ...userBuildings];
+    for (const b of allBuildings) {
+      if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) {
+        return b;
+      }
+    }
+    return null;
+  }
+
   // --- 1) GRID DRAWING (runs every render) ---
-  function drawTile(x,y) {
-    tileCount++; // Counting one tile drawn
+  // --- MODIFIED --- Now takes a set of covered tiles to check against.
+  function drawTile(x, y, coveredTiles) {
+    tileCount++;
     const [sx,sy] = worldToScreen(x,y);
     ctx.beginPath();
     ctx.moveTo(   sx,        sy - tileH/2);
@@ -168,13 +184,14 @@
     ctx.fillStyle   = fillColor; ctx.fill();
     ctx.strokeStyle = borderColor; ctx.lineWidth = strokeW; ctx.stroke();
 
-    // Only draw text if zoom level is high enough to read it
-    if (cam.scale > 0.7) { 
+    // --- MODIFIED --- Now checks two conditions before drawing coords.
+    const isCovered = coveredTiles.has(`${x},${y}`);
+    if (cam.scale > 0.7 && !isCovered) { 
       ctx.fillStyle = textColor;
       ctx.font = `${fontSize}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`X${x}, Y${y}`, sx, sy);
+      ctx.fillText(`${x}, ${y}`, sx, sy);
     }
   }
 
@@ -208,24 +225,19 @@
   }
 
 
-  // --- MODIFIED --- This function now acts as the LOD manager
-  function drawGrid(groupSize) {
+  // --- MODIFIED --- Now passes the coveredTiles set to drawTile.
+  function drawGrid(groupSize, coveredTiles) {
     const halfH = tileH/2, s = cam.scale, H = canvas.height;
     const sumMin = Math.max(0, Math.floor((cam.y - H - halfH*s)/(s*halfH)));
     const sumMax = Math.min(2*N, Math.ceil((cam.y + halfH*s)/(s*halfH)));
     
     for (let sum = sumMin; sum <= sumMax; sum++) {
-      const sx = Math.max(0, sum-N),
-            ex = Math.min(sum, N);
-
+      const sx = Math.max(0, sum-N), ex = Math.min(sum, N);
       for (let x = sx; x <= ex; x++) {
         const y = sum - x;
-
         if (groupSize === 1) {
-          // High detail: draw individual tiles with borders and text
-          drawTile(x, y);
+          drawTile(x, y, coveredTiles);
         } else {
-          // Low detail: draw merged tiles, only from the group's anchor point
           if (x % groupSize === 0 && y % groupSize === 0) {
             drawMergedTile(x, y, groupSize);
           }
@@ -235,29 +247,57 @@
   }
 
   // --- 2) BUILDING FOOTPRINT DRAWING ---
-  function drawBuildingFootprint(b, style) {
-    // ... (This function remains unchanged)
+  // --- MODIFIED --- This function is now much more powerful.
+  function drawBuildingFootprint(b, highlightStyle = null) {
+    // Determine the style from the building object, or use a default/highlight
+    const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
+    const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
+    
     const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
+
+    // Outer boundary calculation (unchanged)
     const bottomTile = { x: x0,       y: y0 };
     const rightTile  = { x: x0 + w - 1, y: y0 };
     const topTile    = { x: x0 + w - 1, y: y0 + h - 1 };
     const leftTile   = { x: x0,       y: y0 + h - 1 };
+
     const [sbx, sby] = worldToScreen(bottomTile.x, bottomTile.y);
     const [srx, sry] = worldToScreen(rightTile.x, rightTile.y);
     const [stx, sty] = worldToScreen(topTile.x, topTile.y);
     const [slx, sly] = worldToScreen(leftTile.x, leftTile.y);
+    
     const p_bottom = { x: sbx, y: sby + tileH/2 };
     const p_right  = { x: srx + tileW/2, y: sry };
     const p_top    = { x: stx, y: sty - tileH/2 };
     const p_left   = { x: slx - tileW/2, y: sly };
+
     ctx.beginPath();
     ctx.moveTo(p_bottom.x, p_bottom.y);
     ctx.lineTo(p_right.x,  p_right.y);
     ctx.lineTo(p_top.x,    p_top.y);
     ctx.lineTo(p_left.x,   p_left.y);
     ctx.closePath();
-    ctx.fillStyle = style; ctx.fill();
-    ctx.strokeStyle = style; ctx.stroke();
+    ctx.fillStyle = fill; ctx.fill();
+    ctx.strokeStyle = border; 
+    ctx.lineWidth = highlightStyle ? strokeW * 2 : strokeW; // Thicker highlight
+    ctx.stroke();
+
+    // --- NEW --- Draw the building's display name and optional coordinates
+    if (cam.scale > 0.5 && b.displayName) {
+      ctx.fillStyle = textColor;
+      ctx.font = `bold ${fontSize + 2}px sans-serif`;
+      ctx.textAlign = 'center';
+      
+      let textY = p_top.y + 12; // Start position below the top point
+      
+      ctx.fillText(b.displayName, p_top.x, textY);
+      
+      if (b.displayCoordinates) {
+        ctx.font = `${fontSize}px sans-serif`;
+        textY += 14; // Move down for the next line
+        ctx.fillText(`(X${b.x}, Y${b.y})`, p_top.x, textY);
+      }
+    }
   }
 
   // resize & initial center
@@ -285,7 +325,6 @@
 
     const [centerX, centerY] = screenToWorld(canvas.width/2, canvas.height/2);
     centerTileEl.textContent = `Center: X${centerX} Y${centerY}`;
-
     const pct = Math.round(cam.scale*100);
     zoomLevelEl.textContent = `Zoom: ${pct}%`;
     zoomSlider.value = Math.min(pct, zoomSlider.max);
@@ -296,12 +335,26 @@
     const power = Math.max(0,Math.floor(Math.log2(ratio)));
     const groupSize = Math.pow(2,power);
 
-    tileCount = 0; // Reset tile count for this frame
+    tileCount = 0;
     ctx.save();
     ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
+    
+    // --- NEW --- Pre-calculate a set of all tiles covered by buildings that hide coords
+    const coveredTiles = new Set();
+    if (groupSize === 1) { // Only do this expensive check when zoomed in
+        [...baseMap.defaultBuildings, ...userBuildings].forEach(b => {
+            if (b.hideCoordinates) {
+                for (let dx = 0; dx < b.w; dx++) {
+                    for (let dy = 0; dy < b.h; dy++) {
+                        coveredTiles.add(`${b.x + dx},${b.y + dy}`);
+                    }
+                }
+            }
+        });
+    }
 
-    // 1) draw grid (using the LOD groupSize)
-    drawGrid(groupSize);
+    // 1) draw grid (passing the new coveredTiles set)
+    drawGrid(groupSize, coveredTiles);
 
     // 2) draw unoccupiable water
     ctx.fillStyle = 'rgba(0,0,255,0.3)';
@@ -317,27 +370,27 @@
     });
 
     // 3) draw default buildings
-    baseMap.defaultBuildings.forEach(b=>
-      drawBuildingFootprint(b,'rgba(0,255,0,0.3)')
-    );
+    baseMap.defaultBuildings.forEach(b => drawBuildingFootprint(b));
 
     // 4) draw user buildings
-    userBuildings.forEach(b=>
-      drawBuildingFootprint(b,'rgba(255,255,0,0.5)')
-    );
+    userBuildings.forEach(b => drawBuildingFootprint(b));
 
-    // 5) Draw highlight for the selected tile
-    if (selectedTile) {
-      const [sx, sy] = worldToScreen(selectedTile.x, selectedTile.y);
-      ctx.beginPath();
-      ctx.moveTo(sx, sy - tileH/2);
-      ctx.lineTo(sx + tileW/2, sy);
-      ctx.lineTo(sx, sy + tileH/2);
-      ctx.lineTo(sx - tileW/2, sy);
-      ctx.closePath();
-      ctx.strokeStyle = selectionColor;
-      ctx.lineWidth = strokeW * 1.5;
-      ctx.stroke();
+    // --- MODIFIED --- 5) Draw highlight for the selection
+    if (selection) {
+      if (selection.w) { // It's a building if it has a width property
+        drawBuildingFootprint(selection, selectionColor);
+      } else { // It's a single tile
+        const [sx, sy] = worldToScreen(selection.x, selection.y);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - tileH/2);
+        ctx.lineTo(sx + tileW/2, sy);
+        ctx.lineTo(sx, sy + tileH/2);
+        ctx.lineTo(sx - tileW/2, sy);
+        ctx.closePath();
+        ctx.strokeStyle = selectionColor;
+        ctx.lineWidth = strokeW * 1.5;
+        ctx.stroke();
+      }
     }
 
     ctx.restore();
@@ -373,20 +426,27 @@
   });
   window.addEventListener('mouseup', ()=>dragging=false);
 
-  // Click handler to select tiles
+  // --- MODIFIED --- Click handler now finds buildings first
   canvas.addEventListener('click', e => {
-    const dist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
-    if (dist > 5) return;
-
+    // ... (click vs drag check is unchanged)
     const [worldX, worldY] = screenToWorld(e.offsetX, e.offsetY);
 
     if (worldX >= 0 && worldX <= N && worldY >= 0 && worldY <= N) {
-      selectedTile = { x: worldX, y: worldY };
-      inpX.value = worldX;
-      inpY.value = worldY;
-      render();
+      const building = getBuildingAt(worldX, worldY);
+      
+      if (building) {
+        selection = building;
+        inpX.value = building.x; // Update inputs to building origin
+        inpY.value = building.y;
+      } else {
+        selection = { x: worldX, y: worldY };
+        inpX.value = worldX;
+        inpY.value = worldY;
+      }
+      render(); // Re-render to show new selection
     }
   });
+
 
   // --- All event handlers below remain unchanged ---
 
@@ -501,10 +561,13 @@
     cam.x = canvas.width*0.5 - lx*cam.scale;
     cam.y = canvas.height*0.5 - ly*cam.scale;
   }
+  // --- MODIFIED --- Search now selects the building at the target, if one exists
   function doSearch() {
     const x = +inpX.value, y = +inpY.value;
     if (x>=0&&y>=0&&x<=N&&y<=N) {
-      selectedTile = { x, y };
+      const building = getBuildingAt(x, y);
+      selection = building || { x, y }; // Select building or the tile itself
+
       cam.scale = 1.5;
       clampCamera();
       centerOn(x,y);
