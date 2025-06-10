@@ -217,8 +217,12 @@
         return;
     }
     
-    const availableWidth = tileW * cam.scale;
-    const availableHeight = tileH * cam.scale;
+    // --- BUG FIX --- Calculate font size in WORLD space, not screen space.
+    // The font size was being "double scaled" because it was calculated with cam.scale
+    // and then scaled AGAIN by the canvas transform. The fix is to remove cam.scale
+    // from the calculation and let the transform handle all scaling.
+    const availableWidth = tileW; // No * cam.scale
+    const availableHeight = tileH; // No * cam.scale
     const text = `${x}, ${y}`;
     const padding = 0.8;
     let optimalFontSize = Math.min(
@@ -226,7 +230,8 @@
       (availableWidth * padding / text.length) * 1.8
     );
     
-    if (optimalFontSize < 5) {
+    // The legibility check must now happen based on the ON-SCREEN size of the font.
+    if ((optimalFontSize * cam.scale) < 5) {
         return;
     }
 
@@ -290,7 +295,6 @@
     }
   }
 
-  // --- BUILDING FOOTPRINT DRAWING ---
   function drawBuildingFootprint(b, highlightStyle = null) {
     const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
     const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
@@ -398,7 +402,6 @@
     }
   }
 
-  // pan (mouse)
   let dragging=false, lastX, lastY;
   let clickStartX, clickStartY;
   canvas.addEventListener('mousedown', e=>{
@@ -561,7 +564,6 @@
     i.addEventListener('keydown', e=>{ if (e.key==='Enter') doSearch(); });
   });
 
-  // — TOUCH SUPPORT — 
   let touchMode = null;
   let startDist, startScale, pinchCenter;
   canvas.addEventListener('touchstart', e=>{
@@ -606,10 +608,7 @@
     if (e.touches.length<2) touchMode = null;
   });
 
-  // --- BUG FIX --- Switched from on-demand rendering to a continuous main loop
-  // to provide a real-time FPS counter.
   function mainLoop(now) {
-    // --- Rendering logic ---
     ctx.setTransform(1,0,0,1,0,0);
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -664,7 +663,6 @@
     }
     ctx.restore();
 
-    // --- Stats calculation and display ---
     const dt  = now - lastFrame;
     lastFrame = now;
     lastFPS   = Math.round(1000/dt);
@@ -680,7 +678,6 @@
     requestAnimationFrame(mainLoop);
   }
 
-  // Kick off the main loop
   requestAnimationFrame(mainLoop);
   </script>
 </body>
