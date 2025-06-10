@@ -147,6 +147,7 @@
     }
   }
 
+  // MODIFIED: Replaced the 5-point sample with a more robust 3x3 (9-point) grid sample.
   function preCalculateChunks() {
     const numLevels = 6;
     for (let level = 0; level < numLevels; level++) {
@@ -155,13 +156,15 @@
       
       for (let x = 0; x < N; x += chunkSize) {
         for (let y = 0; y < N; y += chunkSize) {
-          const samples = [
-            getBiomeForTile(x, y),
-            getBiomeForTile(x + chunkSize - 1, y),
-            getBiomeForTile(x, y + chunkSize - 1),
-            getBiomeForTile(x + chunkSize - 1, y + chunkSize - 1),
-            getBiomeForTile(x + chunkSize / 2, y + chunkSize / 2)
-          ];
+          const samples = [];
+          // Sample a 3x3 grid within the chunk for better accuracy
+          for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+              const sampleX = x + Math.floor((i * (chunkSize -1)) / 2);
+              const sampleY = y + Math.floor((j * (chunkSize -1)) / 2);
+              samples.push(getBiomeForTile(sampleX, sampleY));
+            }
+          }
           
           const counts = {};
           let maxCount = 0;
@@ -181,7 +184,7 @@
     }
   }
 
-  // MODIFIED: The main rendering loop is now started *after* all data is fetched and processed.
+
   fetch('baseMap.json')
     .then(r=>r.ok? r.json(): Promise.reject(r.status))
     .then(d=>{
@@ -190,7 +193,6 @@
       preCalculateChunks();
       resize();
       
-      // NEW: Start the main loop only when everything is ready.
       requestAnimationFrame(mainLoop);
     })
     .catch(e=>{ console.error(e); alert('BaseMap load error'); });
@@ -728,10 +730,6 @@
     
     requestAnimationFrame(mainLoop);
   }
-
-  // MODIFIED: The initial call to start the main loop has been moved inside the fetch promise,
-  // to prevent a race condition where the loop starts before data is loaded.
-  // requestAnimationFrame(mainLoop); 
   </script>
 </body>
 </html>
