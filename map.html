@@ -94,8 +94,8 @@
         strokeW     = 1,
         borderColor = '#000',
         textColor   = '#fff',
-        // MODIFIED: Increased detail scale to trigger merging sooner (at a higher zoom level)
-        detailScale = 3.0,
+        // MODIFIED: Retuned detailScale to work with a new linear merging formula
+        detailScale = 7.5,
         maxPct      = 1000,
         selectionColor = '#ff0';
   
@@ -219,6 +219,11 @@
     if (building && building.hideCoordinates) {
         return;
     }
+
+    // MODIFIED: Hide coordinates until zoom level is > 100%
+    if (cam.scale <= baseScale) {
+        return;
+    }
     
     const availableWidth = tileW;
     const availableHeight = tileH;
@@ -229,6 +234,9 @@
       (availableWidth * padding / text.length) * 1.8
     );
     
+    // MODIFIED: Further reduce font size for better visual balance
+    optimalFontSize *= 0.7;
+
     if ((optimalFontSize * cam.scale) < 5) {
         return;
     }
@@ -617,8 +625,9 @@
     zoomSlider.value = Math.min(pct, zoomSlider.max);
     
     const ratio = detailScale/cam.scale;
-    const power = Math.max(0,Math.floor(Math.log2(ratio)));
-    const groupSize = Math.pow(2,power);
+
+    // MODIFIED: Replaced the log2 calculation with a simpler linear one for smoother merging
+    const groupSize = Math.max(1, Math.floor(ratio));
     
     tileCount = 0;
 
