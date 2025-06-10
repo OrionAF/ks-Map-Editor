@@ -90,12 +90,12 @@
 <script>
 // —— CONFIG ——
   const N           = 1200,
-        // MODIFIED: Tile size and stroke width have been reduced
         tileW       = 10, tileH = 10,
         strokeW     = 1,
         borderColor = '#000',
         textColor   = '#fff',
-        detailScale = 2.5,
+        // MODIFIED: Adjusted detail scale to match the smaller tile size
+        detailScale = 1.5,
         maxPct      = 1000,
         selectionColor = '#ff0';
   
@@ -537,7 +537,6 @@
       case '-': changeZoomBy(-1); break;
       case 'q': changeZoomBy(+1); break;
       case 'e': changeZoomBy(-1); break;
-      // MODIFIED: Increased panning speed multiplier to feel better with smaller tiles
       case 'ArrowUp':    cam.y += tileW * 5; clampCamera(); break;
       case 'ArrowDown':  cam.y -= tileW * 5; clampCamera(); break;
       case 'ArrowLeft':  cam.x += tileW * 5; clampCamera(); break;
@@ -551,7 +550,6 @@
       const building = getBuildingAt(x, y);
       selection = building || { x, y };
 
-      // MODIFIED: Increased zoom scale to make small tiles clearly visible on search
       cam.scale = 12; 
       centerOn(x,y);
       clampCamera();
