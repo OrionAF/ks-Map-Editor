@@ -52,7 +52,7 @@
 </head>
 <body>
   <div id="searchBox">
-    <!-- FIX: Updated max values for new map size -->
+    <-- Updated max values for new map size -->
     X: <input id="inpX" type="number" min="0" max="1279" value="0">
     Y: <input id="inpY" type="number" min="0" max="1279" value="0">
     <button id="btnGo">Go</button>
@@ -90,9 +90,6 @@
 
 <script>
 // —— CONFIG ——
-  // --- FIX 1: FUNDAMENTAL GRID REALIGNMENT ---
-  // The map size MUST be a multiple of the largest chunk size (64).
-  // 1280 = 20 * 64.
   const N           = 1280,
         tileW       = 10, tileH = 10,
         strokeW     = 1,
@@ -109,13 +106,10 @@
     badlands: 'rgb(191, 208, 152)'
   };
   
-  // --- FIX 2: BIOME BOUNDARY REALIGNMENT ---
-  // The biome boundaries are now also multiples of 64, ensuring
-  // they align perfectly with the chunk grid.
   const biomeRegions = {
-      fertile:  { x1: 480, y1: 480, x2: 799, y2: 799 }, // 320x320 region (5x5 chunks of 64)
-      plains:   { x1: 320, y1: 320, x2: 959, y2: 959 }, // 640x640 region (10x10 chunks of 64)
-      badlands: { x1: 0,   y1: 0,   x2: 1279,y2: 1279}  // 1280x1280 region (20x20 chunks of 64)
+      fertile:  { x1: 480, y1: 480, x2: 799, y2: 799 },
+      plains:   { x1: 320, y1: 320, x2: 959, y2: 959 },
+      badlands: { x1: 0,   y1: 0,   x2: 1279,y2: 1279}
   };
   // ——————————
 
@@ -160,10 +154,6 @@
     }
   }
 
-  // --- FIX 3: SIMPLIFIED CHUNK CALCULATION ---
-  // Because the grid is now perfectly aligned, we no longer need complex
-  // area intersection. We can just determine the biome from the chunk's
-  // top-left corner tile.
   function preCalculateChunks() {
     const numLevels = 6;
     for (let level = 0; level < numLevels; level++) {
@@ -182,7 +172,7 @@
 
 
   fetch('baseMap.json')
-    .then(r=>r.ok? r.json(): Promise.reject(r.status))
+    .then(r=>r.ok? r.json(): Promise.resolve({ unoccupiableTiles:[], defaultBuildings:[] })) // Handle missing file
     .then(d=>{
       Object.assign(baseMap, d);
       preProcessBuildings();
@@ -248,7 +238,7 @@
     ctx.fillStyle = biomeColors[biome];
     ctx.fill();
 
-    ctx.strokeStyle = borderColor; ctx.lineWidth = strokeW; ctx.stroke();
+    ctx.strokeStyle = borderColor; ctx.lineWidth = strokeW / cam.scale; ctx.stroke();
 
     const building = getBuildingAt(x, y);
     if (building && building.hideCoordinates) {
@@ -281,8 +271,6 @@
     ctx.fillText(text, sx, sy);
   }
 
-  // --- FIX 4: SEAMLESS CHUNK DRAWING ---
-  // This logic correctly draws chunks without gaps by calculating shared vertices.
   function drawChunk(chunk) {
     tileCount += chunk.size * chunk.size;
     const { x, y, size, biome } = chunk;
@@ -303,7 +291,7 @@
     ctx.fill();
 
     ctx.strokeStyle = borderColor;
-    ctx.lineWidth = strokeW;
+    ctx.lineWidth = strokeW / cam.scale;
     ctx.stroke();
   }
 
@@ -329,11 +317,11 @@
     ctx.moveTo(p_bottom.x, p_bottom.y);
     ctx.lineTo(p_right.x,  p_right.y);
     ctx.lineTo(p_top.x,    p_top.y);
-    ctx.lineTo(p_left.x,   p_left_y);
+    ctx.lineTo(p_left.x,   p_left.y);
     ctx.closePath();
     ctx.fillStyle = fill; ctx.fill();
     ctx.strokeStyle = border; 
-    ctx.lineWidth = highlightStyle ? strokeW * 2 : strokeW;
+    ctx.lineWidth = (highlightStyle ? strokeW * 2 : strokeW) / cam.scale;
     ctx.stroke();
 
     if (cam.scale > 0.4 && b.displayName) {
@@ -628,7 +616,7 @@
     if (pct <= 15) return 3;
     if (pct <= 30) return 2;
     if (pct <= 60) return 1;
-    if (pct <= 80) return 0;
+    if (pct <= 120) return 0; // Use chunks up to 120% zoom
     return -1;
   }
 
@@ -648,30 +636,56 @@
     ctx.save();
     ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
     
+    // --- FIX: EFFICIENT VIEWPORT CULLING ---
+    // 1. Calculate the world-space bounding box of the visible screen area.
+    const [tl_x, tl_y] = screenToWorld(0, 0);
+    const [tr_x, tr_y] = screenToWorld(canvas.width, 0);
+    const [bl_x, bl_y] = screenToWorld(0, canvas.height);
+    const [br_x, br_y] = screenToWorld(canvas.width, canvas.height);
+
+    const buffer = 2; // Draw a small buffer of off-screen elements to prevent pop-in
+    const viewBounds = {
+      minX: Math.min(tl_x, tr_x, bl_x, br_x) - buffer,
+      maxX: Math.max(tl_x, tr_x, bl_x, br_x) + buffer,
+      minY: Math.min(tl_y, tr_y, bl_y, br_y) - buffer,
+      maxY: Math.max(tl_y, tr_y, bl_y, br_y) + buffer,
+    };
+
     const chunkLevel = getChunkLevelForZoom(pct);
     
     if (chunkLevel === -1) {
-      const maxCoord = N - 1;
-      const s = cam.scale, H = canvas.height;
-      const sumMin = Math.max(0, Math.floor((cam.y - H - tileH/2*s)/(s*tileH/2)));
-      const sumMax = Math.min(2 * maxCoord, Math.ceil((cam.y + H + tileH/2*s)/(s*tileH/2)));
-      for (let sum = sumMin; sum <= sumMax; sum++) {
-        const sx = Math.max(0, sum - maxCoord), ex = Math.min(sum, maxCoord);
-        for (let x = sx; x <= ex; x++) {
+      // 2. Cull individual tiles using the view bounds
+      const minSum = Math.floor(viewBounds.minX + viewBounds.minY);
+      const maxSum = Math.ceil(viewBounds.maxX + viewBounds.maxY);
+
+      for (let sum = minSum; sum <= maxSum; sum++) {
+        const startX = Math.floor(Math.max(viewBounds.minX, (sum - viewBounds.maxY)));
+        const endX = Math.ceil(Math.min(viewBounds.maxX, (sum - viewBounds.minY)));
+
+        for (let x = startX; x <= endX; x++) {
             const y = sum - x;
+            if (x < 0 || x >= N || y < 0 || y >= N) continue;
             if (!getBuildingAt(x, y)) drawTile(x, y);
         }
       }
     } else {
+      // 2. Cull chunks using the view bounds
       const chunksToDraw = chunkLevels[chunkLevel];
       for (const chunk of chunksToDraw.values()) {
+        const { x, y, size } = chunk;
+        if (x + size < viewBounds.minX || x > viewBounds.maxX || y + size < viewBounds.minY || y > viewBounds.maxY) {
+          continue;
+        }
         drawChunk(chunk);
       }
     }
 
     ctx.fillStyle = '#444';
+    // This part does not need culling as it's a small list of specific tiles
     baseMap.unoccupiableTiles.forEach(([x,y])=>{
       if (getBuildingAt(x, y)) return;
+      // A full culling check here would be overkill, but a simple one is cheap
+      if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return;
       const [sx,sy] = worldToScreen(x,y);
       ctx.beginPath();
       ctx.moveTo(sx, sy - tileH/2);
@@ -697,7 +711,7 @@
         ctx.lineTo(sx - tileW/2, sy);
         ctx.closePath();
         ctx.strokeStyle = selectionColor;
-        ctx.lineWidth = strokeW * 1.5;
+        ctx.lineWidth = strokeW * 1.5 / cam.scale;
         ctx.stroke();
       }
     }
