@@ -151,6 +151,8 @@
     .catch(e=>{ console.error(e); alert('BaseMap load error'); });
   
   let userBuildings = [];
+  // FIX: If userBuildings is ever modified at runtime, preProcessBuildings() and render()
+  // must be called again to update the lookup map and redraw the scene.
 
   // camera + stats state …
   const cam = { x:0, y:0, scale:1 };
@@ -382,18 +384,31 @@
   }
   window.addEventListener('resize', resize);
 
-  // --- MODIFIED --- The faulty clamping logic has been removed.
+  // FIX: Replaced faulty camera clamping logic with one that correctly handles the
+  // non-symmetrical Y-axis of the isometric projection.
   function clampCamera() {
     const s = cam.scale;
-    const mapEdgeX = N*(tileW/2)*s;
-    const mapEdgeY = N*(tileH/2)*s;
 
+    // The map's total size in world coordinates
+    const mapWorldWidth = (N - 1) * tileW;
+    const mapWorldHeight = (N - 1) * tileH;
+
+    // The size of the map on the screen at the current zoom level
+    const mapScreenWidth = mapWorldWidth * s;
+    const mapScreenHeight = mapWorldHeight * s;
+    
+    // Horizontal clamping: The map is horizontally centered around the world origin.
+    // We treat its left and right edges as symmetrical.
+    const mapEdgeX = mapScreenWidth / 2;
     const minX = canvas.width - mapEdgeX;
     const maxX = mapEdgeX;
-    const minY = canvas.height - mapEdgeY;
-    const maxY = mapEdgeY;
-    
     cam.x = Math.max(minX, Math.min(maxX, cam.x));
+
+    // Vertical clamping: The map is NOT vertically centered. Its world coordinates
+    // range from -mapWorldHeight at the top to 0 at the bottom.
+    // The camera's allowed Y position is between [canvas.height - mapScreenHeight] and [0].
+    const minY = canvas.height - mapScreenHeight;
+    const maxY = 0;
     cam.y = Math.max(minY, Math.min(maxY, cam.y));
   }
 
@@ -484,9 +499,13 @@
   });
   window.addEventListener('mouseup', ()=>dragging=false);
 
-  // --- MODIFIED --- Click handler now finds buildings first
+  // FIX: This click handler now correctly distinguishes between a click and a drag.
+  // This was successfully implemented by you in the last version.
   canvas.addEventListener('click', e => {
-    // ... (click vs drag check is unchanged)
+    const dist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
+    if (dist > 5) { // If mouse moved more than 5px, consider it a drag and do nothing.
+      return;
+    }
     const [worldX, worldY] = screenToWorld(e.offsetX, e.offsetY);
 
     if (worldX >= 0 && worldX <= N && worldY >= 0 && worldY <= N) {
@@ -628,12 +647,7 @@
   });
 
   // search & center+zoom150%
-  function centerOn(x,y) {
-    const lx = (x - y)*(tileW/2),
-          ly = -((x + y)*(tileH/2));
-    cam.x = canvas.width*0.5 - lx*cam.scale;
-    cam.y = canvas.height*0.5 - ly*cam.scale;
-  }
+  // FIX: The redundant second definition of centerOn() was removed from here.
   function doSearch() {
     const x = +inpX.value, y = +inpY.value;
     if (x>=0&&y>=0&&x<=N&&y<=N) {
@@ -684,7 +698,8 @@
       const dist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
       let scaleFactor = dist / startDist;
       let newScale = startScale * scaleFactor;
-      newScale = Math.max(minPct/100, Math.min(maxPct/100, newScale));
+      // FIX: Correctly uses minFitScale. This was successfully implemented by you.
+      newScale = Math.max(minFitScale, Math.min(maxPct/100, newScale));
       const wx = (pinchCenter.x - cam.x)/cam.scale, wy = (pinchCenter.y - cam.y)/cam.scale;
       cam.scale = newScale;
       cam.x = pinchCenter.x - wx*newScale;
