@@ -147,7 +147,7 @@
     }
   }
 
-  // MODIFIED: Replaced the 5-point sample with a more robust 3x3 (9-point) grid sample.
+  // MODIFIED: Replaced flawed "dominant biome" voting with a deterministic center-point sample.
   function preCalculateChunks() {
     const numLevels = 6;
     for (let level = 0; level < numLevels; level++) {
@@ -156,28 +156,15 @@
       
       for (let x = 0; x < N; x += chunkSize) {
         for (let y = 0; y < N; y += chunkSize) {
-          const samples = [];
-          // Sample a 3x3 grid within the chunk for better accuracy
-          for (let i = 0; i < 3; i++) {
-            for (let j = 0; j < 3; j++) {
-              const sampleX = x + Math.floor((i * (chunkSize -1)) / 2);
-              const sampleY = y + Math.floor((j * (chunkSize -1)) / 2);
-              samples.push(getBiomeForTile(sampleX, sampleY));
-            }
-          }
+          // Calculate the center coordinates of the chunk
+          const centerX = x + chunkSize / 2;
+          const centerY = y + chunkSize / 2;
           
-          const counts = {};
-          let maxCount = 0;
-          let dominantBiome = samples[0];
-          for (const biome of samples) {
-            counts[biome] = (counts[biome] || 0) + 1;
-            if (counts[biome] > maxCount) {
-              maxCount = counts[biome];
-              dominantBiome = biome;
-            }
-          }
+          // Determine the biome of that single center point
+          const chunkBiome = getBiomeForTile(centerX, centerY);
           
-          levelMap.set(`${x},${y}`, { x, y, size: chunkSize, biome: dominantBiome });
+          // Store the chunk info with the determined biome
+          levelMap.set(`${x},${y}`, { x, y, size: chunkSize, biome: chunkBiome });
         }
       }
       chunkLevels.push(levelMap);
