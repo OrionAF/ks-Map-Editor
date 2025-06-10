@@ -89,18 +89,18 @@
   <canvas id="map"></canvas>
 
 <script>
-  // —— CONFIG —— 
+// —— CONFIG ——
   const N           = 1201,
         tileW       = 80, tileH = 80,
         strokeW     = 2,
-        fillColor   = '#333',
+        fillColor   = '#444',
         borderColor = '#000',
         textColor   = '#fff',
         fontSize    = 10,
         detailScale = 0.5,
         minPct      = 1,
         maxPct      = 1000,
-        selectionColor = '#ff0'; 
+        selectionColor = '#ff0';
   // ——————————
 
   // DOM refs
@@ -128,11 +128,34 @@
 
   // data layers
   let baseMap = { unoccupiableTiles:[], defaultBuildings:[] };
+  // --- NEW --- This Map will store our pre-processed data for instant lookups.
+  const buildingMap = new Map();
+
+  // --- NEW --- This function populates our fast lookup map.
+  function preProcessBuildings() {
+    buildingMap.clear();
+    const allBuildings = [...baseMap.defaultBuildings, ...userBuildings];
+    for (const b of allBuildings) {
+      for (let dx = 0; dx < b.w; dx++) {
+        for (let dy = 0; dy < b.h; dy++) {
+          const key = `${b.x + dx},${b.y + dy}`;
+          buildingMap.set(key, b);
+        }
+      }
+    }
+  }
+
   fetch('baseMap.json')
     .then(r=>r.ok? r.json(): Promise.reject(r.status))
-    .then(d=>{ baseMap = d; render(); })
+    .then(d=>{
+      baseMap = d;
+      // --- MODIFIED --- We now pre-process the data right after fetching it.
+      preProcessBuildings();
+      render();
+    })
     .catch(e=>{ console.error(e); alert('BaseMap load error'); });
-
+  
+  // We will add user buildings later, but when we do, we'll need to call preProcessBuildings() again.
   let userBuildings = [];
 
   // camera + stats state …
@@ -159,20 +182,19 @@
     return [x,y];
   }
 
-  // --- NEW --- Helper function to find which building (if any) a coordinate is in.
+    // --- NEW --- Memoization cache to speed up building lookups.
+  const buildingAtCache = new Map();
+
+  // --- MODIFIED: THE PERFORMANCE HOTSPOT ---
+  // --- This function is now incredibly fast! ---
   function getBuildingAt(x, y) {
-    const allBuildings = [...baseMap.defaultBuildings, ...userBuildings];
-    for (const b of allBuildings) {
-      if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) {
-        return b;
-      }
-    }
-    return null;
+    // It's a direct, instantaneous lookup instead of a slow loop.
+    return buildingMap.get(`${x},${y}`) || null;
   }
 
-  // --- 1) GRID DRAWING (runs every render) ---
-  // --- MODIFIED --- Now takes a set of covered tiles to check against.
-  function drawTile(x, y, coveredTiles) {
+  // --- 1) GRID DRAWING ---
+  // --- MODIFIED --- No longer needs to worry about being covered.
+  function drawTile(x, y) {
     tileCount++;
     const [sx,sy] = worldToScreen(x,y);
     ctx.beginPath();
@@ -184,9 +206,9 @@
     ctx.fillStyle   = fillColor; ctx.fill();
     ctx.strokeStyle = borderColor; ctx.lineWidth = strokeW; ctx.stroke();
 
-    // --- MODIFIED --- Now checks two conditions before drawing coords.
-    const isCovered = coveredTiles.has(`${x},${y}`);
-    if (cam.scale > 0.7 && !isCovered) { 
+    // --- MODIFIED --- Logic now checks the building's property directly.
+    const building = getBuildingAt(x, y);
+    if (cam.scale > 0.7 && (!building || !building.hideCoordinates)) {
       ctx.fillStyle = textColor;
       ctx.font = `${fontSize}px sans-serif`;
       ctx.textAlign = 'center';
@@ -225,8 +247,8 @@
   }
 
 
-  // --- MODIFIED --- Now passes the coveredTiles set to drawTile.
-  function drawGrid(groupSize, coveredTiles) {
+  // --- MODIFIED --- This is now the key to removing internal building grid lines.
+  function drawGrid(groupSize) {
     const halfH = tileH/2, s = cam.scale, H = canvas.height;
     const sumMin = Math.max(0, Math.floor((cam.y - H - halfH*s)/(s*halfH)));
     const sumMax = Math.min(2*N, Math.ceil((cam.y + halfH*s)/(s*halfH)));
@@ -235,31 +257,33 @@
       const sx = Math.max(0, sum-N), ex = Math.min(sum, N);
       for (let x = sx; x <= ex; x++) {
         const y = sum - x;
-        if (groupSize === 1) {
-          drawTile(x, y, coveredTiles);
-        } else {
-          if (x % groupSize === 0 && y % groupSize === 0) {
-            drawMergedTile(x, y, groupSize);
-          }
+        
+        // --- KEY CHANGE --- Only draw a grid tile if there is NOT a building there.
+        // The building will be drawn later, creating a solid shape.
+        if (!getBuildingAt(x, y)) {
+            if (groupSize === 1) {
+              drawTile(x, y);
+            } else {
+              if (x % groupSize === 0 && y % groupSize === 0) {
+                drawMergedTile(x, y, groupSize);
+              }
+            }
         }
       }
     }
   }
 
   // --- 2) BUILDING FOOTPRINT DRAWING ---
-  // --- MODIFIED --- This function is now much more powerful.
+  // --- MODIFIED --- Now with dynamic text placement and sizing.
   function drawBuildingFootprint(b, highlightStyle = null) {
-    // Determine the style from the building object, or use a default/highlight
     const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
     const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
-    
     const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
 
-    // Outer boundary calculation (unchanged)
-    const bottomTile = { x: x0,       y: y0 };
+    const bottomTile = { x: x0, y: y0 };
     const rightTile  = { x: x0 + w - 1, y: y0 };
     const topTile    = { x: x0 + w - 1, y: y0 + h - 1 };
-    const leftTile   = { x: x0,       y: y0 + h - 1 };
+    const leftTile   = { x: x0, y: y0 + h - 1 };
 
     const [sbx, sby] = worldToScreen(bottomTile.x, bottomTile.y);
     const [srx, sry] = worldToScreen(rightTile.x, rightTile.y);
@@ -279,24 +303,36 @@
     ctx.closePath();
     ctx.fillStyle = fill; ctx.fill();
     ctx.strokeStyle = border; 
-    ctx.lineWidth = highlightStyle ? strokeW * 2 : strokeW; // Thicker highlight
+    ctx.lineWidth = highlightStyle ? strokeW * 2 : strokeW;
     ctx.stroke();
 
-    // --- NEW --- Draw the building's display name and optional coordinates
-    if (cam.scale > 0.5 && b.displayName) {
+    // --- NEW: DYNAMIC TEXT LOGIC ---
+    if (cam.scale > 0.4 && b.displayName) {
+      // 1. Calculate the available screen space inside the building
+      const availableWidth = p_right.x - p_left.x;
+      const availableHeight = p_bottom.y - p_top.y;
+      
+      // Don't draw if too small to be legible
+      if (availableWidth < 30 || availableHeight < 15) return;
+
+      // 2. Estimate an optimal font size.
+      // We take a ratio of the available width vs the text length.
+      // The '1.5' is a magic factor that works well for typical fonts.
+      // We also cap the font size to prevent it from getting ridiculously large.
+      const padding = 0.9; // Use 90% of the width for padding
+      let optimalFontSize = Math.min(availableHeight * padding, (availableWidth * padding / b.displayName.length) * 1.5);
+      optimalFontSize = Math.min(48, optimalFontSize); // Cap max size
+
+      // 3. Find the geometric center for the text
+      const centerX = (p_left.x + p_right.x) / 2;
+      const centerY = (p_top.y + p_bottom.y) / 2;
+
+      // 4. Draw the text
       ctx.fillStyle = textColor;
-      ctx.font = `bold ${fontSize + 2}px sans-serif`;
+      ctx.font = `bold ${optimalFontSize}px sans-serif`;
       ctx.textAlign = 'center';
-      
-      let textY = p_top.y + 12; // Start position below the top point
-      
-      ctx.fillText(b.displayName, p_top.x, textY);
-      
-      if (b.displayCoordinates) {
-        ctx.font = `${fontSize}px sans-serif`;
-        textY += 14; // Move down for the next line
-        ctx.fillText(`(X${b.x}, Y${b.y})`, p_top.x, textY);
-      }
+      ctx.textBaseline = 'middle';
+      ctx.fillText(b.displayName, centerX, centerY);
     }
   }
 
@@ -328,37 +364,25 @@
     const pct = Math.round(cam.scale*100);
     zoomLevelEl.textContent = `Zoom: ${pct}%`;
     zoomSlider.value = Math.min(pct, zoomSlider.max);
-
-    // --- MODIFIED --- This calculation is now critical
-    // compute LOD
+    
     const ratio = detailScale/cam.scale;
     const power = Math.max(0,Math.floor(Math.log2(ratio)));
     const groupSize = Math.pow(2,power);
-
+    
+    // --- MODIFIED --- The old buildingAtCache is no longer needed and has been removed.
     tileCount = 0;
+
     ctx.save();
     ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
-    
-    // --- NEW --- Pre-calculate a set of all tiles covered by buildings that hide coords
-    const coveredTiles = new Set();
-    if (groupSize === 1) { // Only do this expensive check when zoomed in
-        [...baseMap.defaultBuildings, ...userBuildings].forEach(b => {
-            if (b.hideCoordinates) {
-                for (let dx = 0; dx < b.w; dx++) {
-                    for (let dy = 0; dy < b.h; dy++) {
-                        coveredTiles.add(`${b.x + dx},${b.y + dy}`);
-                    }
-                }
-            }
-        });
-    }
 
-    // 1) draw grid (passing the new coveredTiles set)
-    drawGrid(groupSize, coveredTiles);
+    // --- RENDER ORDER (Unchanged) ---
+    // 1) Draw base grid (now much faster)
+    drawGrid(groupSize);
 
-    // 2) draw unoccupiable water
-    ctx.fillStyle = 'rgba(0,0,255,0.3)';
+    // 2) Draw Unoccupiable Tiles (UOTs)
+    ctx.fillStyle = '#fff';
     baseMap.unoccupiableTiles.forEach(([x,y])=>{
+      if (getBuildingAt(x, y)) return;
       const [sx,sy] = worldToScreen(x,y);
       ctx.beginPath();
       ctx.moveTo(sx, sy - tileH/2);
@@ -369,17 +393,15 @@
       ctx.fill();
     });
 
-    // 3) draw default buildings
+    // 3) Draw buildings
     baseMap.defaultBuildings.forEach(b => drawBuildingFootprint(b));
-
-    // 4) draw user buildings
     userBuildings.forEach(b => drawBuildingFootprint(b));
 
-    // --- MODIFIED --- 5) Draw highlight for the selection
+    // 4) Draw selection highlight
     if (selection) {
-      if (selection.w) { // It's a building if it has a width property
+      if (selection.w) {
         drawBuildingFootprint(selection, selectionColor);
-      } else { // It's a single tile
+      } else {
         const [sx, sy] = worldToScreen(selection.x, selection.y);
         ctx.beginPath();
         ctx.moveTo(sx, sy - tileH/2);
