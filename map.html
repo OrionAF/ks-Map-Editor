@@ -52,7 +52,7 @@
 </head>
 <body>
   <div id="searchBox">
-    <-- Updated max values for new map size -->
+    <!-- Updated max values for new map size -->
     X: <input id="inpX" type="number" min="0" max="1279" value="0">
     Y: <input id="inpY" type="number" min="0" max="1279" value="0">
     <button id="btnGo">Go</button>
@@ -352,21 +352,25 @@
   }
 
   function centerOn(x,y) {
-    const lx = (x - y)*(tileW/2),
-          ly = -((x + y)*(tileH/2));
+    const [lx, ly] = worldToScreen(x,y);
     cam.x = canvas.width*0.5 - lx*cam.scale;
     cam.y = canvas.height*0.5 - ly*cam.scale;
   }
 
+  // --- FIX: Re-implement zoomToFit to be explicit and stateless ---
   function zoomToFit() {
+    // 1. Set the scale to the pre-calculated minimum fit scale.
     cam.scale = minFitScale;
-    clampCamera();
+    // 2. Explicitly center the camera on the middle of the map.
+    const mapCenter = (N - 1) / 2;
+    centerOn(mapCenter, mapCenter);
   }
 
   function resize() {
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
 
+    // The total screen dimensions of the isometric diamond grid
     const mapTotalWidth = (N - 1) * tileW;
     const mapTotalHeight = (N - 1) * tileH;
     
@@ -376,31 +380,41 @@
     const padding = 0.95;
     minFitScale = Math.min(scaleX, scaleY) * padding;
     
-    if (cam.scale === 1) {
-        cam.scale = baseScale;
-        const mapCenter = (N - 1) / 2;
-        centerOn(mapCenter, mapCenter);
+    if (cam.scale === 1) { // First time setup
+        zoomToFit(); // Start by fitting the map to the screen
+    } else {
+        clampCamera(); // On subsequent resizes, just clamp the view
     }
-    clampCamera();
   }
   window.addEventListener('resize', resize);
 
   function clampCamera() {
     const s = cam.scale;
+    
     const mapScreenWidth = (N - 1) * tileW * s;
     const mapScreenHeight = (N - 1) * tileH * s;
-
+    
+    // Horizontal clamping
     if (mapScreenWidth < canvas.width) {
-      cam.x = canvas.width / 2;
+      // Center map horizontally if it's narrower than the screen
+      const mapCenter = (N - 1) / 2;
+      const [lx, ly] = worldToScreen(mapCenter, mapCenter);
+      cam.x = canvas.width / 2 - lx * s;
     } else {
-      const mapEdgeX = mapScreenWidth / 2;
-      cam.x = Math.max(canvas.width - mapEdgeX, Math.min(mapEdgeX, cam.x));
+      // Keep map edges from going off-screen
+      const mapHalfWidth = mapScreenWidth / 2;
+      cam.x = Math.max(canvas.width - mapHalfWidth, Math.min(mapHalfWidth, cam.x));
     }
-
+    
+    // Vertical clamping
     if (mapScreenHeight < canvas.height) {
-      cam.y = (canvas.height / 2) + (mapScreenHeight / 2);
+      // Center map vertically if it's shorter than the screen
+      const mapCenter = (N - 1) / 2;
+      const [lx, ly] = worldToScreen(mapCenter, mapCenter);
+      cam.y = canvas.height / 2 - ly * s;
     } else {
-      cam.y = Math.max(canvas.height, Math.min(mapScreenHeight, cam.y));
+      // Keep map edges from going off-screen
+      cam.y = Math.max(canvas.height - mapScreenHeight, Math.min(0, cam.y - mapScreenHeight)) + mapScreenHeight;
     }
   }
 
@@ -636,14 +650,12 @@
     ctx.save();
     ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
     
-    // --- FIX: EFFICIENT VIEWPORT CULLING ---
-    // 1. Calculate the world-space bounding box of the visible screen area.
     const [tl_x, tl_y] = screenToWorld(0, 0);
     const [tr_x, tr_y] = screenToWorld(canvas.width, 0);
     const [bl_x, bl_y] = screenToWorld(0, canvas.height);
     const [br_x, br_y] = screenToWorld(canvas.width, canvas.height);
 
-    const buffer = 2; // Draw a small buffer of off-screen elements to prevent pop-in
+    const buffer = 2;
     const viewBounds = {
       minX: Math.min(tl_x, tr_x, bl_x, br_x) - buffer,
       maxX: Math.max(tl_x, tr_x, bl_x, br_x) + buffer,
@@ -654,7 +666,6 @@
     const chunkLevel = getChunkLevelForZoom(pct);
     
     if (chunkLevel === -1) {
-      // 2. Cull individual tiles using the view bounds
       const minSum = Math.floor(viewBounds.minX + viewBounds.minY);
       const maxSum = Math.ceil(viewBounds.maxX + viewBounds.maxY);
 
@@ -669,7 +680,6 @@
         }
       }
     } else {
-      // 2. Cull chunks using the view bounds
       const chunksToDraw = chunkLevels[chunkLevel];
       for (const chunk of chunksToDraw.values()) {
         const { x, y, size } = chunk;
@@ -681,10 +691,8 @@
     }
 
     ctx.fillStyle = '#444';
-    // This part does not need culling as it's a small list of specific tiles
     baseMap.unoccupiableTiles.forEach(([x,y])=>{
       if (getBuildingAt(x, y)) return;
-      // A full culling check here would be overkill, but a simple one is cheap
       if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return;
       const [sx,sy] = worldToScreen(x,y);
       ctx.beginPath();
