@@ -339,14 +339,25 @@
       const availableWidth = p_right.x - p_left.x;
       const availableHeight = p_bottom.y - p_top.y;
       
-      if (availableWidth < 30 || availableHeight < 15) return;
+      const hasCoords = b.displayCoordinates;
+      // If coordinates are shown, we have two lines of text to fit.
+      const heightFactor = hasCoords ? 0.5 : 1.0;
+      
+      if (availableWidth < 30 || (availableHeight * heightFactor) < 15) return;
 
       const padding = 0.9;
-      let optimalFontSize = Math.min(availableHeight * padding, (availableWidth * padding / b.displayName.length) * 1.5);
-      optimalFontSize = Math.min(48, optimalFontSize);
+      // Heuristic for calculating optimal font size based on available space.
+      // It considers both width (based on name length) and height (adjusted for one or two lines).
+      let optimalFontSize = Math.min(
+        (availableHeight * heightFactor) * padding,
+        (availableWidth * padding / b.displayName.length) * 1.35 // A more conservative width factor
+      );
+      optimalFontSize = Math.min(48, optimalFontSize); // Cap max font size
 
       const centerX = (p_left.x + p_right.x) / 2;
-      const centerY = (p_top.y + p_bottom.y) / 2;
+      // Adjust the vertical center to account for two lines, keeping the text block centered.
+      const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
+      const centerY = (p_top.y + p_bottom.y) / 2 + yOffset;
 
       ctx.fillStyle = textColor;
       ctx.font = `bold ${optimalFontSize}px sans-serif`;
@@ -357,6 +368,7 @@
       if (b.displayCoordinates) {
         const coordFontSize = Math.max(8, optimalFontSize * 0.6);
         ctx.font = `${coordFontSize}px sans-serif`;
+        // Draw the second line (coordinates) relative to the first line.
         ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.9);
       }
     }
@@ -396,29 +408,35 @@
   }
   window.addEventListener('resize', resize);
 
-  // The original clamping logic was correct, but this is where issues from
-  // other parts of the code would surface. No changes are needed here.
-  function clampCamera() {
+function clampCamera() {
     const s = cam.scale;
     const mapTotalWidth = (N - 1) * tileW;
     const mapTotalHeight = (N - 1) * tileH;
     const mapScaledWidth = mapTotalWidth * s;
     const mapScaledHeight = mapTotalHeight * s;
     
-    const worldHalfWidth = mapScaledWidth / 2;
-    
+    // Allow panning until the map edge is near the center of the screen.
+    const overscrollX = canvas.width * 0.5;
+    const overscrollY = canvas.height * 0.5;
+
     // Horizontal clamping
     if (mapScaledWidth < canvas.width) {
+      // Center the map if it's smaller than the canvas
       cam.x = canvas.width / 2;
     } else {
-      cam.x = Math.max(canvas.width - worldHalfWidth, Math.min(worldHalfWidth, cam.x));
+      const minCamX = canvas.width - worldHalfWidth;
+      const maxCamX = worldHalfWidth;
+      cam.x = Math.max(minCamX - overscrollX, Math.min(maxCamX + overscrollX, cam.x));
     }
     
     // Vertical clamping
     if (mapScaledHeight < canvas.height) {
+      // Center the map if it's smaller than the canvas
       cam.y = canvas.height / 2 + mapScaledHeight / 2;
     } else {
-      cam.y = Math.max(canvas.height, Math.min(mapScaledHeight, cam.y));
+      const minCamY = canvas.height;
+      const maxCamY = mapScaledHeight;
+      cam.y = Math.max(minCamY - overscrollY, Math.min(maxCamY + overscrollY, cam.y));
     }
   }
 
@@ -654,7 +672,13 @@
 
     ctx.save();
     ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
-    ctx.strokeStyle = borderColor;
+    if (pct > 40) {
+        ctx.strokeStyle = borderColor;
+    } else {
+        // Set a transparent color to effectively disable the stroke for the grid.
+        ctx.strokeStyle = 'rgba(0,0,0,0)';
+    }
+    
     ctx.lineWidth = strokeW;
     
     const [tl_x, tl_y] = screenToWorld(0, 0);
