@@ -278,8 +278,9 @@
     tileCount += chunk.size * chunk.size;
     const { x, y, size, biome } = chunk;
 
-    // When borders are off, slightly inflate the chunk to cover rendering seams.
-    const inflation = drawBorder ? 0 : 0.5;
+    // When borders are off, inflate the chunk by the equivalent of 1 screen pixel
+    // to reliably cover rendering seams at any zoom level.
+    const inflation = drawBorder ? 0 : (1 / cam.scale);
 
     const x0 = x, y0 = y, w = size, h = size;
     const bottomTile = { x: x0, y: y0 };
@@ -291,7 +292,6 @@
     const [stx, sty] = worldToScreen(topTile.x, topTile.y);
     const [slx, sly] = worldToScreen(leftTile.x, leftTile.y);
 
-    // Apply the inflation to the corner points of the polygon
     const p_bottom = { x: sbx, y: sby + tileH/2 + inflation };
     const p_right  = { x: srx + tileW/2 + inflation, y: sry };
     const p_top    = { x: stx, y: sty - tileH/2 - inflation };
@@ -347,29 +347,28 @@
     }
 
     if (cam.scale > 0.4 && b.displayName) {
-      const availableWidth = p_right.x - p_left.x;
+      const availableWidth = (p_right.x - p_left.x) * 0.9; // 90% padding
       const availableHeight = p_bottom.y - p_top.y;
       
-      // Stop if there's no space at all
       if (availableWidth < 10 || availableHeight < 10) return;
       
       const hasCoords = b.displayCoordinates;
       const coordText = `(X${b.x}, Y${b.y})`;
-      const effectiveLength = hasCoords ? Math.max(b.displayName.length, coordText.length * 0.7) : b.displayName.length;
       const heightFactor = hasCoords ? 0.5 : 1.0;
       
-      const padding = 0.9;
+      // Start with a font size based purely on the available height.
+      let optimalFontSize = (availableHeight * heightFactor) * 0.9;
       
-      let optimalFontSize = Math.min(
-        (availableHeight * heightFactor) * padding,
-        (availableWidth * padding / effectiveLength) * 1.2
-      );
+      // Now, measure the text and scale down if it's too wide.
+      ctx.font = `bold ${optimalFontSize}px sans-serif`;
+      const nameWidth = ctx.measureText(b.displayName).width;
       
-      // Don't render text if it would be illegibly small on screen.
+      if (nameWidth > availableWidth) {
+        optimalFontSize *= (availableWidth / nameWidth);
+      }
+      
+      // FINAL CHECK: Don't render text if it would be illegibly small on screen.
       if (optimalFontSize * cam.scale < 7) return;
-      
-      // Set a minimum logical font size for the primary name.
-      optimalFontSize = Math.max(10, optimalFontSize);
       
       const centerX = (p_left.x + p_right.x) / 2;
       const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
@@ -382,7 +381,6 @@
       ctx.fillText(b.displayName, centerX, centerY);
       
       if (b.displayCoordinates) {
-        // The coordinate font size is now ALWAYS a proportion of the (clamped) main font size.
         const coordFontSize = optimalFontSize * 0.6;
         ctx.font = `${coordFontSize}px sans-serif`;
         ctx.fillText(coordText, centerX, centerY + optimalFontSize * 0.9);
