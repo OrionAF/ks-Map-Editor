@@ -1,6 +1,6 @@
 # Kingshot Map Editor & Planner
 
-A dynamic, web-based isometric map planner designed for strategic visualization. This tool provides an interactive canvas for viewing and planning on a large grid, with features like dynamic zooming, panning, and object placement.
+A dynamic, web-based isometric map planner designed for strategic visualization. This tool provides an interactive canvas for viewing and planning on a large grid, with features like dynamic zooming, panning, and object placement.  You can view the map [here](https://orionaf.github.io/ks-Map-Editor/map.html).
 
 ![image](https://github.com/user-attachments/assets/5190d976-12ca-4a71-aa46-346c1a6f0698)
 
