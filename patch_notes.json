@@ -1,0 +1,16 @@
+{
+  "0.2.5.2": [
+    "Improved the vertical zoom slider for better precision and a more consistent layout on different screen sizes.",
+    "Optimized application startup by moving patch notes to an external file."
+  ],
+  "0.2.5.1": [
+    "Redesigned UI layout for improved usability.",
+    "Added a vertical zoom slider on the left.",
+    "Implemented a configurable display for tile coordinates.",
+    "Fixed building name text overflowing its container.",
+    "Added this patch notes window and versioning system."
+  ],
+  "0.2.5.0": [
+    "Initial public release version with core features."
+  ]
+}

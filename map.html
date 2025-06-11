@@ -69,16 +69,16 @@
     #statsPanel div { margin:4px 0; color:#fff; }
 
 
-    /* --- NEW STYLES for Vertical Zoom Controls (LEFT) --- */
+    /* --- STYLES for Vertical Zoom Controls (LEFT) --- */
     #zoomControlsContainer {
       position: absolute;
-      left: 10px;
-      top: auto;
-      /*transform: translateY(10%);*/
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px; /* Reduced gap */
+      gap: 10px;
       padding: 15px 10px;
       border-radius: 4px;
       z-index: 10;
@@ -108,10 +108,9 @@
     #zoomSlider {
       -webkit-appearance: slider-vertical;
       appearance: slider-vertical;
-      /* Inverting for JS logic: In HTML, a higher value is at the top. */
       writing-mode: bt-lr; 
-      height: 65vh; /* Use 50% of the viewport height */
-      max-height: 65%;
+      height: 65vh; 
+      max-height: 500px;
       width: auto;
       margin: 0;
     }
@@ -129,7 +128,7 @@
         transform: translateY(-50%);
     }
 
-    /* --- NEW STYLES for Version Display & Patch Notes --- */
+    /* --- STYLES for Version Display & Patch Notes --- */
     #versionDisplay {
         position: absolute;
         bottom: 10px;
@@ -285,16 +284,6 @@
   
   const baseScale = 5;
 
-  const patchNotes = {
-    '0.2.5.1': [
-      "Redesigned UI layout for improved usability.",
-      "Added a vertical zoom slider on the left.",
-      "Implemented a configurable display for tile coordinates.",
-      "Fixed building name text overflowing its container.",
-      "Added this patch notes window and versioning system."
-    ]
-  };
-
   const biomeColors = {
     fertile:  'rgb(109, 159, 62)',
     plains:   'rgb(158, 180, 103)',
@@ -329,7 +318,6 @@
   const coordsToggle      = document.getElementById('coordsToggle');
   const floatingZoomLabel = document.getElementById('floatingZoomLabel');
   
-  // NEW DOM Refs for Patch Notes
   const versionDisplay        = document.getElementById('versionDisplay');
   const patchNotesBtn         = document.getElementById('patchNotesBtn');
   const modalOverlay          = document.getElementById('modalOverlay');
@@ -345,6 +333,7 @@
 
   // data layers
   let baseMap = { unoccupiableTiles:[], defaultBuildings:[] };
+  let patchNotes = {}; // Will be populated from JSON
   const buildingMap = new Map();
   const chunkLevels = []; 
 
@@ -377,22 +366,29 @@
     }
   }
 
+  // --- MODIFIED DATA FETCHING ---
+  Promise.all([
+    fetch('baseMap.json').then(r => r.ok ? r.json() : Promise.resolve({ unoccupiableTiles:[], defaultBuildings:[] })),
+    fetch('patch_notes.json').then(r => r.ok ? r.json() : Promise.resolve({}))
+  ])
+  .then(([baseMapData, patchNotesData]) => {
+      // Assign fetched data
+      Object.assign(baseMap, baseMapData);
+      patchNotes = patchNotesData;
 
-  fetch('baseMap.json')
-    .then(r=>r.ok? r.json(): Promise.resolve({ unoccupiableTiles:[], defaultBuildings:[] }))
-    .then(d=>{
-      Object.assign(baseMap, d);
+      // Initialize application modules
       preProcessBuildings();
       preCalculateChunks();
-      
-      // Initialize UI features before starting the main loop
       initializeUI();
-
       resize();
       
+      // Start the main loop
       requestAnimationFrame(mainLoop);
-    })
-    .catch(e=>{ console.error(e); alert('BaseMap load error'); });
+  })
+  .catch(e => {
+      console.error(e);
+      alert('Error loading essential application data.');
+  });
   
   let userBuildings = [];
 
@@ -407,17 +403,19 @@
   let isInitialLoad = true;
   let touchStartTime = 0; 
 
-  // --- NEW Patch Notes & Versioning Logic ---
+  // --- Patch Notes & Versioning Logic ---
     function showPatchNotes() {
         const notesForVersion = patchNotes[CURRENT_VERSION];
-        if (!notesForVersion) return;
-
-        let content = `<h4>Version ${CURRENT_VERSION}</h4><ul>`;
-        notesForVersion.forEach(note => {
-            content += `<li>${note}</li>`;
-        });
-        content += '</ul>';
-        patchNotesBody.innerHTML = content;
+        if (!notesForVersion) {
+            patchNotesBody.innerHTML = `<p>No patch notes found for version ${CURRENT_VERSION}.</p>`;
+        } else {
+            let content = `<h4>Version ${CURRENT_VERSION}</h4><ul>`;
+            notesForVersion.forEach(note => {
+                content += `<li>${note}</li>`;
+            });
+            content += '</ul>';
+            patchNotesBody.innerHTML = content;
+        }
 
         modalOverlay.style.display = 'block';
         patchNotesModal.style.display = 'block';
@@ -432,15 +430,12 @@
     }
 
     function initializeUI() {
-        // Set version display
         versionDisplay.textContent = 'V' + CURRENT_VERSION;
 
-        // Set up event listeners for patch notes
         patchNotesBtn.addEventListener('click', showPatchNotes);
         closePatchNotesBtn.addEventListener('click', hidePatchNotes);
-        modalOverlay.addEventListener('click', hidePatchNotes); // Click outside to close
+        modalOverlay.addEventListener('click', hidePatchNotes);
 
-        // Check if patch notes should be shown on startup
         const lastSeenVersion = localStorage.getItem('lastSeenVersion');
         if (lastSeenVersion !== CURRENT_VERSION) {
             showPatchNotes();
