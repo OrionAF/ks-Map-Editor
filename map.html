@@ -61,7 +61,8 @@
       font-size:13px; color:#ddd;
       text-align: left;
     }
-    #infoPanel.open, #statsPanel.open { max-height:120px; }
+    #infoPanel.open { max-height:160px; } /* Increased height for patch notes button */
+    #statsPanel.open { max-height:120px; }
     #infoPanel h4 { margin:6px 0 4px; color:#fff; }
     #infoPanel ul { padding-left:16px; margin:0 }
     #infoPanel li { margin-bottom:4px; }
@@ -71,9 +72,9 @@
     /* --- NEW STYLES for Vertical Zoom Controls (LEFT) --- */
     #zoomControlsContainer {
       position: absolute;
-      left: 15px;
-      top: 50%;
-      transform: translateY(-50%);
+      left: 10px;
+      top: auto;
+      /*transform: translateY(10%);*/
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -89,7 +90,7 @@
       display: flex;
       flex-direction: column;
       gap: 5px;
-      order: 4; /* Order: +, slider, -, presets, text */
+      order: 4;
     }
 
     #zoomControlsContainer button {
@@ -109,25 +110,94 @@
       appearance: slider-vertical;
       /* Inverting for JS logic: In HTML, a higher value is at the top. */
       writing-mode: bt-lr; 
-      height: 50vh; /* Use 50% of the viewport height */
-      max-height: 350px;
+      height: 65vh; /* Use 50% of the viewport height */
+      max-height: 65%;
       width: auto;
       margin: 0;
     }
 
-    /* Floating label for zoom slider */
     #floatingZoomLabel {
         position: absolute;
         display: none;
-        left: 25px; /* Position to the right of the slider */
+        left: 25px;
         background-color: #0b508f;
         color: white;
         padding: 3px 6px;
         border-radius: 4px;
         font-size: 13px;
-        pointer-events: none; /* So it doesn't interfere with slider interaction */
-        transform: translateY(-50%); /* Center it vertically on the thumb */
+        pointer-events: none;
+        transform: translateY(-50%);
     }
+
+    /* --- NEW STYLES for Version Display & Patch Notes --- */
+    #versionDisplay {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        color: rgba(255, 255, 255, 0.5);
+        font-family: sans-serif;
+        font-size: 12px;
+        user-select: none;
+        z-index: 10;
+    }
+
+    #modalOverlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 999;
+    }
+
+    #patchNotesModal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 500px;
+        background: #2c2c2c;
+        color: #eee;
+        border-radius: 8px;
+        z-index: 1000;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+    .patch-notes-header {
+        padding: 15px;
+        border-bottom: 1px solid #444;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .patch-notes-header h3 { margin: 0; }
+    .patch-notes-header .close-btn {
+        background: none;
+        border: none;
+        color: #ccc;
+        font-size: 24px;
+        cursor: pointer;
+    }
+    .patch-notes-body {
+        padding: 15px;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+    .patch-notes-body ul {
+        padding-left: 20px;
+        margin: 0;
+    }
+    .patch-notes-body li { margin-bottom: 8px; }
+    .patch-notes-footer {
+        padding: 10px 15px;
+        border-top: 1px solid #444;
+        background: #333;
+        border-radius: 0 0 8px 8px;
+    }
+    .patch-notes-footer label { user-select: none; font-size: 14px; }
 
   </style>
 </head>
@@ -152,11 +222,10 @@
       <ul>
         <li><strong>Pan</strong>: drag / one-finger touch</li>
         <li><strong>Zoom</strong>: wheel, slider, +/–, q/e, dblclick</li>
-        <li><strong>Zoom out</strong>: right-dblclick</li>
         <li><strong>Pinch</strong>: two-finger touch</li>
         <li><strong>Keyboard</strong>: arrows to pan</li>
-        <li><strong>Search</strong>: enter X/Y then Go (zooms to 150%)</li>
       </ul>
+      <button id="patchNotesBtn">Patch Notes</button>
     </div>
     <div id="statsPanel">
       <div id="statsFPS">FPS: –</div>
@@ -181,13 +250,31 @@
     <div id="zoomLevel">Zoom: 100%</div>
   </div>
   
-  <!-- Center tile display is now standalone -->
   <div id="centerTile">Center: X0 Y0</div>
+  <div id="versionDisplay"></div>
+  
+  <!-- Patch Notes Modal -->
+  <div id="modalOverlay"></div>
+  <div id="patchNotesModal">
+      <div class="patch-notes-header">
+          <h3>What's New</h3>
+          <button id="closePatchNotesBtn" class="close-btn">×</button>
+      </div>
+      <div class="patch-notes-body" id="patchNotesBody">
+          <!-- Content will be injected by JS -->
+      </div>
+      <div class="patch-notes-footer">
+          <input type="checkbox" id="hidePatchNotesCheckbox">
+          <label for="hidePatchNotesCheckbox">Do not show this again until the next update.</label>
+      </div>
+  </div>
+
 
   <canvas id="map"></canvas>
 
 <script>
 // —— CONFIG ——
+  const CURRENT_VERSION = '0.2.5.1';
   const N           = 1200,
         tileW       = 10, tileH = 10,
         strokeW     = 0.3, 
@@ -197,6 +284,16 @@
         selectionColor = '#ff0';
   
   const baseScale = 5;
+
+  const patchNotes = {
+    '0.2.5.1': [
+      "Redesigned UI layout for improved usability.",
+      "Added a vertical zoom slider on the left.",
+      "Implemented a configurable display for tile coordinates.",
+      "Fixed building name text overflowing its container.",
+      "Added this patch notes window and versioning system."
+    ]
+  };
 
   const biomeColors = {
     fertile:  'rgb(109, 159, 62)',
@@ -229,9 +326,17 @@
   const statsPanel   = document.getElementById('statsPanel');
   const statsFPSEl   = document.getElementById('statsFPS');
   const statsTilesEl = document.getElementById('statsTiles');
-  // New DOM Refs
   const coordsToggle      = document.getElementById('coordsToggle');
   const floatingZoomLabel = document.getElementById('floatingZoomLabel');
+  
+  // NEW DOM Refs for Patch Notes
+  const versionDisplay        = document.getElementById('versionDisplay');
+  const patchNotesBtn         = document.getElementById('patchNotesBtn');
+  const modalOverlay          = document.getElementById('modalOverlay');
+  const patchNotesModal       = document.getElementById('patchNotesModal');
+  const patchNotesBody        = document.getElementById('patchNotesBody');
+  const closePatchNotesBtn    = document.getElementById('closePatchNotesBtn');
+  const hidePatchNotesCheckbox= document.getElementById('hidePatchNotesCheckbox');
 
 
   // toggle panels
@@ -279,6 +384,10 @@
       Object.assign(baseMap, d);
       preProcessBuildings();
       preCalculateChunks();
+      
+      // Initialize UI features before starting the main loop
+      initializeUI();
+
       resize();
       
       requestAnimationFrame(mainLoop);
@@ -297,6 +406,47 @@
   let minFitScale = 0.01;
   let isInitialLoad = true;
   let touchStartTime = 0; 
+
+  // --- NEW Patch Notes & Versioning Logic ---
+    function showPatchNotes() {
+        const notesForVersion = patchNotes[CURRENT_VERSION];
+        if (!notesForVersion) return;
+
+        let content = `<h4>Version ${CURRENT_VERSION}</h4><ul>`;
+        notesForVersion.forEach(note => {
+            content += `<li>${note}</li>`;
+        });
+        content += '</ul>';
+        patchNotesBody.innerHTML = content;
+
+        modalOverlay.style.display = 'block';
+        patchNotesModal.style.display = 'block';
+    }
+
+    function hidePatchNotes() {
+        if (hidePatchNotesCheckbox.checked) {
+            localStorage.setItem('lastSeenVersion', CURRENT_VERSION);
+        }
+        modalOverlay.style.display = 'none';
+        patchNotesModal.style.display = 'none';
+    }
+
+    function initializeUI() {
+        // Set version display
+        versionDisplay.textContent = 'V' + CURRENT_VERSION;
+
+        // Set up event listeners for patch notes
+        patchNotesBtn.addEventListener('click', showPatchNotes);
+        closePatchNotesBtn.addEventListener('click', hidePatchNotes);
+        modalOverlay.addEventListener('click', hidePatchNotes); // Click outside to close
+
+        // Check if patch notes should be shown on startup
+        const lastSeenVersion = localStorage.getItem('lastSeenVersion');
+        if (lastSeenVersion !== CURRENT_VERSION) {
+            showPatchNotes();
+        }
+    }
+
 
   // coord transforms
   function worldToScreen(x,y) {
@@ -350,12 +500,11 @@
         return;
     }
 
-    // --- MODIFIED TILE COORDINATE RENDER LOGIC ---
     const pct = Math.round((cam.scale / baseScale) * 100);
     const showThreshold = coordsToggle.checked ? 80 : 200;
 
     if (pct <= showThreshold) {
-        return; // Exit before doing any more coord drawing work
+        return;
     }
     
     const availableWidth = tileW;
@@ -451,8 +600,7 @@
     }
 
     if (cam.scale > 0.4 && b.displayName) {
-      // --- REVISED FONT SIZING LOGIC ---
-      const availableWidth = (p_right.x - p_left.x) * 0.8; // Use 80% of width for more padding
+      const availableWidth = (p_right.x - p_left.x) * 0.8;
       const availableHeight = p_bottom.y - p_top.y;
       
       if (availableWidth < 10 || availableHeight < 10) return;
@@ -482,7 +630,7 @@
       ctx.fillText(b.displayName, centerX, centerY);
       
       if (b.displayCoordinates) {
-        const coordFontSize = optimalFontSize * 0.7; // Make coords slightly larger relative to name
+        const coordFontSize = optimalFontSize * 0.7;
         ctx.font = `${coordFontSize}px sans-serif`;
         ctx.fillText(coordText, centerX, centerY + optimalFontSize * 0.9);
       }
@@ -642,8 +790,7 @@ function clampCamera() {
 
   canvas.addEventListener('contextmenu', e=>e.preventDefault());
 
-  // --- FLOATING ZOOM LABEL LOGIC ---
-    let hideLabelTimeout;
+  let hideLabelTimeout;
 
     function updateFloatingZoomLabel() {
         const slider = zoomSlider;
@@ -653,24 +800,20 @@ function clampCamera() {
         const max = parseInt(slider.max, 10);
         const val = parseInt(slider.value, 10);
 
-        // Position of the thumb in percentage (0.0 to 1.0)
-        // For our vertical slider, value increases from bottom to top.
         const percent = (val - min) / (max - min);
 
-        const thumbHeight = 15; // Approximate height of the thumb
+        const thumbHeight = 15;
         const trackHeight = slider.offsetHeight;
-        // Top position is inverted percentage of the track height
         const topPos = (1 - percent) * (trackHeight - thumbHeight) + (thumbHeight / 2);
         
         label.style.top = `${topPos}px`;
         label.textContent = `Zoom: ${val}%`;
         label.style.display = 'block';
 
-        // Reset the hide timer whenever the slider is moved
         clearTimeout(hideLabelTimeout);
         hideLabelTimeout = setTimeout(() => {
             label.style.display = 'none';
-        }, 1500); // Hide after 1.5 seconds
+        }, 1500);
     }
 
     zoomSlider.addEventListener('input', () => {
@@ -681,13 +824,12 @@ function clampCamera() {
         cam.scale = Math.max(minFitScale, Math.min(maxPct / 100 * baseScale, targetScale));
         cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
         clampCamera();
-        updateFloatingZoomLabel(); // Update floating label on input
+        updateFloatingZoomLabel();
     });
     
-    // Also show on mouse down to feel more responsive
     zoomSlider.addEventListener('mousedown', () => {
         clearTimeout(hideLabelTimeout);
-        updateFloatingZoomLabel(); // Update position immediately on click
+        updateFloatingZoomLabel();
     });
 
 
@@ -859,14 +1001,11 @@ canvas.addEventListener('touchstart', e=>{
     centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
     
     const pct = Math.round((cam.scale / baseScale) * 100);
-    // Update the permanent zoom level text
     zoomLevelEl.textContent = `Zoom: ${pct}%`;
     
-    // Dynamically adjust the slider's max value if we zoom past it
     if (pct > zoomSlider.max) {
       zoomSlider.max = pct;
     }
-    // Sync slider value with current zoom
     zoomSlider.value = pct;
     
     tileCount = 0;
