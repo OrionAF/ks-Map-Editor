@@ -1,4 +1,7 @@
 {
+  "0.2.5.3": [
+    "Fixed the patch notes not showing and updating correctly"
+  ],
   "0.2.5.2": [
     "Improved the vertical zoom slider for better precision and a more consistent layout on different screen sizes.",
     "Optimized application startup by moving patch notes to an external file."

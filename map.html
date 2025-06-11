@@ -404,19 +404,58 @@
   let touchStartTime = 0; 
 
   // --- Patch Notes & Versioning Logic ---
+// --- UPDATED Patch Notes Logic ---
     function showPatchNotes() {
-        const notesForVersion = patchNotes[CURRENT_VERSION];
-        if (!notesForVersion) {
-            patchNotesBody.innerHTML = `<p>No patch notes found for version ${CURRENT_VERSION}.</p>`;
-        } else {
-            let content = `<h4>Version ${CURRENT_VERSION}</h4><ul>`;
-            notesForVersion.forEach(note => {
+        // Get all version keys from the fetched patchNotes object
+        const versions = Object.keys(patchNotes);
+
+        if (versions.length === 0) {
+            patchNotesBody.innerHTML = `<p>No patch notes are available at this time.</p>`;
+            modalOverlay.style.display = 'block';
+            patchNotesModal.style.display = 'block';
+            return;
+        }
+
+        // Sort versions from newest to oldest using a proper version comparison
+        versions.sort((a, b) => {
+            const partsA = a.split('.').map(Number);
+            const partsB = b.split('.').map(Number);
+            
+            const longest = Math.max(partsA.length, partsB.length);
+
+            for (let i = 0; i < longest; i++) {
+                const numA = partsA[i] || 0;
+                const numB = partsB[i] || 0;
+                
+                // If parts are different, we can determine the order
+                if (numA !== numB) {
+                    return numB - numA; // Sort descending (newest first)
+                }
+            }
+            return 0; // Versions are identical
+        });
+
+        // Build the HTML content for all versions
+        let content = '';
+        versions.forEach((version, index) => {
+            const notes = patchNotes[version];
+            
+            content += `<h4>Version ${version}</h4><ul>`;
+            notes.forEach(note => {
                 content += `<li>${note}</li>`;
             });
             content += '</ul>';
-            patchNotesBody.innerHTML = content;
-        }
 
+            // Add a separator between versions, but not after the last one
+            if (index < versions.length - 1) {
+                content += '<hr style="border-color: #444; border-top: 0;">';
+            }
+        });
+
+        // Inject the full content into the modal body
+        patchNotesBody.innerHTML = content;
+
+        // Show the modal
         modalOverlay.style.display = 'block';
         patchNotesModal.style.display = 'block';
     }
