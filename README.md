@@ -31,7 +31,7 @@ To run this project on your local machine:
 
 1.  Clone or download the repository.
 2.  Ensure the following files are in the same directory:
-    *   `index.html` (the main file)
+    *   `map.html` (the main file)
     *   `baseMap.json`
     *   `patch_notes.json`
 3.  Because the application uses the `fetch()` API to load local JSON files, you may need to run it from a simple local web server to avoid browser security (CORS) errors. A simple way to do this is with Python:
