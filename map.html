@@ -11,28 +11,42 @@
     canvas { display:block; cursor:grab; }
     canvas:active { cursor:grabbing; }
 
-    /* UI Container */
+    /* UI Container - MOVED to top-right */
     #searchBox {
-      position:absolute; top:10px; left:10px; z-index:10;
+      position:absolute; top:10px; right:10px; z-index:10;
       color:#fff; font-family:sans-serif;
       background:rgba(0,0,0,0.6); padding:8px; border-radius:4px;
+      text-align: right;
     }
     #searchBox input { width:60px; }
-    /* This rule is now obsolete as the slider has been moved */
-    /*
-    #searchBox input[type=range] {
-      width:250px;
-      vertical-align:middle; margin:0 6px;
-    }
-    */
     #searchBox button {
       margin:2px 4px 2px 0;
       -webkit-user-select:none; user-select:none;
     }
-    #zoomLevel, #centerTile {
-      margin-top:4px; font-size:14px;
+    
+    /* Center Tile Display - MOVED to bottom-center */
+    #centerTile {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.5);
+      padding: 4px 8px;
+      border-radius: 4px;
+      color:#fff; font-family:sans-serif;
+      font-size:14px;
       -webkit-user-select:none; user-select:none;
+      z-index: 10;
     }
+
+    /* Coords Toggle Label Style */
+    label.coords-label {
+        font-size: 13px;
+        vertical-align: middle;
+        user-select: none;
+    }
+    #searchBox > div { margin-top: 4px; }
+
 
     /* Info & Stats panels */
     #infoBtn, #statsBtn {
@@ -45,6 +59,7 @@
       background:rgba(58,55,55,0.85);
       padding:0 6px; border-radius:4px;
       font-size:13px; color:#ddd;
+      text-align: left;
     }
     #infoPanel.open, #statsPanel.open { max-height:120px; }
     #infoPanel h4 { margin:6px 0 4px; color:#fff; }
@@ -52,26 +67,29 @@
     #infoPanel li { margin-bottom:4px; }
     #statsPanel div { margin:4px 0; color:#fff; }
 
-    /* --- NEW STYLES for Vertical Zoom Controls --- */
+
+    /* --- NEW STYLES for Vertical Zoom Controls (LEFT) --- */
     #zoomControlsContainer {
       position: absolute;
-      right: 15px;
+      left: 15px;
       top: 50%;
       transform: translateY(-50%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 15px;
-      background: rgba(0,0,0,0.6);
+      gap: 10px; /* Reduced gap */
       padding: 15px 10px;
       border-radius: 4px;
       z-index: 10;
+      color: #fff;
+      font-family: sans-serif;
     }
     
     #zoomControlsContainer #presetButtons {
       display: flex;
       flex-direction: column;
       gap: 5px;
+      order: 4; /* Order: +, slider, -, presets, text */
     }
 
     #zoomControlsContainer button {
@@ -80,24 +98,55 @@
       width: 60px;
     }
 
-    #zoomControlsContainer #zoomSlider {
+    #zoomControlsContainer #zoomInc { order: 1; }
+    #zoomControlsContainer #sliderWrapper { order: 2; position: relative; }
+    #zoomControlsContainer #zoomDec { order: 3; }
+    #zoomControlsContainer #zoomLevel { order: 5; font-size: 14px; margin-top: 5px; }
+
+
+    #zoomSlider {
       -webkit-appearance: slider-vertical;
       appearance: slider-vertical;
-      height: 60vh; /* Use 60% of the viewport height (approx. 2/3) */
-      max-height: 450px; /* Cap the height on very tall screens */
+      /* Inverting for JS logic: In HTML, a higher value is at the top. */
+      writing-mode: bt-lr; 
+      height: 50vh; /* Use 50% of the viewport height */
+      max-height: 350px;
       width: auto;
       margin: 0;
     }
+
+    /* Floating label for zoom slider */
+    #floatingZoomLabel {
+        position: absolute;
+        display: none;
+        left: 25px; /* Position to the right of the slider */
+        background-color: #0b508f;
+        color: white;
+        padding: 3px 6px;
+        border-radius: 4px;
+        font-size: 13px;
+        pointer-events: none; /* So it doesn't interfere with slider interaction */
+        transform: translateY(-50%); /* Center it vertically on the thumb */
+    }
+
   </style>
 </head>
 <body>
+  <!-- Search and info panel moved to top right -->
   <div id="searchBox">
-    X: <input id="inpX" type="number" min="0" max="1199" value="0">
-    Y: <input id="inpY" type="number" min="0" max="1199" value="0">
-    <button id="btnGo">Go</button>
-    <div id="zoomLevel">Zoom: 100%</div>
-    <div id="centerTile">Center: X0 Y0</div>
-    <button id="infoBtn" title="Show controls">ℹ️</button>
+    <div>
+        X: <input id="inpX" type="number" min="0" max="1199" value="0">
+        Y: <input id="inpY" type="number" min="0" max="1199" value="0">
+        <button id="btnGo">Go</button>
+    </div>
+    <div>
+      <input type="checkbox" id="coordsToggle">
+      <label for="coordsToggle" class="coords-label">Show Coords >80%</label>
+    </div>
+    <div>
+      <button id="infoBtn" title="Show controls">ℹ️</button>
+      <button id="statsBtn" title="Toggle stats">⚙️</button>
+    </div>
     <div id="infoPanel">
       <h4>Controls</h4>
       <ul>
@@ -109,25 +158,31 @@
         <li><strong>Search</strong>: enter X/Y then Go (zooms to 150%)</li>
       </ul>
     </div>
-    <button id="statsBtn" title="Toggle stats">⚙️</button>
     <div id="statsPanel">
       <div id="statsFPS">FPS: –</div>
       <div id="statsTiles">Tiles: –</div>
     </div>
   </div>
 
-  <!-- Vertically oriented zoom controls -->
+  <!-- Vertically oriented zoom controls moved to left -->
   <div id="zoomControlsContainer">
+    <button id="zoomInc">+</button>
+    <div id="sliderWrapper">
+        <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
+        <div id="floatingZoomLabel"></div>
+    </div>
+    <button id="zoomDec">−</button>
     <div id="presetButtons">
         <button data-zoom="Fit">Fit</button>
         <button data-zoom="50">50%</button>
         <button data-zoom="75">75%</button>
         <button data-zoom="100">100%</button>
     </div>
-    <button id="zoomInc">+</button>
-    <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
-    <button id="zoomDec">−</button>
+    <div id="zoomLevel">Zoom: 100%</div>
   </div>
+  
+  <!-- Center tile display is now standalone -->
+  <div id="centerTile">Center: X0 Y0</div>
 
   <canvas id="map"></canvas>
 
@@ -174,6 +229,10 @@
   const statsPanel   = document.getElementById('statsPanel');
   const statsFPSEl   = document.getElementById('statsFPS');
   const statsTilesEl = document.getElementById('statsTiles');
+  // New DOM Refs
+  const coordsToggle      = document.getElementById('coordsToggle');
+  const floatingZoomLabel = document.getElementById('floatingZoomLabel');
+
 
   // toggle panels
   infoBtn.addEventListener('click', ()=>infoPanel.classList.toggle('open'));
@@ -237,7 +296,7 @@
   let selection = null; 
   let minFitScale = 0.01;
   let isInitialLoad = true;
-  let touchStartTime = 0; // Add this line
+  let touchStartTime = 0; 
 
   // coord transforms
   function worldToScreen(x,y) {
@@ -291,8 +350,12 @@
         return;
     }
 
-    if (cam.scale <= baseScale) {
-        return;
+    // --- MODIFIED TILE COORDINATE RENDER LOGIC ---
+    const pct = Math.round((cam.scale / baseScale) * 100);
+    const showThreshold = coordsToggle.checked ? 80 : 200;
+
+    if (pct <= showThreshold) {
+        return; // Exit before doing any more coord drawing work
     }
     
     const availableWidth = tileW;
@@ -321,8 +384,6 @@
     tileCount += chunk.size * chunk.size;
     const { x, y, size, biome } = chunk;
 
-    // When borders are off, inflate the chunk by the equivalent of 1 screen pixel
-    // to reliably cover rendering seams at any zoom level.
     const inflation = drawBorder ? 0 : (1 / cam.scale);
 
     const x0 = x, y0 = y, w = size, h = size;
@@ -389,31 +450,25 @@
         ctx.stroke();
     }
 
-    // --- MODIFIED FONT SIZING LOGIC ---
     if (cam.scale > 0.4 && b.displayName) {
-      const availableWidth = (p_right.x - p_left.x) * 0.9; // Use 90% of width for padding
+      // --- REVISED FONT SIZING LOGIC ---
+      const availableWidth = (p_right.x - p_left.x) * 0.8; // Use 80% of width for more padding
       const availableHeight = p_bottom.y - p_top.y;
       
       if (availableWidth < 10 || availableHeight < 10) return;
       
       const hasCoords = b.displayCoordinates;
       const coordText = `(X${b.x}, Y${b.y})`;
-      const heightFactor = hasCoords ? 0.5 : 1.0; // Reserve half the height for coords if needed
+      const heightFactor = hasCoords ? 0.5 : 1.0; 
       
-      // 1. Determine the maximum font size that can fit vertically.
-      const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9; // Use 90% of available height
+      const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9;
 
-      // 2. Determine the maximum font size that can fit horizontally.
-      // We do this by measuring the text at a large, reference font size (e.g., 100px)
-      // and then scaling it down proportionally to fit the available width.
       ctx.font = `bold 100px sans-serif`;
       const widthAtRefSize = ctx.measureText(b.displayName).width;
       const fontSizeBasedOnWidth = (availableWidth / widthAtRefSize) * 100;
 
-      // 3. The true optimal font size is the smaller of the two constraints.
       const optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
 
-      // FINAL CHECK: Don't render text if it would be illegibly small on screen.
       if (optimalFontSize * cam.scale < 7) return;
       
       const centerX = (p_left.x + p_right.x) / 2;
@@ -427,7 +482,7 @@
       ctx.fillText(b.displayName, centerX, centerY);
       
       if (b.displayCoordinates) {
-        const coordFontSize = optimalFontSize * 0.6;
+        const coordFontSize = optimalFontSize * 0.7; // Make coords slightly larger relative to name
         ctx.font = `${coordFontSize}px sans-serif`;
         ctx.fillText(coordText, centerX, centerY + optimalFontSize * 0.9);
       }
@@ -458,7 +513,6 @@
     const padding = 0.95;
     minFitScale = Math.min(scaleX, scaleY) * padding;
     
-    // FIX 1: Use the robust flag to handle initial load.
     if (isInitialLoad) {
         zoomToFit();
         isInitialLoad = false;
@@ -477,13 +531,10 @@ function clampCamera() {
 
     const worldHalfWidth = mapScaledWidth / 2;
     
-    // Allow panning until the map edge is near the center of the screen.
     const overscrollX = canvas.width * 0.5;
     const overscrollY = canvas.height * 0.5;
 
-    // Horizontal clamping
     if (mapScaledWidth < canvas.width) {
-      // Center the map if it's smaller than the canvas
       cam.x = canvas.width / 2;
     } else {
       const minCamX = canvas.width - worldHalfWidth;
@@ -491,9 +542,7 @@ function clampCamera() {
       cam.x = Math.max(minCamX - overscrollX, Math.min(maxCamX + overscrollX, cam.x));
     }
     
-    // Vertical clamping
     if (mapScaledHeight < canvas.height) {
-      // Center the map if it's smaller than the canvas
       cam.y = canvas.height / 2 + mapScaledHeight / 2;
     } else {
       const minCamY = canvas.height;
@@ -593,15 +642,54 @@ function clampCamera() {
 
   canvas.addEventListener('contextmenu', e=>e.preventDefault());
 
-  zoomSlider.addEventListener('input', () => {
-    const cx = canvas.width/2, cy = canvas.height/2;
-    const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
-    let pct = Number(zoomSlider.value);
-    const targetScale = (pct / 100) * baseScale;
-    cam.scale = Math.max(minFitScale, Math.min(maxPct / 100 * baseScale, targetScale));
-    cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
-    clampCamera();
-  });
+  // --- FLOATING ZOOM LABEL LOGIC ---
+    let hideLabelTimeout;
+
+    function updateFloatingZoomLabel() {
+        const slider = zoomSlider;
+        const label = floatingZoomLabel;
+        
+        const min = parseInt(slider.min, 10);
+        const max = parseInt(slider.max, 10);
+        const val = parseInt(slider.value, 10);
+
+        // Position of the thumb in percentage (0.0 to 1.0)
+        // For our vertical slider, value increases from bottom to top.
+        const percent = (val - min) / (max - min);
+
+        const thumbHeight = 15; // Approximate height of the thumb
+        const trackHeight = slider.offsetHeight;
+        // Top position is inverted percentage of the track height
+        const topPos = (1 - percent) * (trackHeight - thumbHeight) + (thumbHeight / 2);
+        
+        label.style.top = `${topPos}px`;
+        label.textContent = `Zoom: ${val}%`;
+        label.style.display = 'block';
+
+        // Reset the hide timer whenever the slider is moved
+        clearTimeout(hideLabelTimeout);
+        hideLabelTimeout = setTimeout(() => {
+            label.style.display = 'none';
+        }, 1500); // Hide after 1.5 seconds
+    }
+
+    zoomSlider.addEventListener('input', () => {
+        const cx = canvas.width/2, cy = canvas.height/2;
+        const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
+        let pct = Number(zoomSlider.value);
+        const targetScale = (pct / 100) * baseScale;
+        cam.scale = Math.max(minFitScale, Math.min(maxPct / 100 * baseScale, targetScale));
+        cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
+        clampCamera();
+        updateFloatingZoomLabel(); // Update floating label on input
+    });
+    
+    // Also show on mouse down to feel more responsive
+    zoomSlider.addEventListener('mousedown', () => {
+        clearTimeout(hideLabelTimeout);
+        updateFloatingZoomLabel(); // Update position immediately on click
+    });
+
 
   function changeZoomBy(delta) {
     const cx = canvas.width/2, cy = canvas.height/2;
@@ -624,11 +712,10 @@ function clampCamera() {
     }
 
     b.addEventListener('click', () => {
-        // UX FIX: Use smooth animation for preset buttons.
         const cx = canvas.width/2, cy = canvas.height/2;
         let pct = Number(zoomVal);
         const targetScale = (pct / 100) * baseScale;
-        animateZoom(targetScale, cx, cy, 200); // Animate over 200ms
+        animateZoom(targetScale, cx, cy, 200);
     });
   });
 
@@ -654,7 +741,6 @@ function clampCamera() {
 
       const targetScale = (150 / 100) * baseScale;
       
-      // Animate to the target
       const [screenX, screenY] = worldToScreen(x, y);
       const targetCamX = canvas.width/2 - screenX * targetScale;
       const targetCamY = canvas.height/2 - screenY * targetScale;
@@ -663,14 +749,13 @@ function clampCamera() {
     }
   }
 
-  // Helper function for combined pan-and-zoom animation
   function animatePanZoom(targetScale, targetX, targetY, duration=300) {
       const startScale = cam.scale, startX = cam.x, startY = cam.y;
       const start = performance.now();
 
       function step(now) {
           const t = Math.min(1, (now - start)/duration);
-          const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; // ease-in-out
+          const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
           
           cam.scale = startScale + (targetScale - startScale)*k;
           cam.x = startX + (targetX - startX)*k;
@@ -696,7 +781,6 @@ canvas.addEventListener('touchstart', e=>{
       const t = e.touches[0];
       lastX = t.clientX;
       lastY = t.clientY;
-      // Record start position and time for tap vs. pan detection
       clickStartX = t.clientX;
       clickStartY = t.clientY;
       touchStartTime = performance.now();
@@ -733,13 +817,11 @@ canvas.addEventListener('touchstart', e=>{
   }, { passive:false });
 
   canvas.addEventListener('touchend', e=>{
-    // Logic to handle tap-to-select on touch devices
     if (touchMode === 'pan' && e.changedTouches.length === 1) {
       const t = e.changedTouches[0];
       const dist = Math.hypot(t.clientX - clickStartX, t.clientY - clickStartY);
       const duration = performance.now() - touchStartTime;
 
-      // Consider it a 'tap' if it's short and hasn't moved far.
       if (duration < 200 && dist < 10) {
         const [worldX, worldY] = screenToWorld(t.clientX, t.clientY);
         if (worldX >= 0 && worldX < N && worldY >= 0 && worldY < N) {
@@ -777,11 +859,14 @@ canvas.addEventListener('touchstart', e=>{
     centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
     
     const pct = Math.round((cam.scale / baseScale) * 100);
+    // Update the permanent zoom level text
     zoomLevelEl.textContent = `Zoom: ${pct}%`;
     
+    // Dynamically adjust the slider's max value if we zoom past it
     if (pct > zoomSlider.max) {
       zoomSlider.max = pct;
     }
+    // Sync slider value with current zoom
     zoomSlider.value = pct;
     
     tileCount = 0;
@@ -893,7 +978,6 @@ canvas.addEventListener('touchstart', e=>{
       ctx.restore();
     }
     
-    // CRITICAL FIX: The loop to draw the buildings was missing. It is now restored.
     visibleBuildings.forEach(b => {
         drawBuildingFootprint(b, null, shouldDrawBorders);
     });
