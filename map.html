@@ -236,9 +236,7 @@
     const biome = getBiomeForTile(x, y);
     ctx.fillStyle = biomeColors[biome];
     ctx.fill();
-
-    // --- FIX 1: Set constant line width ---
-    ctx.strokeStyle = borderColor; ctx.lineWidth = strokeW; ctx.stroke();
+    ctx.stroke();
 
     const building = getBuildingAt(x, y);
     if (building && building.hideCoordinates) {
@@ -289,9 +287,6 @@
 
     ctx.fillStyle = biomeColors[biome];
     ctx.fill();
-
-    ctx.strokeStyle = borderColor;
-    ctx.lineWidth = strokeW;
     ctx.stroke();
   }
 
@@ -375,7 +370,8 @@
     const padding = 0.95;
     minFitScale = Math.min(scaleX, scaleY) * padding;
     
-    if (cam.scale === 1) {
+    // Set initial camera state only once
+    if (cam.scale === 1 && cam.x === 0 && cam.y === 0) {
         zoomToFit();
     } else {
         clampCamera();
@@ -383,24 +379,30 @@
   }
   window.addEventListener('resize', resize);
 
+  // --- FIX 1: Final, robust camera clamping logic ---
   function clampCamera() {
     const s = cam.scale;
     const mapTotalWidth = (N - 1) * tileW;
     const mapTotalHeight = (N - 1) * tileH;
     const mapScaledWidth = mapTotalWidth * s;
     const mapScaledHeight = mapTotalHeight * s;
-
+    
+    // The untransformed diamond map is horizontally centered on x=0.
+    // Its y-coordinates range from -mapTotalHeight to 0.
+    const worldHalfWidth = mapScaledWidth / 2;
+    
+    // Horizontal clamping
     if (mapScaledWidth < canvas.width) {
       cam.x = canvas.width / 2;
     } else {
-      const worldHalfWidth = mapScaledWidth / 2;
       cam.x = Math.max(canvas.width - worldHalfWidth, Math.min(worldHalfWidth, cam.x));
     }
-
+    
+    // Vertical clamping
     if (mapScaledHeight < canvas.height) {
-      cam.y = canvas.height/2 + mapScaledHeight/2;
+      cam.y = canvas.height / 2 + mapScaledHeight / 2;
     } else {
-      cam.y = Math.max(canvas.height - (mapScaledHeight/2), Math.min(mapScaledHeight/2, cam.y));
+      cam.y = Math.max(canvas.height, Math.min(mapScaledHeight, cam.y));
     }
   }
 
@@ -627,14 +629,14 @@
     
     const pct = Math.round((cam.scale / baseScale) * 100);
     zoomLevelEl.textContent = `Zoom: ${pct}%`;
-    zoomSlider.value = Math.min(pct, zoomSlider.max);
+    zoomSlider.value = Math.min(100, Math.max(1, pct));
     
     tileCount = 0;
 
     ctx.save();
-    // --- FIX 1: Apply constant line width globally ---
-    ctx.lineWidth = strokeW;
     ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = strokeW;
     
     const [tl_x, tl_y] = screenToWorld(0, 0);
     const [tr_x, tr_y] = screenToWorld(canvas.width, 0);
@@ -666,7 +668,6 @@
         }
       }
     } else {
-      // --- FIX 2: Efficiently render only visible chunks ---
       const chunksToDraw = chunkLevels[chunkLevel];
       const chunkSize = Math.pow(2, chunkLevel + 1);
 
