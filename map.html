@@ -99,6 +99,15 @@
       width: 60px;
     }
 
+    #searchBox select {
+      background: #333;
+      color: #fff;
+      border: 1px solid #555;
+      border-radius: 2px;
+      padding: 2px;
+      vertical-align: middle;
+    }
+
     #zoomControlsContainer #zoomInc { order: 1; }
     #zoomControlsContainer #sliderWrapper { order: 2; position: relative; }
     #zoomControlsContainer #zoomDec { order: 3; }
@@ -230,6 +239,15 @@
       <div id="statsFPS">FPS: –</div>
       <div id="statsTiles">Tiles: –</div>
     </div>
+    <div>
+      <label for="qualitySelect" class="coords-label">Quality:</label>
+        <select id="qualitySelect">
+            <option value="50">Normal</option>
+            <option value="25">Low</option>
+            <option value="80">High</option>
+            <option value="1000">Ultra (No Merging)</option>
+        </select>
+    </div>
   </div>
 
   <!-- Vertically oriented zoom controls moved to left -->
@@ -273,7 +291,7 @@
 
 <script>
 // —— CONFIG ——
-  const CURRENT_VERSION = '0.2.5.5';
+  const CURRENT_VERSION = '0.2.5.7';
   const N           = 1200,
         tileW       = 10, tileH = 10,
         strokeW     = 0.3, 
@@ -325,6 +343,7 @@
   const patchNotesBody        = document.getElementById('patchNotesBody');
   const closePatchNotesBtn    = document.getElementById('closePatchNotesBtn');
   const hidePatchNotesCheckbox= document.getElementById('hidePatchNotesCheckbox');
+    const qualitySelect       = document.getElementById('qualitySelect');
 
 
   // toggle panels
@@ -469,16 +488,25 @@
     }
 
     function initializeUI() {
+        // Version and Patch Notes logic
         versionDisplay.textContent = 'V' + CURRENT_VERSION;
-
         patchNotesBtn.addEventListener('click', showPatchNotes);
         closePatchNotesBtn.addEventListener('click', hidePatchNotes);
         modalOverlay.addEventListener('click', hidePatchNotes);
-
         const lastSeenVersion = localStorage.getItem('lastSeenVersion');
         if (lastSeenVersion !== CURRENT_VERSION) {
             showPatchNotes();
         }
+
+        // --- NEW: Quality Setting Logic ---
+        // Load saved quality setting, or default to '50'
+        const savedQuality = localStorage.getItem('mapQuality') || '50';
+        qualitySelect.value = savedQuality;
+
+        // Save setting to localStorage whenever it's changed
+        qualitySelect.addEventListener('change', () => {
+            localStorage.setItem('mapQuality', qualitySelect.value);
+        });
     }
 
 
@@ -1020,11 +1048,16 @@ canvas.addEventListener('touchstart', e=>{
   });
   
   function getChunkLevelForZoom(pct) {
-    if (pct > 50) return -1;  // Level -1: Full detail
-    if (pct > 25) return 0;   // Level 0: Small chunks
-    if (pct > 10) return 1;   // Level 1: Medium chunks
-    if (pct > 5)  return 2;   // Level 2: Large chunks
-    return 3;                 // Level 3: Largest chunks (map overview)
+    const qualityThreshold = parseInt(qualitySelect.value, 10);
+
+    // If zoom is above the user's chosen threshold, show individual tiles
+    if (pct > qualityThreshold) return -1;
+    
+    // The rest of the logic scales based on the initial threshold
+    if (pct > qualityThreshold / 2) return 0;   // e.g., for Normal (50), this is 25
+    if (pct > qualityThreshold / 5) return 1;   // e.g., for Normal (50), this is 10
+    if (pct > qualityThreshold / 10) return 2;  // e.g., for Normal (50), this is 5
+    return 3;
   }
 
   function mainLoop(now) {
@@ -1050,7 +1083,7 @@ canvas.addEventListener('touchstart', e=>{
     ctx.strokeStyle = borderColor;
     ctx.lineWidth = strokeW;
     
-    const shouldDrawBorders = pct > 50;
+    const shouldDrawBorders = pct > parseInt(qualitySelect.value, 10);
     
     const [tl_x, tl_y] = screenToWorld(0, 0);
     const [tr_x, tr_y] = screenToWorld(canvas.width, 0);

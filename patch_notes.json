@@ -1,4 +1,10 @@
 {
+  "0.2.5.7": [
+    "Added a 'Quality' dropdown menu in the top-right panel.",
+    "Users can now choose their preferred performance vs. visual quality setting.",
+    "Settings include 'Low', 'Normal', 'High', and 'Ultra (No Merging)' to accommodate a wide range of devices.",
+    "The selected quality setting is saved and remembered for your next visit."
+  ],
   "0.2.5.5": [
     "Made improvements to the zoom camera"
   ],
