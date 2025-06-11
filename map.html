@@ -1151,8 +1151,6 @@ canvas.addEventListener('touchstart', e=>{
     ctx.strokeStyle = borderColor;
     ctx.lineWidth = strokeW;
     
-    const shouldDrawBorders = gridlinesToggle.checked && pct > 50;
-    
     const [tl_x, tl_y] = screenToWorld(0, 0);
     const [tr_x, tr_y] = screenToWorld(canvas.width, 0);
     const [bl_x, bl_y] = screenToWorld(0, canvas.height);
@@ -1168,8 +1166,11 @@ canvas.addEventListener('touchstart', e=>{
 
     const chunkLevel = getChunkLevelForZoom(pct);
     
-    // --- High Detail Rendering (Zoom > 50%) ---
+    // --- High Detail Rendering ---
     if (chunkLevel === -1) {
+      // --- FIX: Define shouldDrawBorders here, where pct is known ---
+      const shouldDrawBorders = gridlinesToggle.checked && pct > 50;
+
       // Draw individual background tiles
       const minSum = Math.floor(viewBounds.minX + viewBounds.minY);
       const maxSum = Math.ceil(viewBounds.maxX + viewBounds.maxY);
@@ -1183,12 +1184,8 @@ canvas.addEventListener('touchstart', e=>{
         }
       }
       
-      // Filter the master list of buildings based on the RSS toggle
-      const buildingsToRender = allBuildings.filter(b => {
-          return !b.isRss || allianceRssToggle.checked;
-      });
-
-      // Draw all visible buildings from the filtered list
+      // Filter and draw buildings
+      const buildingsToRender = allBuildings.filter(b => !b.isRss || allianceRssToggle.checked);
       buildingsToRender.filter(b => 
         !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY)
       ).forEach(b => {
@@ -1208,12 +1205,15 @@ canvas.addEventListener('touchstart', e=>{
         ctx.fill();
       });
 
-    // --- Chunk-Based LOD Rendering (Zoom <= 50%) ---
+    // --- Chunk-Based LOD Rendering ---
     } else {
       // Draw the base chunks for the current LOD level
       const chunksToDraw = chunkLevels[chunkLevel];
       const chunkSize = Math.pow(2, chunkLevel + 1);
-      // ... (the existing chunk drawing loop remains here) ...
+      const startChunkX = Math.floor(viewBounds.minX / chunkSize) * chunkSize;
+      const endChunkX = Math.ceil(viewBounds.maxX / chunkSize) * chunkSize;
+      const startChunkY = Math.floor(viewBounds.minY / chunkSize) * chunkSize;
+      const endChunkY = Math.ceil(viewBounds.maxY / chunkSize) * chunkSize;
       for (let x = startChunkX; x <= endChunkX; x += chunkSize) {
         for (let y = startChunkY; y <= endChunkY; y += chunkSize) {
             const chunk = chunksToDraw.get(`${x},${y}`);
@@ -1228,7 +1228,6 @@ canvas.addEventListener('touchstart', e=>{
           drawBuildingFootprint(b, null, false);
       });
       
-      // --- NEW LOGIC STARTS HERE ---
       // If both toggles are enabled, draw RSS buildings even in chunked view
       if (allianceRssToggle.checked && allianceRssAlwaysVisibleToggle.checked) {
         allBuildings.filter(b => 
@@ -1239,7 +1238,7 @@ canvas.addEventListener('touchstart', e=>{
         });
       }
       
-      // Only draw resource tiles on the closer chunk levels to reduce clutter
+      // Only draw resource tiles on the closer chunk levels
       if (chunkLevel < 2) {
           ctx.fillStyle = '#444';
           baseMap.unoccupiableTiles.forEach(([x,y])=>{
