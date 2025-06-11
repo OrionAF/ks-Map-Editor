@@ -18,10 +18,13 @@
       background:rgba(0,0,0,0.6); padding:8px; border-radius:4px;
     }
     #searchBox input { width:60px; }
+    /* This rule is now obsolete as the slider has been moved */
+    /*
     #searchBox input[type=range] {
       width:250px;
       vertical-align:middle; margin:0 6px;
     }
+    */
     #searchBox button {
       margin:2px 4px 2px 0;
       -webkit-user-select:none; user-select:none;
@@ -48,6 +51,43 @@
     #infoPanel ul { padding-left:16px; margin:0 }
     #infoPanel li { margin-bottom:4px; }
     #statsPanel div { margin:4px 0; color:#fff; }
+
+    /* --- NEW STYLES for Vertical Zoom Controls --- */
+    #zoomControlsContainer {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      background: rgba(0,0,0,0.6);
+      padding: 15px 10px;
+      border-radius: 4px;
+      z-index: 10;
+    }
+    
+    #zoomControlsContainer #presetButtons {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    #zoomControlsContainer button {
+      -webkit-user-select:none; user-select:none;
+      margin: 0;
+      width: 60px;
+    }
+
+    #zoomControlsContainer #zoomSlider {
+      -webkit-appearance: slider-vertical;
+      appearance: slider-vertical;
+      height: 60vh; /* Use 60% of the viewport height (approx. 2/3) */
+      max-height: 450px; /* Cap the height on very tall screens */
+      width: auto;
+      margin: 0;
+    }
   </style>
 </head>
 <body>
@@ -56,15 +96,6 @@
     Y: <input id="inpY" type="number" min="0" max="1199" value="0">
     <button id="btnGo">Go</button>
     <div id="zoomLevel">Zoom: 100%</div>
-    <button id="zoomDec">−</button>
-    <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
-    <button id="zoomInc">+</button>
-    <div id="presetButtons">
-        <button data-zoom="Fit">Fit</button>
-        <button data-zoom="50">50%</button>
-        <button data-zoom="75">75%</button>
-        <button data-zoom="100">100%</button>
-    </div>
     <div id="centerTile">Center: X0 Y0</div>
     <button id="infoBtn" title="Show controls">ℹ️</button>
     <div id="infoPanel">
@@ -83,6 +114,19 @@
       <div id="statsFPS">FPS: –</div>
       <div id="statsTiles">Tiles: –</div>
     </div>
+  </div>
+
+  <!-- Vertically oriented zoom controls -->
+  <div id="zoomControlsContainer">
+    <div id="presetButtons">
+        <button data-zoom="Fit">Fit</button>
+        <button data-zoom="50">50%</button>
+        <button data-zoom="75">75%</button>
+        <button data-zoom="100">100%</button>
+    </div>
+    <button id="zoomInc">+</button>
+    <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
+    <button id="zoomDec">−</button>
   </div>
 
   <canvas id="map"></canvas>
@@ -192,7 +236,6 @@
       lastTiles = 0;
   let selection = null; 
   let minFitScale = 0.01;
-  // FIX 1: Add a flag for robust initial loading.
   let isInitialLoad = true;
   let touchStartTime = 0; // Add this line
 
@@ -346,27 +389,30 @@
         ctx.stroke();
     }
 
+    // --- MODIFIED FONT SIZING LOGIC ---
     if (cam.scale > 0.4 && b.displayName) {
-      const availableWidth = (p_right.x - p_left.x) * 0.9; // 90% padding
+      const availableWidth = (p_right.x - p_left.x) * 0.9; // Use 90% of width for padding
       const availableHeight = p_bottom.y - p_top.y;
       
       if (availableWidth < 10 || availableHeight < 10) return;
       
       const hasCoords = b.displayCoordinates;
       const coordText = `(X${b.x}, Y${b.y})`;
-      const heightFactor = hasCoords ? 0.5 : 1.0;
+      const heightFactor = hasCoords ? 0.5 : 1.0; // Reserve half the height for coords if needed
       
-      // Start with a font size based purely on the available height.
-      let optimalFontSize = (availableHeight * heightFactor) * 0.9;
-      
-      // Now, measure the text and scale down if it's too wide.
-      ctx.font = `bold ${optimalFontSize}px sans-serif`;
-      const nameWidth = ctx.measureText(b.displayName).width;
-      
-      if (nameWidth > availableWidth) {
-        optimalFontSize *= (availableWidth / nameWidth);
-      }
-      
+      // 1. Determine the maximum font size that can fit vertically.
+      const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9; // Use 90% of available height
+
+      // 2. Determine the maximum font size that can fit horizontally.
+      // We do this by measuring the text at a large, reference font size (e.g., 100px)
+      // and then scaling it down proportionally to fit the available width.
+      ctx.font = `bold 100px sans-serif`;
+      const widthAtRefSize = ctx.measureText(b.displayName).width;
+      const fontSizeBasedOnWidth = (availableWidth / widthAtRefSize) * 100;
+
+      // 3. The true optimal font size is the smaller of the two constraints.
+      const optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
+
       // FINAL CHECK: Don't render text if it would be illegibly small on screen.
       if (optimalFontSize * cam.scale < 7) return;
       
@@ -628,7 +674,7 @@ function clampCamera() {
           
           cam.scale = startScale + (targetScale - startScale)*k;
           cam.x = startX + (targetX - startX)*k;
-          cam.y = startY + (startY - targetY)*k;
+          cam.y = startY + (targetY - startY)*k;
           
           clampCamera();
           if (t < 1) requestAnimationFrame(step);
@@ -643,16 +689,17 @@ function clampCamera() {
   let touchMode = null;
   let startDist, startScale, pinchCenter;
 
-  canvas.addEventListener('touchstart', e=>{
+canvas.addEventListener('touchstart', e=>{
     e.preventDefault();
     if (e.touches.length===1) {
       touchMode = 'pan';
       const t = e.touches[0];
       lastX = t.clientX;
       lastY = t.clientY;
-      clickStartX = t.clientX; // Record start position for tap detection
+      // Record start position and time for tap vs. pan detection
+      clickStartX = t.clientX;
       clickStartY = t.clientY;
-      touchStartTime = performance.now(); // Record start time for tap detection
+      touchStartTime = performance.now();
     } else if (e.touches.length===2) {
       touchMode = 'pinch';
       const [a,b] = e.touches;
