@@ -222,6 +222,10 @@
       <label for="coordsToggle" class="coords-label">Show Coords >80%</label>
     </div>
     <div>
+      <input type="checkbox" id="allianceRssAlwaysVisibleToggle">
+      <label for="allianceRssAlwaysVisibleToggle" class="coords-label">Always Show RSS</label>
+    </div>
+    <div>
       <button id="infoBtn" title="Show controls">ℹ️</button>
       <button id="statsBtn" title="Toggle stats">⚙️</button>
     </div>
@@ -360,6 +364,7 @@
   const tileDetailSelect    = document.getElementById('tileDetailSelect');
   const gridlinesToggle     = document.getElementById('gridlinesToggle');
   const allianceRssToggle   = document.getElementById('allianceRssToggle');
+  const allianceRssAlwaysVisibleToggle = document.getElementById('allianceRssAlwaysVisibleToggle');
 
   // toggle panels
   infoBtn.addEventListener('click', ()=>infoPanel.classList.toggle('open'));
@@ -548,6 +553,13 @@
         tileDetailSelect.value = savedDetail;
         tileDetailSelect.addEventListener('change', () => {
             localStorage.setItem('mapTileDetail', tileDetailSelect.value);
+        });
+
+        // Load "Always Show RSS" setting, default to 'false' (unchecked)
+        const savedAlwaysVisible = localStorage.getItem('mapAlwaysShowRss') === 'true';
+        allianceRssAlwaysVisibleToggle.checked = savedAlwaysVisible;
+        allianceRssAlwaysVisibleToggle.addEventListener('change', () => {
+            localStorage.setItem('mapAlwaysShowRss', allianceRssAlwaysVisibleToggle.checked);
         });
 
         // Load Gridlines setting, default to 'true' (checked)
@@ -1183,13 +1195,6 @@ canvas.addEventListener('touchstart', e=>{
           drawBuildingFootprint(b, null, shouldDrawBorders);
       });
 
-      // Draw all visible buildings from the filtered list
-      buildingsToRender.filter(b => 
-        !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY)
-      ).forEach(b => {
-          drawBuildingFootprint(b, null, shouldDrawBorders);
-      });
-
       // Draw resource tiles
       ctx.fillStyle = '#444';
       baseMap.unoccupiableTiles.forEach(([x,y])=>{
@@ -1208,10 +1213,7 @@ canvas.addEventListener('touchstart', e=>{
       // Draw the base chunks for the current LOD level
       const chunksToDraw = chunkLevels[chunkLevel];
       const chunkSize = Math.pow(2, chunkLevel + 1);
-      const startChunkX = Math.floor(viewBounds.minX / chunkSize) * chunkSize;
-      const endChunkX = Math.ceil(viewBounds.maxX / chunkSize) * chunkSize;
-      const startChunkY = Math.floor(viewBounds.minY / chunkSize) * chunkSize;
-      const endChunkY = Math.ceil(viewBounds.maxY / chunkSize) * chunkSize;
+      // ... (the existing chunk drawing loop remains here) ...
       for (let x = startChunkX; x <= endChunkX; x += chunkSize) {
         for (let y = startChunkY; y <= endChunkY; y += chunkSize) {
             const chunk = chunksToDraw.get(`${x},${y}`);
@@ -1219,12 +1221,23 @@ canvas.addEventListener('touchstart', e=>{
         }
       }
 
-      // --- VISIBILITY FIX: Draw important buildings on ALL chunked levels ---
+      // Draw important buildings on ALL chunked levels
       baseMap.defaultBuildings.filter(b => 
           !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY)
       ).forEach(b => {
           drawBuildingFootprint(b, null, false);
       });
+      
+      // --- NEW LOGIC STARTS HERE ---
+      // If both toggles are enabled, draw RSS buildings even in chunked view
+      if (allianceRssToggle.checked && allianceRssAlwaysVisibleToggle.checked) {
+        allBuildings.filter(b => 
+            b.isRss && 
+            !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY)
+        ).forEach(b => {
+            drawBuildingFootprint(b, null, false);
+        });
+      }
       
       // Only draw resource tiles on the closer chunk levels to reduce clutter
       if (chunkLevel < 2) {
