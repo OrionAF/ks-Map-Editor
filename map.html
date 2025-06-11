@@ -91,8 +91,8 @@
 // —— CONFIG ——
   const N           = 1200,
         tileW       = 10, tileH = 10,
-        strokeW     = 0.3,
-        borderColor = '#000',
+        strokeW     = 1, // Changed from 0.3 to 1 for better performance
+        borderColor = 'rgba(0,0,0,0.5)', // Use alpha for a softer look
         textColor   = '#fff',
         maxPct      = 1000,
         selectionColor = '#ff0';
@@ -601,13 +601,34 @@ function clampCamera() {
       const building = getBuildingAt(x, y);
       selection = building || { x, y };
 
-      // FIX 2: Use the documented 150% zoom level instead of a hardcoded value.
       const targetScale = (150 / 100) * baseScale;
-      cam.scale = targetScale; 
-
-      centerOn(x,y);
-      clampCamera();
+      
+      // Animate to the target
+      const [screenX, screenY] = worldToScreen(x, y);
+      const targetCamX = canvas.width/2 - screenX * targetScale;
+      const targetCamY = canvas.height/2 - screenY * targetScale;
+      
+      animatePanZoom(targetScale, targetCamX, targetCamY);
     }
+  }
+
+  // Helper function for combined pan-and-zoom animation
+  function animatePanZoom(targetScale, targetX, targetY, duration=300) {
+      const startScale = cam.scale, startX = cam.x, startY = cam.y;
+      const start = performance.now();
+
+      function step(now) {
+          const t = Math.min(1, (now - start)/duration);
+          const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; // ease-in-out
+          
+          cam.scale = startScale + (targetScale - startScale)*k;
+          cam.x = startX + (targetX - startX)*k;
+          cam.y = startY + (startY - targetY)*k;
+          
+          clampCamera();
+          if (t < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
   }
   btnGo.addEventListener('click', doSearch);
   [inpX,inpY].forEach(i=>{
@@ -675,7 +696,12 @@ function clampCamera() {
     
     const pct = Math.round((cam.scale / baseScale) * 100);
     zoomLevelEl.textContent = `Zoom: ${pct}%`;
-    zoomSlider.value = Math.min(100, Math.max(1, pct));
+    
+    // UX FIX: Keep the slider in sync with the actual zoom percentage
+    if (pct > zoomSlider.max) {
+      zoomSlider.max = pct;
+    }
+    zoomSlider.value = pct;
     
     tileCount = 0;
 
@@ -749,18 +775,18 @@ function clampCamera() {
       ctx.fill();
     });
 
-    // Combine all buildings into one array for efficient processing.
+    // PERFORMANCE FIX: Pre-filter for only visible buildings once.
     const allBuildings = [...baseMap.defaultBuildings, ...userBuildings];
+    const visibleBuildings = allBuildings.filter(b => 
+        !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY)
+    );
 
-    // When in chunked view, punch holes for visible buildings.
     if (chunkLevel !== -1) {
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
       
-      allBuildings.forEach(b => {
-        // PERFORMANCE FIX: Cull (skip) buildings that are not in the current view.
-        if (b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY) return;
-        
+      visibleBuildings.forEach(b => {
+        // This loop now only runs for on-screen buildings.
         const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
         const bottomTile = { x: x0, y: y0 };
         const rightTile  = { x: x0 + w - 1, y: y0 };
@@ -788,11 +814,9 @@ function clampCamera() {
       ctx.restore();
     }
     
-    // Draw all visible buildings.
-    allBuildings.forEach(b => {
-        // PERFORMANCE FIX: Cull (skip) buildings that are not in the current view.
-        if (b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || y > viewBounds.maxY || b.y + b.h < viewBounds.minY) return;
-        drawBuildingFootprint(b, null, shouldDrawBorders)
+    // This loop now only runs for on-screen buildings.
+    visibleBuildings.forEach(b => {
+        drawBuildingFootprint(b, null, shouldDrawBorders);
     });
 
     if (selection) {
