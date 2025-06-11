@@ -1020,10 +1020,11 @@ canvas.addEventListener('touchstart', e=>{
   });
   
   function getChunkLevelForZoom(pct) {
-    if (pct > 50) return -1;  // Level -1: Individual tiles (full detail)
-    if (pct > 25) return 0;   // Level 0: Smallest chunks (medium detail)
-    if (pct > 15) return 1;   // Level 1: Medium chunks (low detail)
-    return 2;                 // Level 2: Largest chunks (map overview)
+    if (pct > 50) return -1;  // Level -1: Full detail
+    if (pct > 25) return 0;   // Level 0: Small chunks
+    if (pct > 10) return 1;   // Level 1: Medium chunks
+    if (pct > 5)  return 2;   // Level 2: Large chunks
+    return 3;                 // Level 3: Largest chunks (map overview)
   }
 
   function mainLoop(now) {
@@ -1114,40 +1115,38 @@ canvas.addEventListener('touchstart', e=>{
       for (let x = startChunkX; x <= endChunkX; x += chunkSize) {
         for (let y = startChunkY; y <= endChunkY; y += chunkSize) {
             const chunk = chunksToDraw.get(`${x},${y}`);
-            if (chunk) drawChunk(chunk, false); // Borders are off in chunk view
+            if (chunk) drawChunk(chunk, false);
         }
       }
 
-      // At the closest chunk level, also draw landmarks and resources
-      if (chunkLevel === 0) {
-        // Draw default buildings (landmarks)
-        baseMap.defaultBuildings.filter(b => 
-            !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY)
-        ).forEach(b => {
-            drawBuildingFootprint(b, null, false);
-        });
-
-        // Draw resource tiles
-        ctx.fillStyle = '#444';
-        baseMap.unoccupiableTiles.forEach(([x,y])=>{
-          if (getBuildingAt(x, y)) return;
-          if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return;
-          const [sx,sy] = worldToScreen(x,y);
-          ctx.beginPath();
-          ctx.moveTo(sx, sy - tileH/2); ctx.lineTo(sx + tileW/2, sy);
-          ctx.lineTo(sx, sy + tileH/2); ctx.lineTo(sx - tileW/2, sy);
-          ctx.closePath();
-          ctx.fill();
-        });
+      // --- VISIBILITY FIX: Draw important buildings on ALL chunked levels ---
+      baseMap.defaultBuildings.filter(b => 
+          !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY)
+      ).forEach(b => {
+          drawBuildingFootprint(b, null, false);
+      });
+      
+      // Only draw resource tiles on the closer chunk levels to reduce clutter
+      if (chunkLevel < 2) {
+          ctx.fillStyle = '#444';
+          baseMap.unoccupiableTiles.forEach(([x,y])=>{
+            if (getBuildingAt(x, y)) return;
+            if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return;
+            const [sx,sy] = worldToScreen(x,y);
+            ctx.beginPath();
+            ctx.moveTo(sx, sy - tileH/2); ctx.lineTo(sx + tileW/2, sy);
+            ctx.lineTo(sx, sy + tileH/2); ctx.lineTo(sx - tileW/2, sy);
+            ctx.closePath();
+            ctx.fill();
+          });
       }
-      // Note: At chunk levels 1 and 2, we draw nothing extra, just the biome chunks.
     }
 
-    // Always draw the current selection on top of everything
+    // Always draw the current selection on top
     if (selection) {
-      if (selection.w) { // It's a building
+      if (selection.w) {
         drawBuildingFootprint(selection, selectionColor, true);
-      } else { // It's a single tile
+      } else {
         const [sx, sy] = worldToScreen(selection.x, selection.y);
         ctx.beginPath();
         ctx.moveTo(sx, sy - tileH/2); ctx.lineTo(sx + tileW/2, sy);
