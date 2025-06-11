@@ -1,4 +1,9 @@
 {
+  "0.2.5.9": [
+    "Added a new toggleable layer for 'Alliance RSS' buildings.",
+    "Alliance resource nodes (Wood, Food, Stone, Iron) will now render on the map with unique colors.",
+    "A new 'Show Alliance RSS' checkbox has been added to the top-right panel to control their visibility."
+  ],
   "0.2.5.8": [
     "Replaced the confusing 'Quality' dropdown with two separate, clearer settings.",
     "New 'Tile Detail' setting now controls only when tiles merge together at low zoom levels.",

@@ -196,5 +196,12 @@
       "fillColor": "rgba(65,105,225,1)",
       "borderColor": "rgba(52,84,178,1)"
     }
+  ],
+  "allianceRssBuildings": [
+    { "type": "wood", "x": 594, "y": 594 },
+    { "type": "wood", "x": 24, "y": 34 },
+    { "type": "food", "x": 59, "y": 59 },
+    { "type": "stone", "x": 400, "y": 400 },
+    { "type": "iron", "x": 450, "y": 450 }
   ]
 }
