@@ -17,8 +17,8 @@
       "displayName": "King's Castle",
       "displayCoordinates": true,
       "hideCoordinates": true,
-      "fillColor": "rgba(180, 50, 50, 0.4)",
-      "borderColor": "rgba(255, 80, 80, 0.9)"
+      "fillColor": "rgba(255,215,0,1)",
+      "borderColor": "rgba(204,172,0,1)"
     },
     {
       "x": 800,
@@ -28,8 +28,8 @@
       "displayName": "Fortress No. 4",
       "displayCoordinates": true,
       "hideCoordinates": true,
-      "fillColor": "rgba(200, 200, 100, 0.4)",
-      "borderColor": "rgba(230, 230, 90, 1)"
+      "fillColor": "rgba(178,34,34,1)",
+      "borderColor": "rgba(142,27,27,1)"
     },
     {
       "x": 597,
@@ -39,8 +39,8 @@
       "displayName": "Fortress No. 3",
       "displayCoordinates": true,
       "hideCoordinates": true,
-      "fillColor": "rgba(200, 200, 100, 0.4)",
-      "borderColor": "rgba(230, 230, 90, 1)"
+      "fillColor": "rgba(178,34,34,1)",
+      "borderColor": "rgba(142,27,27,1)"
     },
         {
       "x": 400,
@@ -50,8 +50,8 @@
       "displayName": "Fortress No. 2",
       "displayCoordinates": true,
       "hideCoordinates": true,
-      "fillColor": "rgba(200, 200, 100, 0.4)",
-      "borderColor": "rgba(230, 230, 90, 1)"
+      "fillColor": "rgba(178,34,34,1)",
+      "borderColor": "rgba(142,27,27,1)"
     },
         {
       "x": 597,
@@ -61,8 +61,140 @@
       "displayName": "Fortress No. 1",
       "displayCoordinates": true,
       "hideCoordinates": true,
-      "fillColor": "rgba(200, 200, 100, 0.4)",
-      "borderColor": "rgba(230, 230, 90, 1)"
+      "fillColor": "rgba(178,34,34,1)",
+      "borderColor": "rgba(142,27,27,1)"
+    },
+        {
+      "x": 237,
+      "y": 828,
+      "w": 6,
+      "h": 6,
+      "displayName": "Sanctuary 1",
+      "displayCoordinates": true,
+      "hideCoordinates": true,
+      "fillColor": "rgba(65,105,225,1)",
+      "borderColor": "rgba(52,84,178,1)"
+    },
+        {
+      "x": 237,
+      "y": 606,
+      "w": 6,
+      "h": 6,
+      "displayName": "Sanctuary 2",
+      "displayCoordinates": true,
+      "hideCoordinates": true,
+      "fillColor": "rgba(65,105,225,1)",
+      "borderColor": "rgba(52,84,178,1)"
+    },
+        {
+      "x": 237,
+      "y": 348,
+      "w": 6,
+      "h": 6,
+      "displayName": "Sanctuary 3",
+      "displayCoordinates": true,
+      "hideCoordinates": true,
+      "fillColor": "rgba(65,105,225,1)",
+      "borderColor": "rgba(52,84,178,1)"
+    },
+        {
+      "x": 366,
+      "y": 237,
+      "w": 6,
+      "h": 6,
+      "displayName": "Sanctuary 4",
+      "displayCoordinates": true,
+      "hideCoordinates": true,
+      "fillColor": "rgba(65,105,225,1)",
+      "borderColor": "rgba(52,84,178,1)"
+    },
+        {
+      "x": 588,
+      "y": 237,
+      "w": 6,
+      "h": 6,
+      "displayName": "Sanctuary 5",
+      "displayCoordinates": true,
+      "hideCoordinates": true,
+      "fillColor": "rgba(65,105,225,1)",
+      "borderColor": "rgba(52,84,178,1)"
+    },
+        {
+      "x": 846,
+      "y": 237,
+      "w": 6,
+      "h": 6,
+      "displayName": "Sanctuary 6",
+      "displayCoordinates": true,
+      "hideCoordinates": true,
+      "fillColor": "rgba(65,105,225,1)",
+      "borderColor": "rgba(52,84,178,1)"
+    },
+        {
+      "x": 957,
+      "y": 348,
+      "w": 6,
+      "h": 6,
+      "displayName": "Sanctuary 7",
+      "displayCoordinates": true,
+      "hideCoordinates": true,
+      "fillColor": "rgba(65,105,225,1)",
+      "borderColor": "rgba(52,84,178,1)"
+    },
+        {
+      "x": 957,
+      "y": 606,
+      "w": 6,
+      "h": 6,
+      "displayName": "Sanctuary 8",
+      "displayCoordinates": true,
+      "hideCoordinates": true,
+      "fillColor": "rgba(65,105,225,1)",
+      "borderColor": "rgba(52,84,178,1)"
+    },
+        {
+      "x": 957,
+      "y": 828,
+      "w": 6,
+      "h": 6,
+      "displayName": "Sanctuary 9",
+      "displayCoordinates": true,
+      "hideCoordinates": true,
+      "fillColor": "rgba(65,105,225,1)",
+      "borderColor": "rgba(52,84,178,1)"
+    },
+        {
+      "x": 846,
+      "y": 957,
+      "w": 6,
+      "h": 6,
+      "displayName": "Sanctuary 10",
+      "displayCoordinates": true,
+      "hideCoordinates": true,
+      "fillColor": "rgba(65,105,225,1)",
+      "borderColor": "rgba(52,84,178,1)"
+    },
+        {
+      "x": 606,
+      "y": 957,
+      "w": 6,
+      "h": 6,
+      "displayName": "Sanctuary 11",
+      "displayCoordinates": true,
+      "hideCoordinates": true,
+      "fillColor": "rgba(65,105,225,1)",
+      "borderColor": "rgba(52,84,178,1)"
+    },
+        {
+      "x": 366,
+      "y": 957,
+      "w": 6,
+      "h": 6,
+      "displayName": "Sanctuary 12",
+      "displayCoordinates": true,
+      "hideCoordinates": true,
+      "fillColor": "rgba(65,105,225,1)",
+      "borderColor": "rgba(52,84,178,1)"
     }
   ]
 }

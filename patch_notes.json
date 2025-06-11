@@ -1,4 +1,8 @@
 {
+  "0.2.5.4": [
+    "Changed the color pallete of existing buildings.",
+    "Implemented Sanctuaries"
+  ],
   "0.2.5.3": [
     "Fixed the patch notes not showing and updating correctly"
   ],
