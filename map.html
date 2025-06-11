@@ -275,16 +275,30 @@
     tileCount += chunk.size * chunk.size;
     const { x, y, size, biome } = chunk;
 
-    const [p_bottom_x, p_bottom_y] = worldToScreen(x, y);
-    const [p_right_x, p_right_y]   = worldToScreen(x + size, y);
-    const [p_top_x, p_top_y]       = worldToScreen(x + size, y + size);
-    const [p_left_x, p_left_y]    = worldToScreen(x, y + size);
+    // This logic is now corrected to match the precise geometry of drawBuildingFootprint,
+    // ensuring that chunks tile perfectly without overlapping each other.
+    const x0 = x, y0 = y, w = size, h = size;
+
+    const bottomTile = { x: x0, y: y0 };
+    const rightTile  = { x: x0 + w - 1, y: y0 };
+    const topTile    = { x: x0 + w - 1, y: y0 + h - 1 };
+    const leftTile   = { x: x0, y: y0 + h - 1 };
+
+    const [sbx, sby] = worldToScreen(bottomTile.x, bottomTile.y);
+    const [srx, sry] = worldToScreen(rightTile.x, rightTile.y);
+    const [stx, sty] = worldToScreen(topTile.x, topTile.y);
+    const [slx, sly] = worldToScreen(leftTile.x, leftTile.y);
+
+    const p_bottom = { x: sbx, y: sby + tileH/2 };
+    const p_right  = { x: srx + tileW/2, y: sry };
+    const p_top    = { x: stx, y: sty - tileH/2 };
+    const p_left   = { x: slx - tileW/2, y: sly };
 
     ctx.beginPath();
-    ctx.moveTo(p_bottom_x, p_bottom_y);
-    ctx.lineTo(p_right_x,  p_right_y);
-    ctx.lineTo(p_top_x,    p_top_y);
-    ctx.lineTo(p_left_x,   p_left_y);
+    ctx.moveTo(p_bottom.x, p_bottom.y);
+    ctx.lineTo(p_right.x,  p_right.y);
+    ctx.lineTo(p_top.x,    p_top.y);
+    ctx.lineTo(p_left.x,   p_left.y);
     ctx.closePath();
 
     ctx.fillStyle = biomeColors[biome];
