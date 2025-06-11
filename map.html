@@ -298,7 +298,7 @@
 
 <script>
 // —— CONFIG ——
-  const CURRENT_VERSION = '0.2.5.10';
+  const CURRENT_VERSION = '0.2.5.11';
   const N           = 1200,
         tileW       = 10, tileH = 10,
         strokeW     = 0.3, 
@@ -371,32 +371,37 @@
   const buildingMap = new Map();
   const chunkLevels = []; 
 
+  // This will now be a global variable holding our master list.
+  let allBuildings = []; 
+
   function preProcessBuildings() {
-    buildingMap.clear();
+    // Start with default and user buildings
+    let buildings = [...baseMap.defaultBuildings, ...userBuildings];
 
-    // Combine default buildings and user buildings
-    let allBuildings = [...baseMap.defaultBuildings, ...userBuildings];
-
-    // Process and add alliance resource buildings
+    // Process and add alliance resource buildings to the list
     if (baseMap.allianceRssBuildings) {
       const formattedRssBuildings = baseMap.allianceRssBuildings.map(rss => {
         const style = ALLIANCE_RSS_STYLES[rss.type] || {};
         return {
           x: rss.x,
           y: rss.y,
-          w: 2, // CORRECTED: Set width to 2
-          h: 2, // CORRECTED: Set height to 2
+          w: 2, // Correct size
+          h: 2, // Correct size
           displayName: style.displayName,
           fillColor: style.fillColor,
           borderColor: style.borderColor,
           displayCoordinates: false,
-          isRss: true
+          isRss: true // Flag to identify these buildings for filtering
         };
       });
-      allBuildings = allBuildings.concat(formattedRssBuildings);
+      buildings = buildings.concat(formattedRssBuildings);
     }
     
-    // Populate the lookup map
+    // Store the final, definitive list
+    allBuildings = buildings;
+
+    // Populate the lookup map from this definitive list
+    buildingMap.clear();
     for (const b of allBuildings) {
       for (let dx = 0; dx < b.w; dx++) {
         for (let dy = 0; dy < b.h; dy++) {
@@ -1166,22 +1171,17 @@ canvas.addEventListener('touchstart', e=>{
         }
       }
       
-      // Determine which buildings to render based on toggles
-      let buildingsToRender = [...baseMap.defaultBuildings, ...userBuildings];
-      if (allianceRssToggle.checked && baseMap.allianceRssBuildings) {
-          const formattedRssBuildings = baseMap.allianceRssBuildings.map(rss => {
-              const style = ALLIANCE_RSS_STYLES[rss.type] || {};
-              return {
-                  ...rss, w: 1, h: 1,
-                  displayName: style.displayName,
-                  fillColor: style.fillColor,
-                  borderColor: style.borderColor,
-                  displayCoordinates: false,
-                  isRss: true
-              };
-          });
-          buildingsToRender = buildingsToRender.concat(formattedRssBuildings);
-      }
+      // Filter the master list of buildings based on the RSS toggle
+      const buildingsToRender = allBuildings.filter(b => {
+          return !b.isRss || allianceRssToggle.checked;
+      });
+
+      // Draw all visible buildings from the filtered list
+      buildingsToRender.filter(b => 
+        !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY)
+      ).forEach(b => {
+          drawBuildingFootprint(b, null, shouldDrawBorders);
+      });
 
       // Draw all visible buildings from the filtered list
       buildingsToRender.filter(b => 

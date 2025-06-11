@@ -1,4 +1,8 @@
 {
+  "0.2.5.11": [
+    "Fixed a critical bug where Alliance RSS buildings were not filling their entire 2x2 area, leaving parts of the tile uncolored.",
+    "Refactored the building rendering logic to be more efficient and prevent similar bugs in the future."
+  ],
   "0.2.5.10": [
     "Fixed a bug where Alliance RSS buildings were rendered as 1x1 tiles instead of the correct 2x2 size.",
     "Fixed an issue where the names of Alliance RSS buildings (e.g., 'Wood', 'Food') were not being displayed on the map."
