@@ -225,7 +225,7 @@
   }
 
   // --- GRID DRAWING ---
-  function drawTile(x, y) {
+  function drawTile(x, y, drawBorder = true) {
     tileCount++;
     const [sx,sy] = worldToScreen(x,y);
     ctx.beginPath();
@@ -234,11 +234,13 @@
     ctx.lineTo(   sx,        sy + tileH/2);
     ctx.lineTo(sx - tileW/2, sy      );
     ctx.closePath();
-    
+
     const biome = getBiomeForTile(x, y);
     ctx.fillStyle = biomeColors[biome];
     ctx.fill();
-    ctx.stroke();
+    if (drawBorder) {
+      ctx.stroke();
+    }
 
     const building = getBuildingAt(x, y);
     if (building && building.hideCoordinates) {
@@ -271,24 +273,19 @@
     ctx.fillText(text, sx, sy);
   }
 
-  function drawChunk(chunk) {
+  function drawChunk(chunk, drawBorder = true) {
     tileCount += chunk.size * chunk.size;
     const { x, y, size, biome } = chunk;
 
-    // This logic is now corrected to match the precise geometry of drawBuildingFootprint,
-    // ensuring that chunks tile perfectly without overlapping each other.
     const x0 = x, y0 = y, w = size, h = size;
-
     const bottomTile = { x: x0, y: y0 };
     const rightTile  = { x: x0 + w - 1, y: y0 };
     const topTile    = { x: x0 + w - 1, y: y0 + h - 1 };
     const leftTile   = { x: x0, y: y0 + h - 1 };
-
     const [sbx, sby] = worldToScreen(bottomTile.x, bottomTile.y);
     const [srx, sry] = worldToScreen(rightTile.x, rightTile.y);
     const [stx, sty] = worldToScreen(topTile.x, topTile.y);
     const [slx, sly] = worldToScreen(leftTile.x, leftTile.y);
-
     const p_bottom = { x: sbx, y: sby + tileH/2 };
     const p_right  = { x: srx + tileW/2, y: sry };
     const p_top    = { x: stx, y: sty - tileH/2 };
@@ -303,7 +300,9 @@
 
     ctx.fillStyle = biomeColors[biome];
     ctx.fill();
-    ctx.stroke();
+    if (drawBorder) {
+      ctx.stroke();
+    }
   }
 
 
@@ -353,15 +352,16 @@
       // If coordinates are shown, we have two lines of text to fit.
       const heightFactor = hasCoords ? 0.5 : 1.0;
       
-      if (availableWidth < 30 || (availableHeight * heightFactor) < 10) return;
-
       const padding = 0.9;
-      // Heuristic for calculating optimal font size based on available space.
+      // Heuristic for calculating optimal font size. The width factor is more conservative.
       let optimalFontSize = Math.min(
         (availableHeight * heightFactor) * padding,
-        (availableWidth * padding / effectiveLength) * 1.4
+        (availableWidth * padding / effectiveLength) * 1.2 // Reduced factor for more conservative sizing
       );
       optimalFontSize = Math.min(48, optimalFontSize);
+
+      // FINAL CHECK: Don't render text if it would be smaller than 7px on screen.
+      if (optimalFontSize * cam.scale < 7) return;
 
       const centerX = (p_left.x + p_right.x) / 2;
       const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
@@ -681,14 +681,11 @@ function clampCamera() {
 
     ctx.save();
     ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
-    if (pct > 40) {
-        ctx.strokeStyle = borderColor;
-    } else {
-        // Set a transparent color to effectively disable the stroke for the grid.
-        ctx.strokeStyle = 'rgba(0,0,0,0)';
-    }
     
+    ctx.strokeStyle = borderColor;
     ctx.lineWidth = strokeW;
+    
+    const shouldDrawBorders = pct > 40;
     
     const [tl_x, tl_y] = screenToWorld(0, 0);
     const [tr_x, tr_y] = screenToWorld(canvas.width, 0);
@@ -716,7 +713,7 @@ function clampCamera() {
         for (let x = startX; x <= endX; x++) {
             const y = sum - x;
             if (x < 0 || x >= N || y < 0 || y >= N) continue;
-            if (!getBuildingAt(x, y)) drawTile(x, y);
+            if (!getBuildingAt(x, y)) drawTile(x, y, shouldDrawBorders);
         }
       }
     } else {
@@ -732,7 +729,7 @@ function clampCamera() {
         for (let y = startChunkY; y <= endChunkY; y += chunkSize) {
             const chunk = chunksToDraw.get(`${x},${y}`);
             if (chunk) {
-                drawChunk(chunk);
+                drawChunk(chunk, shouldDrawBorders);
             }
         }
       }
@@ -752,12 +749,18 @@ function clampCamera() {
       ctx.fill();
     });
 
+    // Combine all buildings into one array for efficient processing.
+    const allBuildings = [...baseMap.defaultBuildings, ...userBuildings];
+
+    // When in chunked view, punch holes for visible buildings.
     if (chunkLevel !== -1) {
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
-      const allBuildings = [...baseMap.defaultBuildings, ...userBuildings];
-
+      
       allBuildings.forEach(b => {
+        // PERFORMANCE FIX: Cull (skip) buildings that are not in the current view.
+        if (b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY) return;
+        
         const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
         const bottomTile = { x: x0, y: y0 };
         const rightTile  = { x: x0 + w - 1, y: y0 };
@@ -785,14 +788,15 @@ function clampCamera() {
       ctx.restore();
     }
     
-    const shouldDrawBorders = pct > 40;
-
-    baseMap.defaultBuildings.forEach(b => drawBuildingFootprint(b, null, shouldDrawBorders));
-    userBuildings.forEach(b => drawBuildingFootprint(b, null, shouldDrawBorders));
+    // Draw all visible buildings.
+    allBuildings.forEach(b => {
+        // PERFORMANCE FIX: Cull (skip) buildings that are not in the current view.
+        if (b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || y > viewBounds.maxY || b.y + b.h < viewBounds.minY) return;
+        drawBuildingFootprint(b, null, shouldDrawBorders)
+    });
 
     if (selection) {
       if (selection.w) {
-        // Selection highlight should always have a border.
         drawBuildingFootprint(selection, selectionColor, true);
       } else {
         const [sx, sy] = worldToScreen(selection.x, selection.y);
