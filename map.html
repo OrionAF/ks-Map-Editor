@@ -705,6 +705,47 @@
       ctx.fill();
     });
 
+    // ======================= FIX STARTS HERE =======================
+    // When in chunked view, punch holes in the background where buildings will be drawn.
+    // This prevents the building's semi-transparent color from blending with the
+    // solid background color of the chunk, ensuring visual consistency with the
+    // individual-tile rendering mode.
+    if (chunkLevel !== -1) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      const allBuildings = [...baseMap.defaultBuildings, ...userBuildings];
+
+      allBuildings.forEach(b => {
+        // Use the same geometry logic from drawBuildingFootprint to create the shape
+        const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
+        const bottomTile = { x: x0, y: y0 };
+        const rightTile  = { x: x0 + w - 1, y: y0 };
+        const topTile    = { x: x0 + w - 1, y: y0 + h - 1 };
+        const leftTile   = { x: x0, y: y0 + h - 1 };
+        const [sbx, sby] = worldToScreen(bottomTile.x, bottomTile.y);
+        const [srx, sry] = worldToScreen(rightTile.x, rightTile.y);
+        const [stx, sty] = worldToScreen(topTile.x, topTile.y);
+        const [slx, sly] = worldToScreen(leftTile.x, leftTile.y);
+        const p_bottom = { x: sbx, y: sby + tileH/2 };
+        const p_right  = { x: srx + tileW/2, y: sry };
+        const p_top    = { x: stx, y: sty - tileH/2 };
+        const p_left   = { x: slx - tileW/2, y: sly };
+        
+        ctx.beginPath();
+        ctx.moveTo(p_bottom.x, p_bottom.y);
+        ctx.lineTo(p_right.x,  p_right.y);
+        ctx.lineTo(p_top.x,    p_top.y);
+        ctx.lineTo(p_left.x,   p_left.y);
+        ctx.closePath();
+        
+        // Fill with any opaque color to erase the background chunk content.
+        ctx.fillStyle = '#000';
+        ctx.fill();
+      });
+      ctx.restore(); // Restore globalCompositeOperation to default
+    }
+    // ======================== FIX ENDS HERE ========================
+
     baseMap.defaultBuildings.forEach(b => drawBuildingFootprint(b));
     userBuildings.forEach(b => drawBuildingFootprint(b));
 
