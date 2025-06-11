@@ -91,8 +91,8 @@
 // —— CONFIG ——
   const N           = 1200,
         tileW       = 10, tileH = 10,
-        strokeW     = 1, // Changed from 0.3 to 1 for better performance
-        borderColor = 'rgba(0,0,0,0.5)', // Use alpha for a softer look
+        strokeW     = 0.3, 
+        borderColor = '#000', 
         textColor   = '#fff',
         maxPct      = 1000,
         selectionColor = '#ff0';
@@ -194,6 +194,7 @@
   let minFitScale = 0.01;
   // FIX 1: Add a flag for robust initial loading.
   let isInitialLoad = true;
+  let touchStartTime = 0; // Add this line
 
   // coord transforms
   function worldToScreen(x,y) {
@@ -571,13 +572,11 @@ function clampCamera() {
     }
 
     b.addEventListener('click', () => {
+        // UX FIX: Use smooth animation for preset buttons.
         const cx = canvas.width/2, cy = canvas.height/2;
-        const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
         let pct = Number(zoomVal);
         const targetScale = (pct / 100) * baseScale;
-        cam.scale = Math.max(minFitScale, Math.min(maxPct / 100 * baseScale, targetScale));
-        cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
-        clampCamera();
+        animateZoom(targetScale, cx, cy, 200); // Animate over 200ms
     });
   });
 
@@ -637,12 +636,17 @@ function clampCamera() {
 
   let touchMode = null;
   let startDist, startScale, pinchCenter;
+
   canvas.addEventListener('touchstart', e=>{
     e.preventDefault();
     if (e.touches.length===1) {
       touchMode = 'pan';
-      lastX = e.touches[0].clientX;
-      lastY = e.touches[0].clientY;
+      const t = e.touches[0];
+      lastX = t.clientX;
+      lastY = t.clientY;
+      clickStartX = t.clientX; // Record start position for tap detection
+      clickStartY = t.clientY;
+      touchStartTime = performance.now(); // Record start time for tap detection
     } else if (e.touches.length===2) {
       touchMode = 'pinch';
       const [a,b] = e.touches;
@@ -676,6 +680,31 @@ function clampCamera() {
   }, { passive:false });
 
   canvas.addEventListener('touchend', e=>{
+    // Logic to handle tap-to-select on touch devices
+    if (touchMode === 'pan' && e.changedTouches.length === 1) {
+      const t = e.changedTouches[0];
+      const dist = Math.hypot(t.clientX - clickStartX, t.clientY - clickStartY);
+      const duration = performance.now() - touchStartTime;
+
+      // Consider it a 'tap' if it's short and hasn't moved far.
+      if (duration < 200 && dist < 10) {
+        const [worldX, worldY] = screenToWorld(t.clientX, t.clientY);
+        if (worldX >= 0 && worldX < N && worldY >= 0 && worldY < N) {
+          const building = getBuildingAt(worldX, worldY);
+          
+          if (building) {
+            selection = building;
+            inpX.value = building.x;
+            inpY.value = building.y;
+          } else {
+            selection = { x: worldX, y: worldY };
+            inpX.value = worldX;
+            inpY.value = worldY;
+          }
+        }
+      }
+    }
+    
     if (e.touches.length<2) touchMode = null;
   });
   
@@ -697,7 +726,6 @@ function clampCamera() {
     const pct = Math.round((cam.scale / baseScale) * 100);
     zoomLevelEl.textContent = `Zoom: ${pct}%`;
     
-    // UX FIX: Keep the slider in sync with the actual zoom percentage
     if (pct > zoomSlider.max) {
       zoomSlider.max = pct;
     }
@@ -775,7 +803,6 @@ function clampCamera() {
       ctx.fill();
     });
 
-    // PERFORMANCE FIX: Pre-filter for only visible buildings once.
     const allBuildings = [...baseMap.defaultBuildings, ...userBuildings];
     const visibleBuildings = allBuildings.filter(b => 
         !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY)
@@ -786,7 +813,6 @@ function clampCamera() {
       ctx.globalCompositeOperation = 'destination-out';
       
       visibleBuildings.forEach(b => {
-        // This loop now only runs for on-screen buildings.
         const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
         const bottomTile = { x: x0, y: y0 };
         const rightTile  = { x: x0 + w - 1, y: y0 };
@@ -814,7 +840,7 @@ function clampCamera() {
       ctx.restore();
     }
     
-    // This loop now only runs for on-screen buildings.
+    // CRITICAL FIX: The loop to draw the buildings was missing. It is now restored.
     visibleBuildings.forEach(b => {
         drawBuildingFootprint(b, null, shouldDrawBorders);
     });
