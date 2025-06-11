@@ -240,13 +240,16 @@
       <div id="statsTiles">Tiles: –</div>
     </div>
     <div>
-      <label for="qualitySelect" class="coords-label">Quality:</label>
-        <select id="qualitySelect">
-            <option value="50">Normal</option>
-            <option value="25">Low</option>
-            <option value="80">High</option>
-            <option value="1000">Ultra (No Merging)</option>
+        <label for="tileDetailSelect" class="coords-label">Tile Detail:</label>
+        <select id="tileDetailSelect">
+            <option value="25">Low (Merge Early)</option>
+            <option value="50">Normal (Balanced)</option>
+            <option value="80">High (Merge Late)</option>
         </select>
+    </div>
+    <div>
+        <input type="checkbox" id="gridlinesToggle">
+        <label for="gridlinesToggle" class="coords-label">Show Gridlines</label>
     </div>
   </div>
 
@@ -291,7 +294,7 @@
 
 <script>
 // —— CONFIG ——
-  const CURRENT_VERSION = '0.2.5.7';
+  const CURRENT_VERSION = '0.2.5.8';
   const N           = 1200,
         tileW       = 10, tileH = 10,
         strokeW     = 0.3, 
@@ -343,8 +346,8 @@
   const patchNotesBody        = document.getElementById('patchNotesBody');
   const closePatchNotesBtn    = document.getElementById('closePatchNotesBtn');
   const hidePatchNotesCheckbox= document.getElementById('hidePatchNotesCheckbox');
-    const qualitySelect       = document.getElementById('qualitySelect');
-
+  const tileDetailSelect    = document.getElementById('tileDetailSelect');
+  const gridlinesToggle     = document.getElementById('gridlinesToggle');
 
   // toggle panels
   infoBtn.addEventListener('click', ()=>infoPanel.classList.toggle('open'));
@@ -488,7 +491,7 @@
     }
 
     function initializeUI() {
-        // Version and Patch Notes logic
+        // Version and Patch Notes logic... (this part remains the same)
         versionDisplay.textContent = 'V' + CURRENT_VERSION;
         patchNotesBtn.addEventListener('click', showPatchNotes);
         closePatchNotesBtn.addEventListener('click', hidePatchNotes);
@@ -498,14 +501,20 @@
             showPatchNotes();
         }
 
-        // --- NEW: Quality Setting Logic ---
-        // Load saved quality setting, or default to '50'
-        const savedQuality = localStorage.getItem('mapQuality') || '50';
-        qualitySelect.value = savedQuality;
+        // --- UPDATED: Control Settings Logic ---
+        
+        // Load Tile Detail setting, default to '50'
+        const savedDetail = localStorage.getItem('mapTileDetail') || '50';
+        tileDetailSelect.value = savedDetail;
+        tileDetailSelect.addEventListener('change', () => {
+            localStorage.setItem('mapTileDetail', tileDetailSelect.value);
+        });
 
-        // Save setting to localStorage whenever it's changed
-        qualitySelect.addEventListener('change', () => {
-            localStorage.setItem('mapQuality', qualitySelect.value);
+        // Load Gridlines setting, default to 'true' (checked)
+        const savedGridlines = localStorage.getItem('mapShowGridlines') !== 'false';
+        gridlinesToggle.checked = savedGridlines;
+        gridlinesToggle.addEventListener('change', () => {
+            localStorage.setItem('mapShowGridlines', gridlinesToggle.checked);
         });
     }
 
@@ -1048,15 +1057,15 @@ canvas.addEventListener('touchstart', e=>{
   });
   
   function getChunkLevelForZoom(pct) {
-    const qualityThreshold = parseInt(qualitySelect.value, 10);
+    const detailThreshold = parseInt(tileDetailSelect.value, 10);
 
-    // If zoom is above the user's chosen threshold, show individual tiles
-    if (pct > qualityThreshold) return -1;
+    // If zoom is above the user's chosen detail threshold, show individual tiles
+    if (pct > detailThreshold) return -1;
     
-    // The rest of the logic scales based on the initial threshold
-    if (pct > qualityThreshold / 2) return 0;   // e.g., for Normal (50), this is 25
-    if (pct > qualityThreshold / 5) return 1;   // e.g., for Normal (50), this is 10
-    if (pct > qualityThreshold / 10) return 2;  // e.g., for Normal (50), this is 5
+    // The rest of the LOD logic scales based on that threshold
+    if (pct > detailThreshold / 2) return 0;
+    if (pct > detailThreshold / 5) return 1;
+    if (pct > detailThreshold / 10) return 2;
     return 3;
   }
 
@@ -1083,7 +1092,7 @@ canvas.addEventListener('touchstart', e=>{
     ctx.strokeStyle = borderColor;
     ctx.lineWidth = strokeW;
     
-    const shouldDrawBorders = pct > parseInt(qualitySelect.value, 10);
+    const shouldDrawBorders = gridlinesToggle.checked && pct > 50;
     
     const [tl_x, tl_y] = screenToWorld(0, 0);
     const [tr_x, tr_y] = screenToWorld(canvas.width, 0);
