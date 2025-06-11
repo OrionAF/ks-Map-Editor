@@ -278,6 +278,9 @@
     tileCount += chunk.size * chunk.size;
     const { x, y, size, biome } = chunk;
 
+    // When borders are off, slightly inflate the chunk to cover rendering seams.
+    const inflation = drawBorder ? 0 : 0.5;
+
     const x0 = x, y0 = y, w = size, h = size;
     const bottomTile = { x: x0, y: y0 };
     const rightTile  = { x: x0 + w - 1, y: y0 };
@@ -287,10 +290,12 @@
     const [srx, sry] = worldToScreen(rightTile.x, rightTile.y);
     const [stx, sty] = worldToScreen(topTile.x, topTile.y);
     const [slx, sly] = worldToScreen(leftTile.x, leftTile.y);
-    const p_bottom = { x: sbx, y: sby + tileH/2 };
-    const p_right  = { x: srx + tileW/2, y: sry };
-    const p_top    = { x: stx, y: sty - tileH/2 };
-    const p_left   = { x: slx - tileW/2, y: sly };
+
+    // Apply the inflation to the corner points of the polygon
+    const p_bottom = { x: sbx, y: sby + tileH/2 + inflation };
+    const p_right  = { x: srx + tileW/2 + inflation, y: sry };
+    const p_top    = { x: stx, y: sty - tileH/2 - inflation };
+    const p_left   = { x: slx - tileW/2 - inflation, y: sly };
 
     ctx.beginPath();
     ctx.moveTo(p_bottom.x, p_bottom.y);
@@ -345,25 +350,27 @@
       const availableWidth = p_right.x - p_left.x;
       const availableHeight = p_bottom.y - p_top.y;
       
+      // Stop if there's no space at all
+      if (availableWidth < 10 || availableHeight < 10) return;
+      
       const hasCoords = b.displayCoordinates;
       const coordText = `(X${b.x}, Y${b.y})`;
-      // Use the length of the longer line for width calculation
-      const effectiveLength = hasCoords ? Math.max(b.displayName.length, coordText.length) : b.displayName.length;
-
-      // If coordinates are shown, we have two lines of text to fit.
+      const effectiveLength = hasCoords ? Math.max(b.displayName.length, coordText.length * 0.7) : b.displayName.length;
       const heightFactor = hasCoords ? 0.5 : 1.0;
       
       const padding = 0.9;
-      // Heuristic for calculating optimal font size. The width factor is more conservative.
+      
       let optimalFontSize = Math.min(
         (availableHeight * heightFactor) * padding,
-        (availableWidth * padding / effectiveLength) * 1.2 // Reduced factor for more conservative sizing
+        (availableWidth * padding / effectiveLength) * 1.2
       );
-      optimalFontSize = Math.min(48, optimalFontSize);
-
-      // FINAL CHECK: Don't render text if it would be smaller than 7px on screen.
+      
+      // Don't render text if it would be illegibly small on screen.
       if (optimalFontSize * cam.scale < 7) return;
-
+      
+      // Set a minimum logical font size for the primary name.
+      optimalFontSize = Math.max(10, optimalFontSize);
+      
       const centerX = (p_left.x + p_right.x) / 2;
       const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
       const centerY = (p_top.y + p_bottom.y) / 2 + yOffset;
@@ -375,7 +382,8 @@
       ctx.fillText(b.displayName, centerX, centerY);
       
       if (b.displayCoordinates) {
-        const coordFontSize = Math.max(8, optimalFontSize * 0.6);
+        // The coordinate font size is now ALWAYS a proportion of the (clamped) main font size.
+        const coordFontSize = optimalFontSize * 0.6;
         ctx.font = `${coordFontSize}px sans-serif`;
         ctx.fillText(coordText, centerX, centerY + optimalFontSize * 0.9);
       }
