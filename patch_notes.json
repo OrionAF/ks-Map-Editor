@@ -1,4 +1,8 @@
 {
+  "0.2.5.10": [
+    "Fixed a bug where Alliance RSS buildings were rendered as 1x1 tiles instead of the correct 2x2 size.",
+    "Fixed an issue where the names of Alliance RSS buildings (e.g., 'Wood', 'Food') were not being displayed on the map."
+  ],
   "0.2.5.9": [
     "Added a new toggleable layer for 'Alliance RSS' buildings.",
     "Alliance resource nodes (Wood, Food, Stone, Iron) will now render on the map with unique colors.",

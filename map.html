@@ -298,7 +298,7 @@
 
 <script>
 // —— CONFIG ——
-  const CURRENT_VERSION = '0.2.5.9';
+  const CURRENT_VERSION = '0.2.5.10';
   const N           = 1200,
         tileW       = 10, tileH = 10,
         strokeW     = 0.3, 
@@ -384,13 +384,13 @@
         return {
           x: rss.x,
           y: rss.y,
-          w: 1, // RSS buildings are 1x1 tiles
-          h: 1,
+          w: 2, // CORRECTED: Set width to 2
+          h: 2, // CORRECTED: Set height to 2
           displayName: style.displayName,
           fillColor: style.fillColor,
           borderColor: style.borderColor,
-          displayCoordinates: false, // Explicitly set to false
-          isRss: true // Add a flag to identify these buildings
+          displayCoordinates: false,
+          isRss: true
         };
       });
       allBuildings = allBuildings.concat(formattedRssBuildings);
