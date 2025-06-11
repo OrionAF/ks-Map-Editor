@@ -91,7 +91,7 @@
 // —— CONFIG ——
   const N           = 1200,
         tileW       = 10, tileH = 10,
-        strokeW     = 1,
+        strokeW     = 0.3,
         borderColor = '#000',
         textColor   = '#fff',
         maxPct      = 1000,
@@ -307,7 +307,7 @@
   }
 
 
-  function drawBuildingFootprint(b, highlightStyle = null) {
+  function drawBuildingFootprint(b, highlightStyle = null, drawBorder = true) {
     const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
     const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
     const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
@@ -324,38 +324,46 @@
     const p_right  = { x: srx + tileW/2, y: sry };
     const p_top    = { x: stx, y: sty - tileH/2 };
     const p_left   = { x: slx - tileW/2, y: sly };
+    
     ctx.beginPath();
     ctx.moveTo(p_bottom.x, p_bottom.y);
     ctx.lineTo(p_right.x,  p_right.y);
     ctx.lineTo(p_top.x,    p_top.y);
     ctx.lineTo(p_left.x,   p_left.y);
     ctx.closePath();
-    ctx.fillStyle = fill; ctx.fill();
+    
+    ctx.fillStyle = fill;
+    ctx.fill();
+    
     ctx.strokeStyle = border; 
     ctx.lineWidth = highlightStyle ? strokeW * 2 : strokeW;
-    ctx.stroke();
+    if (drawBorder) {
+        ctx.stroke();
+    }
 
     if (cam.scale > 0.4 && b.displayName) {
       const availableWidth = p_right.x - p_left.x;
       const availableHeight = p_bottom.y - p_top.y;
       
       const hasCoords = b.displayCoordinates;
+      const coordText = `(X${b.x}, Y${b.y})`;
+      // Use the length of the longer line for width calculation
+      const effectiveLength = hasCoords ? Math.max(b.displayName.length, coordText.length) : b.displayName.length;
+
       // If coordinates are shown, we have two lines of text to fit.
       const heightFactor = hasCoords ? 0.5 : 1.0;
       
-      if (availableWidth < 30 || (availableHeight * heightFactor) < 15) return;
+      if (availableWidth < 30 || (availableHeight * heightFactor) < 10) return;
 
       const padding = 0.9;
       // Heuristic for calculating optimal font size based on available space.
-      // It considers both width (based on name length) and height (adjusted for one or two lines).
       let optimalFontSize = Math.min(
         (availableHeight * heightFactor) * padding,
-        (availableWidth * padding / b.displayName.length) * 1.35 // A more conservative width factor
+        (availableWidth * padding / effectiveLength) * 1.4
       );
-      optimalFontSize = Math.min(48, optimalFontSize); // Cap max font size
+      optimalFontSize = Math.min(48, optimalFontSize);
 
       const centerX = (p_left.x + p_right.x) / 2;
-      // Adjust the vertical center to account for two lines, keeping the text block centered.
       const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
       const centerY = (p_top.y + p_bottom.y) / 2 + yOffset;
 
@@ -368,8 +376,7 @@
       if (b.displayCoordinates) {
         const coordFontSize = Math.max(8, optimalFontSize * 0.6);
         ctx.font = `${coordFontSize}px sans-serif`;
-        // Draw the second line (coordinates) relative to the first line.
-        ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.9);
+        ctx.fillText(coordText, centerX, centerY + optimalFontSize * 0.9);
       }
     }
   }
@@ -414,6 +421,8 @@ function clampCamera() {
     const mapTotalHeight = (N - 1) * tileH;
     const mapScaledWidth = mapTotalWidth * s;
     const mapScaledHeight = mapTotalHeight * s;
+
+    const worldHalfWidth = mapScaledWidth / 2;
     
     // Allow panning until the map edge is near the center of the screen.
     const overscrollX = canvas.width * 0.5;
@@ -743,18 +752,12 @@ function clampCamera() {
       ctx.fill();
     });
 
-    // ======================= FIX STARTS HERE =======================
-    // When in chunked view, punch holes in the background where buildings will be drawn.
-    // This prevents the building's semi-transparent color from blending with the
-    // solid background color of the chunk, ensuring visual consistency with the
-    // individual-tile rendering mode.
     if (chunkLevel !== -1) {
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
       const allBuildings = [...baseMap.defaultBuildings, ...userBuildings];
 
       allBuildings.forEach(b => {
-        // Use the same geometry logic from drawBuildingFootprint to create the shape
         const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
         const bottomTile = { x: x0, y: y0 };
         const rightTile  = { x: x0 + w - 1, y: y0 };
@@ -776,20 +779,21 @@ function clampCamera() {
         ctx.lineTo(p_left.x,   p_left.y);
         ctx.closePath();
         
-        // Fill with any opaque color to erase the background chunk content.
         ctx.fillStyle = '#000';
         ctx.fill();
       });
-      ctx.restore(); // Restore globalCompositeOperation to default
+      ctx.restore();
     }
-    // ======================== FIX ENDS HERE ========================
+    
+    const shouldDrawBorders = pct > 40;
 
-    baseMap.defaultBuildings.forEach(b => drawBuildingFootprint(b));
-    userBuildings.forEach(b => drawBuildingFootprint(b));
+    baseMap.defaultBuildings.forEach(b => drawBuildingFootprint(b, null, shouldDrawBorders));
+    userBuildings.forEach(b => drawBuildingFootprint(b, null, shouldDrawBorders));
 
     if (selection) {
       if (selection.w) {
-        drawBuildingFootprint(selection, selectionColor);
+        // Selection highlight should always have a border.
+        drawBuildingFootprint(selection, selectionColor, true);
       } else {
         const [sx, sy] = worldToScreen(selection.x, selection.y);
         ctx.beginPath();
