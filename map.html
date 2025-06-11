@@ -191,7 +191,9 @@
       lastFPS = 0,
       lastTiles = 0;
   let selection = null; 
-  let minFitScale = 0.01; 
+  let minFitScale = 0.01;
+  // FIX 1: Add a flag for robust initial loading.
+  let isInitialLoad = true;
 
   // coord transforms
   function worldToScreen(x,y) {
@@ -312,7 +314,7 @@
     ctx.moveTo(p_bottom.x, p_bottom.y);
     ctx.lineTo(p_right.x,  p_right.y);
     ctx.lineTo(p_top.x,    p_top.y);
-    ctx.lineTo(p_left.x,   p_left_y);
+    ctx.lineTo(p_left.x,   p_left.y);
     ctx.closePath();
     ctx.fillStyle = fill; ctx.fill();
     ctx.strokeStyle = border; 
@@ -370,16 +372,18 @@
     const padding = 0.95;
     minFitScale = Math.min(scaleX, scaleY) * padding;
     
-    // Set initial camera state only once
-    if (cam.scale === 1 && cam.x === 0 && cam.y === 0) {
+    // FIX 1: Use the robust flag to handle initial load.
+    if (isInitialLoad) {
         zoomToFit();
+        isInitialLoad = false;
     } else {
         clampCamera();
     }
   }
   window.addEventListener('resize', resize);
 
-  // --- FIX 1: Final, robust camera clamping logic ---
+  // The original clamping logic was correct, but this is where issues from
+  // other parts of the code would surface. No changes are needed here.
   function clampCamera() {
     const s = cam.scale;
     const mapTotalWidth = (N - 1) * tileW;
@@ -387,8 +391,6 @@
     const mapScaledWidth = mapTotalWidth * s;
     const mapScaledHeight = mapTotalHeight * s;
     
-    // The untransformed diamond map is horizontally centered on x=0.
-    // Its y-coordinates range from -mapTotalHeight to 0.
     const worldHalfWidth = mapScaledWidth / 2;
     
     // Horizontal clamping
@@ -558,7 +560,10 @@
       const building = getBuildingAt(x, y);
       selection = building || { x, y };
 
-      cam.scale = 12; 
+      // FIX 2: Use the documented 150% zoom level instead of a hardcoded value.
+      const targetScale = (150 / 100) * baseScale;
+      cam.scale = targetScale; 
+
       centerOn(x,y);
       clampCamera();
     }
