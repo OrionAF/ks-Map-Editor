@@ -679,31 +679,37 @@ const KingshotPlanner = {
 
   handleWheel(e) {
     e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.1 : 0.9;
-    const targetScale = this.state.cam.scale * factor;
+    const factor = e.deltaY < 0 ? 1.2 : 0.8; // Increased factor for a better feel
+    let targetScale = this.state.cam.scale * factor;
 
-    // We can call animateZoom to handle the complex math and provide a smooth feel
-    this.animateZoom(targetScale, e.offsetX, e.offsetY, 60);
+    // Clamp the target scale to the allowed min/max zoom levels
+    targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
+
+    this.animateZoom(targetScale, e.offsetX, e.offsetY, 60); // Use a short animation for smoothness
   },
 
   handleDblClick(e) {
     e.preventDefault();
-    // Use a fixed multiplicative factor for a significant zoom jump
-    const factor = 2.0; 
-    const targetScale = this.state.cam.scale * factor;
+    const factor = e.button === 2 ? 0.5 : 2.0; // Zoom out on right-double-click
+    let targetScale = this.state.cam.scale * factor;
+
+    // Clamp the target scale
+    targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
     
-    this.animateZoom(targetScale, e.offsetX, e.offsetY);
+    this.animateZoom(targetScale, e.offsetX, e.offsetY, 150); // Animate the double-click zoom
   },
 
   handleZoomSlider() {
-    const cx = this.dom.canvas.width/2, cy = this.dom.canvas.height/2;
-    const wx = (cx - this.state.cam.x)/this.state.cam.scale, wy = (cy - this.state.cam.y)/this.state.cam.scale;
     const pct = Number(this.dom.zoomSlider.value);
-    const targetScale = (pct / 100) * this.config.baseScale;
-    this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-    this.state.cam.x = cx - wx*this.state.cam.scale; 
-    this.state.cam.y = cy - wy*this.state.cam.scale;
-    this.clampCamera();
+    let targetScale = (pct / 100) * this.config.baseScale;
+    
+    // Clamp the target scale
+    targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
+
+    // Animate to the center of the screen, with no duration for instant response
+    const cx = this.dom.canvas.width / 2, cy = this.dom.canvas.height / 2;
+    this.animateZoom(targetScale, cx, cy, 0); 
+    
     this.updateFloatingZoomLabel();
   },
 
@@ -847,11 +853,18 @@ const KingshotPlanner = {
   },
 
   changeZoomBy(delta) {
-    const factor = delta > 0 ? 1.25 : 0.8;
-    const targetScale = this.state.cam.scale * factor;
-    const cx = this.dom.canvas.width / 2, cy = this.dom.canvas.height / 2;
+    // This function will now work with percentages to match the UI feel
+    let currentPct = (this.state.cam.scale / this.config.baseScale) * 100;
+    const changeAmt = delta > 0 ? currentPct * 0.25 : currentPct * -0.2; // 25% zoom in, 20% zoom out
+    let targetPct = currentPct + changeAmt;
+    
+    let targetScale = (targetPct / 100) * this.config.baseScale;
 
-    // Using animateZoom centralizes the logic and ensures it's correct
+    // Clamp the target scale
+    targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
+    
+    // Zoom to the center of the screen
+    const cx = this.dom.canvas.width / 2, cy = this.dom.canvas.height / 2;
     this.animateZoom(targetScale, cx, cy, 100);
   },
 
