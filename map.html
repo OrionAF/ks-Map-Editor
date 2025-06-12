@@ -833,16 +833,22 @@ const KingshotPlanner = {
     const worldHalfWidth = mapScaledWidth / 2;
     const overscrollX = this.dom.canvas.width * 0.5;
     const overscrollY = this.dom.canvas.height * 0.5;
+
     if (mapScaledWidth < this.dom.canvas.width) {
       this.state.cam.x = this.dom.canvas.width / 2;
     } else {
       this.state.cam.x = Math.max(this.dom.canvas.width - worldHalfWidth - overscrollX, Math.min(worldHalfWidth + overscrollX, this.state.cam.x));
     }
+    
+    // START --- FIXED BLOCK
+    const worldHalfHeight = mapScaledHeight / 2;
     if (mapScaledHeight < this.dom.canvas.height) {
       this.state.cam.y = this.dom.canvas.height / 2 + mapScaledHeight / 2;
     } else {
-      this.state.cam.y = Math.max(this.dom.canvas.height - overscrollY, Math.min(mapScaledHeight + overscrollY, this.state.cam.y));
+      // Corrected Y-clamping to match X-clamping logic
+      this.state.cam.y = Math.max(this.dom.canvas.height - worldHalfHeight - overscrollY, Math.min(worldHalfHeight + overscrollY, this.state.cam.y));
     }
+    // END --- FIXED BLOCK
   },
 
   changeZoomBy(delta) {
