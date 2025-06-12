@@ -909,7 +909,8 @@ const KingshotPlanner = {
   drawTile(x, y, drawBorder = true) {
     this.state.tileCount++;
     const [sx,sy] = this.worldToScreen(x,y);
-    const { ctx, config } = this;
+    const { config } = this;
+    const ctx = this.dom.ctx;
     ctx.beginPath();
     ctx.moveTo(sx, sy - config.tileH/2); ctx.lineTo(sx + config.tileW/2, sy);
     ctx.lineTo(sx, sy + config.tileH/2); ctx.lineTo(sx - config.tileW/2, sy);
@@ -943,7 +944,8 @@ const KingshotPlanner = {
   drawChunk(chunk, drawBorder = true) {
     this.state.tileCount += chunk.size * chunk.size;
     const { x, y, size, biome } = chunk;
-    const { ctx, config } = this;
+    const { config } = this;
+    const ctx = this.dom.ctx;
     const inflation = drawBorder ? 0 : (1 / this.state.cam.scale);
     const x0 = x, y0 = y, w = size, h = size;
     const [sbx, sby] = this.worldToScreen(x0, y0);
@@ -964,7 +966,8 @@ const KingshotPlanner = {
   },
   
   drawBuildingFootprint(b, highlightStyle = null, drawBorder = true) {
-    const { ctx, config, state } = this;
+    const { config, state } = this;
+    const ctx = this.dom.ctx;
     const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
     const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
     const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
@@ -1015,7 +1018,7 @@ const KingshotPlanner = {
   // —— MAIN RENDER LOOP ——
   mainLoop(now) {
     const { dom, state, config } = this;
-    const { ctx } = dom; // Or simply use dom.ctx directly
+    const ctx = dom.ctx;
     ctx.setTransform(1,0,0,1,0,0);
     ctx.clearRect(0,0,dom.canvas.width,dom.canvas.height);
 
