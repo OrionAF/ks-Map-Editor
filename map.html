@@ -805,7 +805,9 @@ const KingshotPlanner = {
   
   zoomToFit() {
     this.state.cam.scale = this.state.minFitScale;
-    this.clampCamera();
+    const mapScaledHeight = (this.config.N - 1) * this.config.tileH * this.state.cam.scale;
+    this.state.cam.x = this.dom.canvas.width / 2;
+    this.state.cam.y = this.dom.canvas.height / 2 + mapScaledHeight / 2;
   },
 
   resize() {
@@ -831,24 +833,19 @@ const KingshotPlanner = {
     const mapScaledWidth = mapTotalWidth * s;
     const mapScaledHeight = mapTotalHeight * s;
     const worldHalfWidth = mapScaledWidth / 2;
+    const worldHalfHeight = mapScaledHeight / 2;
     const overscrollX = this.dom.canvas.width * 0.5;
     const overscrollY = this.dom.canvas.height * 0.5;
 
-    if (mapScaledWidth < this.dom.canvas.width) {
-      this.state.cam.x = this.dom.canvas.width / 2;
-    } else {
+    // Only apply clamping logic if the map is larger than the canvas.
+    // If it's smaller, we don't need to clamp and can allow free movement.
+    if (mapScaledWidth > this.dom.canvas.width) {
       this.state.cam.x = Math.max(this.dom.canvas.width - worldHalfWidth - overscrollX, Math.min(worldHalfWidth + overscrollX, this.state.cam.x));
     }
     
-    // START --- FIXED BLOCK
-    const worldHalfHeight = mapScaledHeight / 2;
-    if (mapScaledHeight < this.dom.canvas.height) {
-      this.state.cam.y = this.dom.canvas.height / 2 + mapScaledHeight / 2;
-    } else {
-      // Corrected Y-clamping to match X-clamping logic
+    if (mapScaledHeight > this.dom.canvas.height) {
       this.state.cam.y = Math.max(this.dom.canvas.height - worldHalfHeight - overscrollY, Math.min(worldHalfHeight + overscrollY, this.state.cam.y));
     }
-    // END --- FIXED BLOCK
   },
 
   changeZoomBy(delta) {
