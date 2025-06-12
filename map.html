@@ -375,6 +375,7 @@ const KingshotPlanner = {
     clickStartX: 0, clickStartY: 0,
     touchMode: null,
     startDist: 0, startScale: 1, pinchCenter: null,
+    startCamX: 0, startCamY: 0,
     hideLabelTimeout: null
   },
 
@@ -732,6 +733,10 @@ const KingshotPlanner = {
         this.state.startDist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
         this.state.startScale = this.state.cam.scale;
         this.state.pinchCenter = { x: (a.clientX + b.clientX)/2, y: (a.clientY + b.clientY)/2 };
+        
+        // Capture the camera's starting position for a stable pinch-zoom
+        this.state.startCamX = this.state.cam.x;
+        this.state.startCamY = this.state.cam.y;
     }
   },
 
@@ -747,12 +752,16 @@ const KingshotPlanner = {
         const [a,b] = e.touches;
         const dist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
         const newScale = this.state.startScale * (dist / this.state.startDist);
-        const pc = this.state.pinchCenter;
-        const wx = (pc.x - this.state.cam.x)/this.state.cam.scale;
-        const wy = (pc.y - this.state.cam.y)/this.state.cam.scale;
+        
+        // Clamp the new scale to the allowed min/max
         this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct/100 * this.config.baseScale, newScale));
-        this.state.cam.x = pc.x - wx*this.state.cam.scale;
-        this.state.cam.y = pc.y - wy*this.state.cam.scale;
+
+        // Use the state from touchStart for a stable anchor point
+        const wx = (this.state.pinchCenter.x - this.state.startCamX) / this.state.startScale;
+        const wy = (this.state.pinchCenter.y - this.state.startCamY) / this.state.startScale;
+
+        this.state.cam.x = this.state.pinchCenter.x - wx * this.state.cam.scale;
+        this.state.cam.y = this.state.pinchCenter.y - wy * this.state.cam.scale;
         this.clampCamera();
     }
   },
