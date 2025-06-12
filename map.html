@@ -393,12 +393,38 @@ const KingshotPlanner = {
 
   // —— INITIALIZATION ——
   init() {
-    // Assign all DOM references
-    for (const key in this.dom) {
-        const id = key.replace(/El$/, ''); // Handle cases like zoomLevelEl -> zoomLevel
-        this.dom[key] = document.getElementById(key) || document.querySelectorAll(`#${id} button`);
-    }
+    // --- CORRECTED: Explicitly assign all DOM references ---
+    this.dom.canvas = document.getElementById('map');
     this.dom.ctx = this.dom.canvas.getContext('2d');
+    this.dom.inpX = document.getElementById('inpX');
+    this.dom.inpY = document.getElementById('inpY');
+    this.dom.btnGo = document.getElementById('btnGo');
+    this.dom.zoomLevelEl = document.getElementById('zoomLevel');
+    this.dom.zoomDecBtn = document.getElementById('zoomDec');
+    this.dom.zoomIncBtn = document.getElementById('zoomInc');
+    this.dom.zoomSlider = document.getElementById('zoomSlider');
+    this.dom.presetBtns = document.querySelectorAll('#presetButtons button');
+    this.dom.centerTileEl = document.getElementById('centerTile');
+    this.dom.infoBtn = document.getElementById('infoBtn');
+    this.dom.infoPanel = document.getElementById('infoPanel');
+    this.dom.statsBtn = document.getElementById('statsBtn');
+    this.dom.statsPanel = document.getElementById('statsPanel');
+    this.dom.statsFPSEl = document.getElementById('statsFPS');
+    this.dom.statsTilesEl = document.getElementById('statsTiles');
+    this.dom.coordsToggle = document.getElementById('coordsToggle');
+    this.dom.floatingZoomLabel = document.getElementById('floatingZoomLabel');
+    this.dom.versionDisplay = document.getElementById('versionDisplay');
+    this.dom.patchNotesBtn = document.getElementById('patchNotesBtn');
+    this.dom.modalOverlay = document.getElementById('modalOverlay');
+    this.dom.patchNotesModal = document.getElementById('patchNotesModal');
+    this.dom.patchNotesBody = document.getElementById('patchNotesBody');
+    this.dom.closePatchNotesBtn = document.getElementById('closePatchNotesBtn');
+    this.dom.hidePatchNotesCheckbox = document.getElementById('hidePatchNotesCheckbox');
+    this.dom.tileDetailSelect = document.getElementById('tileDetailSelect');
+    this.dom.gridlinesToggle = document.getElementById('gridlinesToggle');
+    this.dom.allianceRssToggle = document.getElementById('allianceRssToggle');
+    this.dom.allianceRssAlwaysVisibleToggle = document.getElementById('allianceRssAlwaysVisibleToggle');
+    
     this.state.lastFrame = performance.now();
     
     // Fetch data and then start the app
