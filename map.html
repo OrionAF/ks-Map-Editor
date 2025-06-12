@@ -680,21 +680,19 @@ const KingshotPlanner = {
   handleWheel(e) {
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.1 : 0.9;
-    const mx = e.offsetX, my = e.offsetY;
-    const wx = (mx - this.state.cam.x)/this.state.cam.scale;
-    const wy = (my - this.state.cam.y)/this.state.cam.scale;
-    this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct/100 * this.config.baseScale, this.state.cam.scale * factor));
-    this.state.cam.x = mx - wx * this.state.cam.scale;
-    this.state.cam.y = my - wy * this.state.cam.scale;
-    this.clampCamera();
+    const targetScale = this.state.cam.scale * factor;
+
+    // We can call animateZoom to handle the complex math and provide a smooth feel
+    this.animateZoom(targetScale, e.offsetX, e.offsetY, 60);
   },
 
   handleDblClick(e) {
     e.preventDefault();
-    const curPct = Math.round((this.state.cam.scale / this.config.baseScale) * 100);
-    const targetPct = e.button === 2 ? curPct - 75 : curPct + 75;
-    const targetScale = (targetPct / 100) * this.config.baseScale;
-    this.animateZoom(Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale)), e.offsetX, e.offsetY);
+    // Use a fixed multiplicative factor for a significant zoom jump
+    const factor = 2.0; 
+    const targetScale = this.state.cam.scale * factor;
+    
+    this.animateZoom(targetScale, e.offsetX, e.offsetY);
   },
 
   handleZoomSlider() {
@@ -849,13 +847,12 @@ const KingshotPlanner = {
   },
 
   changeZoomBy(delta) {
-    const cx = this.dom.canvas.width/2, cy = this.dom.canvas.height/2;
-    const wx = (cx - this.state.cam.x)/this.state.cam.scale, wy = (cy - this.state.cam.y)/this.state.cam.scale;
-    let pct = Math.round((this.state.cam.scale / this.config.baseScale) * 100) + delta;
-    const targetScale = (pct / 100) * this.config.baseScale;
-    this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-    this.state.cam.x = cx - wx*this.state.cam.scale; this.state.cam.y = cy - wy*this.state.cam.scale;
-    this.clampCamera();
+    const factor = delta > 0 ? 1.25 : 0.8;
+    const targetScale = this.state.cam.scale * factor;
+    const cx = this.dom.canvas.width / 2, cy = this.dom.canvas.height / 2;
+
+    // Using animateZoom centralizes the logic and ensures it's correct
+    this.animateZoom(targetScale, cx, cy, 100);
   },
 
   // —— ANIMATION & DRAWING ——
