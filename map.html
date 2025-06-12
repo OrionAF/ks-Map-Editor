@@ -679,37 +679,26 @@ const KingshotPlanner = {
 
   handleWheel(e) {
     e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.2 : 0.8; // Increased factor for a better feel
+    const factor = e.deltaY < 0 ? 1.2 : 0.8;
     let targetScale = this.state.cam.scale * factor;
-
-    // Clamp the target scale to the allowed min/max zoom levels
     targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-
-    this.animateZoom(targetScale, e.offsetX, e.offsetY, 60); // Use a short animation for smoothness
+    this.animateZoom(targetScale, e.offsetX, e.offsetY, 60);
   },
 
   handleDblClick(e) {
     e.preventDefault();
-    const factor = e.button === 2 ? 0.5 : 2.0; // Zoom out on right-double-click
+    const factor = e.button === 2 ? 0.5 : 2.0;
     let targetScale = this.state.cam.scale * factor;
-
-    // Clamp the target scale
     targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-    
-    this.animateZoom(targetScale, e.offsetX, e.offsetY, 150); // Animate the double-click zoom
+    this.animateZoom(targetScale, e.offsetX, e.offsetY, 150);
   },
 
   handleZoomSlider() {
     const pct = Number(this.dom.zoomSlider.value);
     let targetScale = (pct / 100) * this.config.baseScale;
-    
-    // Clamp the target scale
     targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-
-    // Animate to the center of the screen, with no duration for instant response
     const cx = this.dom.canvas.width / 2, cy = this.dom.canvas.height / 2;
     this.animateZoom(targetScale, cx, cy, 0); 
-    
     this.updateFloatingZoomLabel();
   },
 
@@ -809,9 +798,10 @@ const KingshotPlanner = {
   
   zoomToFit() {
     this.state.cam.scale = this.state.minFitScale;
-    const mapScaledHeight = (this.config.N - 1) * this.config.tileH * this.state.cam.scale;
+    // Correctly center the camera. The Y position should be centered just like the X.
+    // The previous logic had an incorrect offset.
     this.state.cam.x = this.dom.canvas.width / 2;
-    this.state.cam.y = this.dom.canvas.height / 2 + mapScaledHeight / 2;
+    this.state.cam.y = this.dom.canvas.height / 2;
   },
 
   resize() {
@@ -836,34 +826,30 @@ const KingshotPlanner = {
     const mapTotalHeight = (this.config.N - 1) * this.config.tileH;
     const mapScaledWidth = mapTotalWidth * s;
     const mapScaledHeight = mapTotalHeight * s;
+    
+    // The world's size in each dimension, halved.
     const worldHalfWidth = mapScaledWidth / 2;
-    const overscrollX = this.dom.canvas.width * 0.5;
-    const overscrollY = this.dom.canvas.height * 0.5;
+    const worldHalfHeight = mapScaledHeight / 2;
 
-    // Only apply clamping logic if the map is larger than the canvas.
+    // The amount of overscroll allowed, relative to canvas size.
+    const overscrollX = this.dom.canvas.width * 0.4;
+    const overscrollY = this.dom.canvas.height * 0.4;
+
+    // Only clamp if the scaled map is larger than the canvas.
     if (mapScaledWidth > this.dom.canvas.width) {
       this.state.cam.x = Math.max(this.dom.canvas.width - worldHalfWidth - overscrollX, Math.min(worldHalfWidth + overscrollX, this.state.cam.x));
     }
     
     if (mapScaledHeight > this.dom.canvas.height) {
-      // This is the corrected logic for the isometric projection's Y-axis,
-      // which is not centered at the origin like the X-axis.
-      this.state.cam.y = Math.max(this.dom.canvas.height - overscrollY, Math.min(mapScaledHeight + overscrollY, this.state.cam.y));
+      this.state.cam.y = Math.max(this.dom.canvas.height - worldHalfHeight - overscrollY, Math.min(worldHalfHeight + overscrollY, this.state.cam.y));
     }
   },
 
   changeZoomBy(delta) {
-    // This function will now work with percentages to match the UI feel
     let currentPct = (this.state.cam.scale / this.config.baseScale) * 100;
-    const changeAmt = delta > 0 ? currentPct * 0.25 : currentPct * -0.2; // 25% zoom in, 20% zoom out
-    let targetPct = currentPct + changeAmt;
-    
-    let targetScale = (targetPct / 100) * this.config.baseScale;
-
-    // Clamp the target scale
+    const changeAmt = delta > 0 ? currentPct * 0.25 : currentPct * -0.2;
+    let targetScale = ((currentPct + changeAmt) / 100) * this.config.baseScale;
     targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-    
-    // Zoom to the center of the screen
     const cx = this.dom.canvas.width / 2, cy = this.dom.canvas.height / 2;
     this.animateZoom(targetScale, cx, cy, 100);
   },
