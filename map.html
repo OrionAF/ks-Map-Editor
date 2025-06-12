@@ -807,10 +807,10 @@ const KingshotPlanner = {
   
   zoomToFit() {
     this.state.cam.scale = this.state.minFitScale;
-    // Correctly center the camera. The Y position should be centered just like the X.
-    // The previous logic had an incorrect offset.
     this.state.cam.x = this.dom.canvas.width / 2;
-    this.state.cam.y = this.dom.canvas.height / 2;
+    // This calculation positions the VISUAL CENTER of the map at the screen center.
+    // It accounts for the isometric projection's negative Y-offset.
+    this.state.cam.y = this.dom.canvas.height / 2 + ((this.config.N - 1) * this.config.tileH / 2) * this.state.cam.scale;
   },
 
   resize() {
@@ -836,21 +836,22 @@ const KingshotPlanner = {
     const mapScaledWidth = mapTotalWidth * s;
     const mapScaledHeight = mapTotalHeight * s;
     
-    // The world's size in each dimension, halved.
     const worldHalfWidth = mapScaledWidth / 2;
-    const worldHalfHeight = mapScaledHeight / 2;
-
-    // The amount of overscroll allowed, relative to canvas size.
     const overscrollX = this.dom.canvas.width * 0.4;
     const overscrollY = this.dom.canvas.height * 0.4;
 
-    // Only clamp if the scaled map is larger than the canvas.
+    // Clamp X (symmetrical)
     if (mapScaledWidth > this.dom.canvas.width) {
       this.state.cam.x = Math.max(this.dom.canvas.width - worldHalfWidth - overscrollX, Math.min(worldHalfWidth + overscrollX, this.state.cam.x));
     }
     
+    // Clamp Y (asymmetrical for this projection)
     if (mapScaledHeight > this.dom.canvas.height) {
-      this.state.cam.y = Math.max(this.dom.canvas.height - worldHalfHeight - overscrollY, Math.min(worldHalfHeight + overscrollY, this.state.cam.y));
+        // Derived from first principles: the lower bound is determined by the top of the map
+        // and the upper bound is determined by the bottom of the map.
+        const lowerBound = mapScaledHeight - overscrollY;
+        const upperBound = this.dom.canvas.height + overscrollY;
+        this.state.cam.y = Math.max(lowerBound, Math.min(upperBound, this.state.cam.y));
     }
   },
 
