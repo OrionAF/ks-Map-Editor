@@ -740,31 +740,32 @@ const KingshotPlanner = {
     }
   },
 
-  handleTouchMove(e) {
+handleTouchMove(e) {
     e.preventDefault();
     if (this.state.touchMode === 'pan' && e.touches.length === 1) {
         const t = e.touches[0];
         this.state.cam.x += t.clientX - this.state.lastX;
         this.state.cam.y += t.clientY - this.state.lastY;
-        this.state.lastX = t.clientX; this.state.lastY = t.clientY;
+        this.state.lastX = t.clientX;
+        this.state.lastY = t.clientY;
         this.clampCamera();
     } else if (this.state.touchMode === 'pinch' && e.touches.length === 2) {
-        const [a,b] = e.touches;
-        const dist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
-        const newScale = this.state.startScale * (dist / this.state.startDist);
-        
-        // Clamp the new scale to the allowed min/max
-        this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct/100 * this.config.baseScale, newScale));
+        const [a, b] = e.touches;
+        const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+        let newScale = this.state.startScale * (dist / this.state.startDist);
 
-        // Use the state from touchStart for a stable anchor point
+        newScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, newScale));
+
         const wx = (this.state.pinchCenter.x - this.state.startCamX) / this.state.startScale;
         const wy = (this.state.pinchCenter.y - this.state.startCamY) / this.state.startScale;
 
+        // Directly set the new state without animation
+        this.state.cam.scale = newScale;
         this.state.cam.x = this.state.pinchCenter.x - wx * this.state.cam.scale;
         this.state.cam.y = this.state.pinchCenter.y - wy * this.state.cam.scale;
         this.clampCamera();
     }
-  },
+},
 
   handleTouchEnd(e) {
     if (this.state.touchMode === 'pan' && e.changedTouches.length === 1) {
@@ -865,23 +866,38 @@ const KingshotPlanner = {
   },
 
   // —— ANIMATION & DRAWING ——
-  animateZoom(targetScale, anchorX, anchorY, duration=150) {
+// This version introduces a global animation state to prevent overlaps.
+animateZoom(targetScale, anchorX, anchorY, duration = 150) {
+    if (this.state.animationId) {
+        cancelAnimationFrame(this.state.animationId);
+    }
+
     const startScale = this.state.cam.scale;
-    const startX = this.state.cam.x, startY = this.state.cam.y;
+    const startX = this.state.cam.x,
+        startY = this.state.cam.y;
     const start = performance.now();
-    const wx = (anchorX - startX)/startScale;
-    const wy = (anchorY - startY)/startScale;
+    const wx = (anchorX - startX) / startScale;
+    const wy = (anchorY - startY) / startScale;
+
     const step = (now) => {
-      const t = Math.min(1, (now - start)/duration);
-      const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
-      this.state.cam.scale = startScale + (targetScale - startScale)*k;
-      this.state.cam.x = anchorX - wx * this.state.cam.scale;
-      this.state.cam.y = anchorY - wy * this.state.cam.scale;
-      this.clampCamera();
-      if (t < 1) requestAnimationFrame(step);
+        const t = duration === 0 ? 1 : Math.min(1, (now - start) / duration);
+        const k = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; // Easing function
+
+        this.state.cam.scale = startScale + (targetScale - startScale) * k;
+        this.state.cam.x = anchorX - wx * this.state.cam.scale;
+        this.state.cam.y = anchorY - wy * this.state.cam.scale;
+
+        this.clampCamera();
+
+        if (t < 1) {
+            this.state.animationId = requestAnimationFrame(step);
+        } else {
+            this.state.animationId = null;
+        }
     };
-    requestAnimationFrame(step);
-  },
+
+    this.state.animationId = requestAnimationFrame(step);
+},
 
   animatePanZoom(targetScale, targetX, targetY, duration=300) {
     const startScale = this.state.cam.scale, startX = this.state.cam.x, startY = this.state.cam.y;
