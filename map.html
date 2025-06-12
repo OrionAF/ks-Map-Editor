@@ -17,6 +17,7 @@
       color:#fff; font-family:sans-serif;
       background:rgba(0,0,0,0.6); padding:8px; border-radius:4px;
       text-align: right;
+      width: 210px; /* Give it a fixed width for better layout */
     }
     #searchBox input { width:60px; }
     #searchBox button {
@@ -45,7 +46,19 @@
         vertical-align: middle;
         user-select: none;
     }
-    #searchBox > div { margin-top: 4px; }
+    #searchBox > div { margin-top: 4px; text-align: left; }
+    #searchBox > hr {
+        border: none;
+        border-top: 1px solid #444;
+        margin: 8px 0;
+    }
+    #searchBox h4 {
+        margin: 6px 0 2px;
+        font-size: 13px;
+        color: #aaa;
+        text-transform: uppercase;
+        text-align: left;
+    }
 
 
     /* Info & Stats panels */
@@ -63,7 +76,7 @@
     }
     #infoPanel.open { max-height:160px; } /* Increased height for patch notes button */
     #statsPanel.open { max-height:120px; }
-    #infoPanel h4 { margin:6px 0 4px; color:#fff; }
+    #infoPanel h4 { margin:6px 0 4px; color:#fff; text-transform: none; }
     #infoPanel ul { padding-left:16px; margin:0 }
     #infoPanel li { margin-bottom:4px; }
     #statsPanel div { margin:4px 0; color:#fff; }
@@ -106,6 +119,7 @@
       border-radius: 2px;
       padding: 2px;
       vertical-align: middle;
+      width: 100%; /* Make select boxes fill their container */
     }
 
     #zoomControlsContainer #zoomInc { order: 1; }
@@ -212,26 +226,44 @@
 <body>
   <!-- Search and info panel moved to top right -->
   <div id="searchBox">
+    <h4>Search</h4>
     <div>
         X: <input id="inpX" type="number" min="0" max="1199" value="0">
         Y: <input id="inpY" type="number" min="0" max="1199" value="0">
         <button id="btnGo">Go</button>
+    </div>
+    <hr>
+    <h4>Display</h4>
+    <div>
+      <input type="checkbox" id="gridlinesToggle">
+      <label for="gridlinesToggle" class="coords-label">Show Gridlines</label>
     </div>
     <div>
       <input type="checkbox" id="coordsToggle">
       <label for="coordsToggle" class="coords-label">Show Coords >80%</label>
     </div>
     <div>
-      <input type="checkbox" id="allianceRssAlwaysVisibleToggle">
-      <label for="allianceRssAlwaysVisibleToggle" class="coords-label">Always Show RSS</label>
+      <input type="checkbox" id="allianceRssToggle">
+      <label for="allianceRssToggle" class="coords-label">Show Alliance RSS</label>
     </div>
+    <div>
+        <input type="checkbox" id="allianceRssAlwaysVisibleToggle">
+        <label for="allianceRssAlwaysVisibleToggle" class="coords-label">Always Show RSS</label>
+    </div>
+    <hr>
+    <h4>Performance</h4>
+    <div>
+        <label for="tileDetailSelect" class="coords-label">Tile Detail:</label>
+        <select id="tileDetailSelect">
+            <option value="25">Low (Merge Early)</option>
+            <option value="50">Normal (Balanced)</option>
+            <option value="80">High (Merge Late)</option>
+        </select>
+    </div>
+    <hr>
     <div>
       <button id="infoBtn" title="Show controls">ℹ️</button>
       <button id="statsBtn" title="Toggle stats">⚙️</button>
-    </div>
-    <div>
-      <input type="checkbox" id="allianceRssToggle">
-      <label for="allianceRssToggle" class="coords-label">Show Alliance RSS</label>
     </div>
     <div id="infoPanel">
       <h4>Controls</h4>
@@ -246,18 +278,6 @@
     <div id="statsPanel">
       <div id="statsFPS">FPS: –</div>
       <div id="statsTiles">Tiles: –</div>
-    </div>
-    <div>
-        <label for="tileDetailSelect" class="coords-label">Tile Detail:</label>
-        <select id="tileDetailSelect">
-            <option value="25">Low (Merge Early)</option>
-            <option value="50">Normal (Balanced)</option>
-            <option value="80">High (Merge Late)</option>
-        </select>
-    </div>
-    <div>
-        <input type="checkbox" id="gridlinesToggle">
-        <label for="gridlinesToggle" class="coords-label">Show Gridlines</label>
     </div>
   </div>
 
@@ -301,877 +321,704 @@
   <canvas id="map"></canvas>
 
 <script>
-// —— CONFIG ——
-  const CURRENT_VERSION = '0.2.5.11';
-  const N           = 1200,
-        tileW       = 10, tileH = 10,
-        strokeW     = 0.3, 
-        borderColor = '#000', 
-        textColor   = '#fff',
-        maxPct      = 1000,
-        selectionColor = '#ff0';
-  
-  const baseScale = 5;
+const KingshotPlanner = {
+  // —— CONFIGURATION ——
+  config: {
+    CURRENT_VERSION: '0.2.6.0',
+    N: 1200,
+    tileW: 10, tileH: 10,
+    strokeW: 0.3, 
+    borderColor: '#000', 
+    textColor: '#fff',
+    maxPct: 1000,
+    selectionColor: '#ff0',
+    pingColor: '#fff',
+    pingDuration: 500, // in milliseconds
+    baseScale: 5,
+    biomeColors: {
+      fertile:  'rgb(109, 159, 62)',
+      plains:   'rgb(158, 180, 103)',
+      badlands: 'rgb(191, 208, 152)'
+    },
+    biomeRegions: {
+        fertile:  { x1: 480, y1: 480, x2: 719, y2: 719 },
+        plains:   { x1: 320, y1: 320, x2: 879, y2: 879 },
+        badlands: { x1: 0,   y1: 0,   x2: 1199,y2: 1199}
+    },
+    ALLIANCE_RSS_STYLES: {
+      wood:  { displayName: 'Wood',  fillColor: 'rgba(139,69,19,1)', borderColor: 'rgba(111,55,15,1)' },
+      food:  { displayName: 'Food',  fillColor: 'rgba(255,165,0,1)', borderColor: 'rgba(204,132,0,1)' },
+      stone: { displayName: 'Stone', fillColor: 'rgba(128,128,128,1)', borderColor: 'rgba(102,102,102,1)' },
+      iron:  { displayName: 'Iron',  fillColor: 'rgba(192,192,192,1)', borderColor: 'rgba(153,153,153,1)' },
+    }
+  },
 
-  const biomeColors = {
-    fertile:  'rgb(109, 159, 62)',
-    plains:   'rgb(158, 180, 103)',
-    badlands: 'rgb(191, 208, 152)'
-  };
+  // —— APPLICATION STATE ——
+  state: {
+    baseMap: { unoccupiableTiles:[], defaultBuildings:[] },
+    patchNotes: {},
+    allBuildings: [],
+    buildingMap: new Map(),
+    chunkLevels: [],
+    userBuildings: [],
+    cam: { x:0, y:0, scale:1 },
+    lastFrame: 0,
+    tileCount: 0,
+    lastFPS: 0,
+    lastTiles: 0,
+    selection: null, 
+    minFitScale: 0.01,
+    isInitialLoad: true,
+    touchStartTime: 0,
+    dragging: false, 
+    lastX: 0, lastY: 0,
+    clickStartX: 0, clickStartY: 0,
+    touchMode: null,
+    startDist: 0, startScale: 1, pinchCenter: null,
+    hideLabelTimeout: null
+  },
 
-  const ALLIANCE_RSS_STYLES = {
-    wood:  { displayName: 'Wood',  fillColor: 'rgba(139,69,19,1)', borderColor: 'rgba(111,55,15,1)' },
-    food:  { displayName: 'Food',  fillColor: 'rgba(255,165,0,1)', borderColor: 'rgba(204,132,0,1)' },
-    stone: { displayName: 'Stone', fillColor: 'rgba(128,128,128,1)', borderColor: 'rgba(102,102,102,1)' },
-    iron:  { displayName: 'Iron',  fillColor: 'rgba(192,192,192,1)', borderColor: 'rgba(153,153,153,1)' },
-  };
-  
-  const biomeRegions = {
-      fertile:  { x1: 480, y1: 480, x2: 719, y2: 719 },
-      plains:   { x1: 320, y1: 320, x2: 879, y2: 879 },
-      badlands: { x1: 0,   y1: 0,   x2: 1199,y2: 1199}
-  };
-  // ——————————
+  // —— DOM REFERENCES ——
+  dom: {
+    canvas: null, ctx: null, inpX: null, inpY: null, btnGo: null,
+    zoomLevelEl: null, zoomDecBtn: null, zoomIncBtn: null, zoomSlider: null,
+    presetBtns: null, centerTileEl: null, infoBtn: null, infoPanel: null,
+    statsBtn: null, statsPanel: null, statsFPSEl: null, statsTilesEl: null,
+    coordsToggle: null, floatingZoomLabel: null, versionDisplay: null,
+    patchNotesBtn: null, modalOverlay: null, patchNotesModal: null,
+    patchNotesBody: null, closePatchNotesBtn: null, hidePatchNotesCheckbox: null,
+    tileDetailSelect: null, gridlinesToggle: null, allianceRssToggle: null,
+    allianceRssAlwaysVisibleToggle: null
+  },
 
-  // DOM refs
-  const canvas       = document.getElementById('map');
-  const ctx          = canvas.getContext('2d');
-  const inpX         = document.getElementById('inpX');
-  const inpY         = document.getElementById('inpY');
-  const btnGo        = document.getElementById('btnGo');
-  const zoomLevelEl  = document.getElementById('zoomLevel');
-  const zoomDecBtn   = document.getElementById('zoomDec');
-  const zoomIncBtn   = document.getElementById('zoomInc');
-  const zoomSlider   = document.getElementById('zoomSlider');
-  const presetBtns   = document.querySelectorAll('#presetButtons button');
-  const centerTileEl = document.getElementById('centerTile');
-  const infoBtn      = document.getElementById('infoBtn');
-  const infoPanel    = document.getElementById('infoPanel');
-  const statsBtn     = document.getElementById('statsBtn');
-  const statsPanel   = document.getElementById('statsPanel');
-  const statsFPSEl   = document.getElementById('statsFPS');
-  const statsTilesEl = document.getElementById('statsTiles');
-  const coordsToggle      = document.getElementById('coordsToggle');
-  const floatingZoomLabel = document.getElementById('floatingZoomLabel');
-  
-  const versionDisplay        = document.getElementById('versionDisplay');
-  const patchNotesBtn         = document.getElementById('patchNotesBtn');
-  const modalOverlay          = document.getElementById('modalOverlay');
-  const patchNotesModal       = document.getElementById('patchNotesModal');
-  const patchNotesBody        = document.getElementById('patchNotesBody');
-  const closePatchNotesBtn    = document.getElementById('closePatchNotesBtn');
-  const hidePatchNotesCheckbox= document.getElementById('hidePatchNotesCheckbox');
-  const tileDetailSelect    = document.getElementById('tileDetailSelect');
-  const gridlinesToggle     = document.getElementById('gridlinesToggle');
-  const allianceRssToggle   = document.getElementById('allianceRssToggle');
-  const allianceRssAlwaysVisibleToggle = document.getElementById('allianceRssAlwaysVisibleToggle');
+  // —— INITIALIZATION ——
+  init() {
+    // Assign all DOM references
+    for (const key in this.dom) {
+        const id = key.replace(/El$/, ''); // Handle cases like zoomLevelEl -> zoomLevel
+        this.dom[key] = document.getElementById(key) || document.querySelectorAll(`#${id} button`);
+    }
+    this.dom.ctx = this.dom.canvas.getContext('2d');
+    this.state.lastFrame = performance.now();
+    
+    // Fetch data and then start the app
+    Promise.all([
+      fetch('baseMap.json').then(r => r.ok ? r.json() : Promise.resolve({ unoccupiableTiles:[], defaultBuildings:[] })),
+      fetch('patch_notes.json').then(r => r.ok ? r.json() : Promise.resolve({}))
+    ])
+    .then(([baseMapData, patchNotesData]) => {
+        Object.assign(this.state.baseMap, baseMapData);
+        this.state.patchNotes = patchNotesData;
 
-  // toggle panels
-  infoBtn.addEventListener('click', ()=>infoPanel.classList.toggle('open'));
-  statsBtn.addEventListener('click', ()=>statsPanel.classList.toggle('open'));
+        this.preProcessBuildings();
+        this.preCalculateChunks();
+        this.initializeUI();
+        this.resize();
+        
+        requestAnimationFrame(this.mainLoop.bind(this));
+    })
+    .catch(e => {
+        console.error(e);
+        alert('Error loading essential application data.');
+    });
+  },
 
-  // data layers
-  let baseMap = { unoccupiableTiles:[], defaultBuildings:[] };
-  let patchNotes = {}; // Will be populated from JSON
-  const buildingMap = new Map();
-  const chunkLevels = []; 
+  initializeUI() {
+    // Info & Stats Panels
+    this.dom.infoBtn.addEventListener('click', ()=>this.dom.infoPanel.classList.toggle('open'));
+    this.dom.statsBtn.addEventListener('click', ()=>this.dom.statsPanel.classList.toggle('open'));
 
-  // This will now be a global variable holding our master list.
-  let allBuildings = []; 
+    // Version and Patch Notes
+    this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
+    this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
+    this.dom.closePatchNotesBtn.addEventListener('click', this.hidePatchNotes.bind(this));
+    this.dom.modalOverlay.addEventListener('click', this.hidePatchNotes.bind(this));
+    const lastSeenVersion = localStorage.getItem('lastSeenVersion');
+    if (lastSeenVersion !== this.config.CURRENT_VERSION) {
+        this.showPatchNotes();
+    }
 
-  function preProcessBuildings() {
-    // Start with default and user buildings
-    let buildings = [...baseMap.defaultBuildings, ...userBuildings];
+    // --- Control Settings Logic ---
+    const savedDetail = localStorage.getItem('mapTileDetail') || '50';
+    this.dom.tileDetailSelect.value = savedDetail;
+    this.dom.tileDetailSelect.addEventListener('change', () => localStorage.setItem('mapTileDetail', this.dom.tileDetailSelect.value));
 
-    // Process and add alliance resource buildings to the list
-    if (baseMap.allianceRssBuildings) {
-      const formattedRssBuildings = baseMap.allianceRssBuildings.map(rss => {
-        const style = ALLIANCE_RSS_STYLES[rss.type] || {};
+    const savedAlwaysVisible = localStorage.getItem('mapAlwaysShowRss') === 'true';
+    this.dom.allianceRssAlwaysVisibleToggle.checked = savedAlwaysVisible;
+    this.dom.allianceRssAlwaysVisibleToggle.addEventListener('change', () => localStorage.setItem('mapAlwaysShowRss', this.dom.allianceRssAlwaysVisibleToggle.checked));
+
+    const savedGridlines = localStorage.getItem('mapShowGridlines') !== 'false';
+    this.dom.gridlinesToggle.checked = savedGridlines;
+    this.dom.gridlinesToggle.addEventListener('change', () => localStorage.setItem('mapShowGridlines', this.dom.gridlinesToggle.checked));
+
+    const savedAllianceRss = localStorage.getItem('mapShowAllianceRss') !== 'false';
+    this.dom.allianceRssToggle.checked = savedAllianceRss;
+    this.dom.allianceRssToggle.addEventListener('change', () => localStorage.setItem('mapShowAllianceRss', this.dom.allianceRssToggle.checked));
+
+    const savedCoords = localStorage.getItem('mapShowCoords') === 'true';
+    this.dom.coordsToggle.checked = savedCoords;
+    this.dom.coordsToggle.addEventListener('change', () => localStorage.setItem('mapShowCoords', this.dom.coordsToggle.checked));
+
+
+    // Search
+    this.dom.btnGo.addEventListener('click', this.doSearch.bind(this));
+    [this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => { if (e.key==='Enter') this.doSearch(); }));
+
+    // Zoom Controls
+    this.dom.zoomDecBtn.addEventListener('click', () => this.changeZoomBy(-1));
+    this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(+1));
+    this.dom.presetBtns.forEach(b => {
+        const zoomVal = b.dataset.zoom;
+        if (zoomVal === 'Fit') {
+            b.textContent = 'Fit';
+            b.addEventListener('click', this.zoomToFit.bind(this));
+        } else {
+            b.addEventListener('click', () => {
+                const cx = this.dom.canvas.width/2, cy = this.dom.canvas.height/2;
+                this.animateZoom((Number(zoomVal) / 100) * this.config.baseScale, cx, cy, 200);
+            });
+        }
+    });
+    this.dom.zoomSlider.addEventListener('input', this.handleZoomSlider.bind(this));
+    this.dom.zoomSlider.addEventListener('mousedown', () => {
+        clearTimeout(this.state.hideLabelTimeout);
+        this.updateFloatingZoomLabel();
+    });
+
+    // Event Listeners with context binding
+    window.addEventListener('resize', this.resize.bind(this));
+    window.addEventListener('mousemove', this.handleMouseMove.bind(this));
+    window.addEventListener('mouseup', () => { this.state.dragging = false; });
+    window.addEventListener('keydown', this.handleKeyDown.bind(this));
+    
+    this.dom.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+    this.dom.canvas.addEventListener('click', this.handleCanvasClick.bind(this));
+    this.dom.canvas.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
+    this.dom.canvas.addEventListener('dblclick', this.handleDblClick.bind(this));
+    this.dom.canvas.addEventListener('contextmenu', e => e.preventDefault());
+    
+    this.dom.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
+    this.dom.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+    this.dom.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
+  },
+
+
+  // —— DATA PROCESSING ——
+  preProcessBuildings() {
+    let buildings = [...this.state.baseMap.defaultBuildings, ...this.state.userBuildings];
+    if (this.state.baseMap.allianceRssBuildings) {
+      const formattedRssBuildings = this.state.baseMap.allianceRssBuildings.map(rss => {
+        const style = this.config.ALLIANCE_RSS_STYLES[rss.type] || {};
         return {
-          x: rss.x,
-          y: rss.y,
-          w: 2, // Correct size
-          h: 2, // Correct size
+          x: rss.x, y: rss.y, w: 2, h: 2,
           displayName: style.displayName,
           fillColor: style.fillColor,
           borderColor: style.borderColor,
           displayCoordinates: false,
-          isRss: true // Flag to identify these buildings for filtering
+          isRss: true
         };
       });
       buildings = buildings.concat(formattedRssBuildings);
     }
-    
-    // Store the final, definitive list
-    allBuildings = buildings;
-
-    // Populate the lookup map from this definitive list
-    buildingMap.clear();
-    for (const b of allBuildings) {
+    this.state.allBuildings = buildings;
+    this.state.buildingMap.clear();
+    for (const b of this.state.allBuildings) {
       for (let dx = 0; dx < b.w; dx++) {
         for (let dy = 0; dy < b.h; dy++) {
-          const key = `${b.x + dx},${b.y + dy}`;
-          buildingMap.set(key, b);
+          this.state.buildingMap.set(`${b.x + dx},${b.y + dy}`, b);
         }
       }
     }
-  }
+  },
 
-  function preCalculateChunks() {
+  preCalculateChunks() {
     const numLevels = 4;
     for (let level = 0; level < numLevels; level++) {
       const chunkSize = Math.pow(2, level + 1);
       const levelMap = new Map();
-      
-      for (let x = 0; x < N; x += chunkSize) {
-        for (let y = 0; y < N; y += chunkSize) {
-          const biome = getBiomeForTile(x, y);
+      for (let x = 0; x < this.config.N; x += chunkSize) {
+        for (let y = 0; y < this.config.N; y += chunkSize) {
+          const biome = this.getBiomeForTile(x, y);
           levelMap.set(`${x},${y}`, { x, y, size: chunkSize, biome: biome });
         }
       }
-      chunkLevels.push(levelMap);
+      this.state.chunkLevels.push(levelMap);
     }
-  }
+  },
 
-  // --- MODIFIED DATA FETCHING ---
-  Promise.all([
-    fetch('baseMap.json').then(r => r.ok ? r.json() : Promise.resolve({ unoccupiableTiles:[], defaultBuildings:[] })),
-    fetch('patch_notes.json').then(r => r.ok ? r.json() : Promise.resolve({}))
-  ])
-  .then(([baseMapData, patchNotesData]) => {
-      // Assign fetched data
-      Object.assign(baseMap, baseMapData);
-      patchNotes = patchNotesData;
+  // —— HELPERS & GETTERS ——
+  worldToScreen(x,y) {
+    return [(x - y)*(this.config.tileW/2), -(x + y)*(this.config.tileH/2)];
+  },
 
-      // Initialize application modules
-      preProcessBuildings();
-      preCalculateChunks();
-      initializeUI();
-      resize();
-      
-      // Start the main loop
-      requestAnimationFrame(mainLoop);
-  })
-  .catch(e => {
-      console.error(e);
-      alert('Error loading essential application data.');
-  });
-  
-  let userBuildings = [];
-
-  // camera + stats state …
-  const cam = { x:0, y:0, scale:1 };
-  let lastFrame = performance.now(),
-      tileCount = 0,
-      lastFPS = 0,
-      lastTiles = 0;
-  let selection = null; 
-  let minFitScale = 0.01;
-  let isInitialLoad = true;
-  let touchStartTime = 0; 
-
-  // --- Patch Notes & Versioning Logic ---
-// --- UPDATED Patch Notes Logic ---
-    function showPatchNotes() {
-        // Get all version keys from the fetched patchNotes object
-        const versions = Object.keys(patchNotes);
-
-        if (versions.length === 0) {
-            patchNotesBody.innerHTML = `<p>No patch notes are available at this time.</p>`;
-            modalOverlay.style.display = 'block';
-            patchNotesModal.style.display = 'block';
-            return;
-        }
-
-        // Sort versions from newest to oldest using a proper version comparison
-        versions.sort((a, b) => {
-            const partsA = a.split('.').map(Number);
-            const partsB = b.split('.').map(Number);
-            
-            const longest = Math.max(partsA.length, partsB.length);
-
-            for (let i = 0; i < longest; i++) {
-                const numA = partsA[i] || 0;
-                const numB = partsB[i] || 0;
-                
-                // If parts are different, we can determine the order
-                if (numA !== numB) {
-                    return numB - numA; // Sort descending (newest first)
-                }
-            }
-            return 0; // Versions are identical
-        });
-
-        // Build the HTML content for all versions
-        let content = '';
-        versions.forEach((version, index) => {
-            const notes = patchNotes[version];
-            
-            content += `<h4>Version ${version}</h4><ul>`;
-            notes.forEach(note => {
-                content += `<li>${note}</li>`;
-            });
-            content += '</ul>';
-
-            // Add a separator between versions, but not after the last one
-            if (index < versions.length - 1) {
-                content += '<hr style="border-color: #444; border-top: 0;">';
-            }
-        });
-
-        // Inject the full content into the modal body
-        patchNotesBody.innerHTML = content;
-
-        // Show the modal
-        modalOverlay.style.display = 'block';
-        patchNotesModal.style.display = 'block';
-    }
-
-    function hidePatchNotes() {
-        if (hidePatchNotesCheckbox.checked) {
-            localStorage.setItem('lastSeenVersion', CURRENT_VERSION);
-        }
-        modalOverlay.style.display = 'none';
-        patchNotesModal.style.display = 'none';
-    }
-
-    function initializeUI() {
-        // Version and Patch Notes logic... (this part remains the same)
-        versionDisplay.textContent = 'V' + CURRENT_VERSION;
-        patchNotesBtn.addEventListener('click', showPatchNotes);
-        closePatchNotesBtn.addEventListener('click', hidePatchNotes);
-        modalOverlay.addEventListener('click', hidePatchNotes);
-        const lastSeenVersion = localStorage.getItem('lastSeenVersion');
-        if (lastSeenVersion !== CURRENT_VERSION) {
-            showPatchNotes();
-        }
-
-        // --- UPDATED: Control Settings Logic ---
-        
-        // Load Tile Detail setting, default to '50'
-        const savedDetail = localStorage.getItem('mapTileDetail') || '50';
-        tileDetailSelect.value = savedDetail;
-        tileDetailSelect.addEventListener('change', () => {
-            localStorage.setItem('mapTileDetail', tileDetailSelect.value);
-        });
-
-        // Load "Always Show RSS" setting, default to 'false' (unchecked)
-        const savedAlwaysVisible = localStorage.getItem('mapAlwaysShowRss') === 'true';
-        allianceRssAlwaysVisibleToggle.checked = savedAlwaysVisible;
-        allianceRssAlwaysVisibleToggle.addEventListener('change', () => {
-            localStorage.setItem('mapAlwaysShowRss', allianceRssAlwaysVisibleToggle.checked);
-        });
-
-        // Load Gridlines setting, default to 'true' (checked)
-        const savedGridlines = localStorage.getItem('mapShowGridlines') !== 'false';
-        gridlinesToggle.checked = savedGridlines;
-        gridlinesToggle.addEventListener('change', () => {
-            localStorage.setItem('mapShowGridlines', gridlinesToggle.checked);
-        });
-
-        // Load Alliance RSS setting, default to 'true' (checked)
-        const savedAllianceRss = localStorage.getItem('mapShowAllianceRss') !== 'false';
-        allianceRssToggle.checked = savedAllianceRss;
-        allianceRssToggle.addEventListener('change', () => {
-            localStorage.setItem('mapShowAllianceRss', allianceRssToggle.checked);
-        });
-    }
-
-
-  // coord transforms
-  function worldToScreen(x,y) {
-    return [(x - y)*(tileW/2), -(x + y)*(tileH/2)];
-  }
-  function screenToWorld(sx,sy) {
-    const lx = (sx - cam.x)/cam.scale,
-          ly = (sy - cam.y)/cam.scale,
-          u  = lx/(tileW/2),
-          v  = -ly/(tileH/2);
-    const x = Math.round((u+v)/2),
-          y = Math.round((v-u)/2);
+  screenToWorld(sx,sy) {
+    const lx = (sx - this.state.cam.x)/this.state.cam.scale;
+    const ly = (sy - this.state.cam.y)/this.state.cam.scale;
+    const u  = lx/(this.config.tileW/2);
+    const v  = -ly/(this.config.tileH/2);
+    const x = Math.round((u+v)/2);
+    const y = Math.round((v-u)/2);
     return [x,y];
-  }
+  },
 
-  function getBuildingAt(x, y) {
-    return buildingMap.get(`${x},${y}`) || null;
-  }
+  getBuildingAt(x, y) {
+    return this.state.buildingMap.get(`${x},${y}`) || null;
+  },
 
-  function getBiomeForTile(x, y) {
-    const { fertile, plains } = biomeRegions;
-    if (x >= fertile.x1 && x <= fertile.x2 && y >= fertile.y1 && y <= fertile.y2) {
-      return 'fertile';
-    }
-    if (x >= plains.x1 && x <= plains.x2 && y >= plains.y1 && y <= plains.y2) {
-      return 'plains';
-    }
+  getBiomeForTile(x, y) {
+    const { fertile, plains } = this.config.biomeRegions;
+    if (x >= fertile.x1 && x <= fertile.x2 && y >= fertile.y1 && y <= fertile.y2) return 'fertile';
+    if (x >= plains.x1 && x <= plains.x2 && y >= plains.y1 && y <= plains.y2) return 'plains';
     return 'badlands';
-  }
+  },
 
-  // --- GRID DRAWING ---
-  function drawTile(x, y, drawBorder = true) {
-    tileCount++;
-    const [sx,sy] = worldToScreen(x,y);
-    ctx.beginPath();
-    ctx.moveTo(   sx,        sy - tileH/2);
-    ctx.lineTo(sx + tileW/2, sy      );
-    ctx.lineTo(   sx,        sy + tileH/2);
-    ctx.lineTo(sx - tileW/2, sy      );
-    ctx.closePath();
-
-    const biome = getBiomeForTile(x, y);
-    ctx.fillStyle = biomeColors[biome];
-    ctx.fill();
-    if (drawBorder) {
-      ctx.stroke();
-    }
-
-    const building = getBuildingAt(x, y);
-    if (building && building.hideCoordinates) {
-        return;
-    }
-
-    const pct = Math.round((cam.scale / baseScale) * 100);
-    const showThreshold = coordsToggle.checked ? 80 : 200;
-
-    if (pct <= showThreshold) {
-        return;
-    }
-    
-    const availableWidth = tileW;
-    const availableHeight = tileH;
-    const text = `${x}, ${y}`;
-    const padding = 0.8;
-    let optimalFontSize = Math.min(
-      availableHeight * padding * 0.5,
-      (availableWidth * padding / text.length) * 1.8
-    );
-    
-    optimalFontSize *= 0.7;
-
-    if ((optimalFontSize * cam.scale) < 5) {
-        return;
-    }
-
-    ctx.fillStyle = textColor;
-    ctx.font = `${optimalFontSize}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, sx, sy);
-  }
-
-  function drawChunk(chunk, drawBorder = true) {
-    tileCount += chunk.size * chunk.size;
-    const { x, y, size, biome } = chunk;
-
-    const inflation = drawBorder ? 0 : (1 / cam.scale);
-
-    const x0 = x, y0 = y, w = size, h = size;
-    const bottomTile = { x: x0, y: y0 };
-    const rightTile  = { x: x0 + w - 1, y: y0 };
-    const topTile    = { x: x0 + w - 1, y: y0 + h - 1 };
-    const leftTile   = { x: x0, y: y0 + h - 1 };
-    const [sbx, sby] = worldToScreen(bottomTile.x, bottomTile.y);
-    const [srx, sry] = worldToScreen(rightTile.x, rightTile.y);
-    const [stx, sty] = worldToScreen(topTile.x, topTile.y);
-    const [slx, sly] = worldToScreen(leftTile.x, leftTile.y);
-
-    const p_bottom = { x: sbx, y: sby + tileH/2 + inflation };
-    const p_right  = { x: srx + tileW/2 + inflation, y: sry };
-    const p_top    = { x: stx, y: sty - tileH/2 - inflation };
-    const p_left   = { x: slx - tileW/2 - inflation, y: sly };
-
-    ctx.beginPath();
-    ctx.moveTo(p_bottom.x, p_bottom.y);
-    ctx.lineTo(p_right.x,  p_right.y);
-    ctx.lineTo(p_top.x,    p_top.y);
-    ctx.lineTo(p_left.x,   p_left.y);
-    ctx.closePath();
-
-    ctx.fillStyle = biomeColors[biome];
-    ctx.fill();
-    if (drawBorder) {
-      ctx.stroke();
-    }
-  }
-
-
-  function drawBuildingFootprint(b, highlightStyle = null, drawBorder = true) {
-    const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
-    const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
-    const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
-
-    const bottomTile = { x: x0, y: y0 };
-    const rightTile  = { x: x0 + w - 1, y: y0 };
-    const topTile    = { x: x0 + w - 1, y: y0 + h - 1 };
-    const leftTile   = { x: x0, y: y0 + h - 1 };
-    const [sbx, sby] = worldToScreen(bottomTile.x, bottomTile.y);
-    const [srx, sry] = worldToScreen(rightTile.x, rightTile.y);
-    const [stx, sty] = worldToScreen(topTile.x, topTile.y);
-    const [slx, sly] = worldToScreen(leftTile.x, leftTile.y);
-    const p_bottom = { x: sbx, y: sby + tileH/2 };
-    const p_right  = { x: srx + tileW/2, y: sry };
-    const p_top    = { x: stx, y: sty - tileH/2 };
-    const p_left   = { x: slx - tileW/2, y: sly };
-    
-    ctx.beginPath();
-    ctx.moveTo(p_bottom.x, p_bottom.y);
-    ctx.lineTo(p_right.x,  p_right.y);
-    ctx.lineTo(p_top.x,    p_top.y);
-    ctx.lineTo(p_left.x,   p_left.y);
-    ctx.closePath();
-    
-    ctx.fillStyle = fill;
-    ctx.fill();
-    
-    ctx.strokeStyle = border; 
-    ctx.lineWidth = highlightStyle ? strokeW * 2 : strokeW;
-    if (drawBorder) {
-        ctx.stroke();
-    }
-
-    if (cam.scale > 0.4 && b.displayName) {
-      const availableWidth = (p_right.x - p_left.x) * 0.8;
-      const availableHeight = p_bottom.y - p_top.y;
-      
-      if (availableWidth < 10 || availableHeight < 10) return;
-      
-      const hasCoords = b.displayCoordinates;
-      const coordText = `(X${b.x}, Y${b.y})`;
-      const heightFactor = hasCoords ? 0.5 : 1.0; 
-      
-      const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9;
-
-      ctx.font = `bold 100px sans-serif`;
-      const widthAtRefSize = ctx.measureText(b.displayName).width;
-      const fontSizeBasedOnWidth = (availableWidth / widthAtRefSize) * 100;
-
-      const optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
-
-      if (optimalFontSize * cam.scale < 7) return;
-      
-      const centerX = (p_left.x + p_right.x) / 2;
-      const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
-      const centerY = (p_top.y + p_bottom.y) / 2 + yOffset;
-
-      ctx.fillStyle = textColor;
-      ctx.font = `bold ${optimalFontSize}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(b.displayName, centerX, centerY);
-      
-      if (b.displayCoordinates) {
-        const coordFontSize = optimalFontSize * 0.7;
-        ctx.font = `${coordFontSize}px sans-serif`;
-        ctx.fillText(coordText, centerX, centerY + optimalFontSize * 0.9);
-      }
-    }
-  }
-
-  function centerOn(x,y) {
-    const [lx, ly] = worldToScreen(x,y);
-    cam.x = canvas.width*0.5 - lx*cam.scale;
-    cam.y = canvas.height*0.5 - ly*cam.scale;
-  }
-  
-  function zoomToFit() {
-    cam.scale = minFitScale;
-    clampCamera();
-  }
-
-  function resize() {
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const mapTotalWidth = (N - 1) * tileW;
-    const mapTotalHeight = (N - 1) * tileH;
-    
-    const scaleX = canvas.width / mapTotalWidth;
-    const scaleY = canvas.height / mapTotalHeight;
-
-    const padding = 0.95;
-    minFitScale = Math.min(scaleX, scaleY) * padding;
-    
-    if (isInitialLoad) {
-        zoomToFit();
-        isInitialLoad = false;
-    } else {
-        clampCamera();
-    }
-  }
-  window.addEventListener('resize', resize);
-
-function clampCamera() {
-    const s = cam.scale;
-    const mapTotalWidth = (N - 1) * tileW;
-    const mapTotalHeight = (N - 1) * tileH;
-    const mapScaledWidth = mapTotalWidth * s;
-    const mapScaledHeight = mapTotalHeight * s;
-
-    const worldHalfWidth = mapScaledWidth / 2;
-    
-    const overscrollX = canvas.width * 0.5;
-    const overscrollY = canvas.height * 0.5;
-
-    if (mapScaledWidth < canvas.width) {
-      cam.x = canvas.width / 2;
-    } else {
-      const minCamX = canvas.width - worldHalfWidth;
-      const maxCamX = worldHalfWidth;
-      cam.x = Math.max(minCamX - overscrollX, Math.min(maxCamX + overscrollX, cam.x));
-    }
-    
-    if (mapScaledHeight < canvas.height) {
-      cam.y = canvas.height / 2 + mapScaledHeight / 2;
-    } else {
-      const minCamY = canvas.height;
-      const maxCamY = mapScaledHeight;
-      cam.y = Math.max(minCamY - overscrollY, Math.min(maxCamY + overscrollY, cam.y));
-    }
-  }
-
-  let dragging=false, lastX, lastY;
-  let clickStartX, clickStartY;
-  canvas.addEventListener('mousedown', e=>{
-    if (e.button===0) {
-      dragging=true;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      clickStartX = e.clientX;
-      clickStartY = e.clientY;
-    }
-  });
-  window.addEventListener('mousemove', e=>{
-    if (!dragging) return;
-    cam.x += e.clientX - lastX;
-    cam.y += e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    clampCamera();
-  });
-  window.addEventListener('mouseup', ()=>dragging=false);
-
-  canvas.addEventListener('click', e => {
-    const dist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
-    if (dist > 5) {
-      return;
-    }
-    const [worldX, worldY] = screenToWorld(e.offsetX, e.offsetY);
-
-    if (worldX >= 0 && worldX < N && worldY >= 0 && worldY < N) {
-      const building = getBuildingAt(worldX, worldY);
-      
-      if (building) {
-        selection = building;
-        inpX.value = building.x;
-        inpY.value = building.y;
-      } else {
-        selection = { x: worldX, y: worldY };
-        inpX.value = worldX;
-        inpY.value = worldY;
-      }
-    }
-  });
-
-  canvas.addEventListener('wheel', e=>{
-    e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.1 : 0.9;
-    const mx = e.offsetX, my = e.offsetY;
-    const wx = (mx - cam.x)/cam.scale,
-          wy = (my - cam.y)/cam.scale;
-    cam.scale *= factor;
-    cam.scale = Math.max(minFitScale,
-      Math.min(maxPct/100 * baseScale, cam.scale));
-    cam.x = mx - wx * cam.scale;
-    cam.y = my - wy * cam.scale;
-    clampCamera();
-  },{ passive:false });
-
-  function animateZoom(targetScale, anchorX, anchorY, duration=150) {
-    const startScale = cam.scale;
-    const startX = cam.x, startY = cam.y;
-    const start = performance.now();
-    const wx = (anchorX - startX)/startScale,
-          wy = (anchorY - startY)/startScale;
-
-    function step(now) {
-      const t = Math.min(1, (now - start)/duration);
-      const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
-      cam.scale = startScale + (targetScale - startScale)*k;
-      cam.x = anchorX - wx * cam.scale;
-      cam.y = anchorY - wy * cam.scale;
-      clampCamera();
-      if (t < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-  }
-
-  canvas.addEventListener('dblclick', e=>{
-    e.preventDefault();
-    const curPct = Math.round((cam.scale / baseScale) * 100);
-    let targetPct;
-    if (e.button === 2) { 
-      targetPct = curPct - 75;
-    } else { 
-      targetPct = curPct + 75;
-    }
-    const targetScale = (targetPct / 100) * baseScale;
-    animateZoom(Math.max(minFitScale, Math.min(maxPct / 100 * baseScale, targetScale)), e.offsetX, e.offsetY);
-  });
-
-  canvas.addEventListener('contextmenu', e=>e.preventDefault());
-
-  let hideLabelTimeout;
-
-    function updateFloatingZoomLabel() {
-        const slider = zoomSlider;
-        const label = floatingZoomLabel;
-        
-        const min = parseInt(slider.min, 10);
-        const max = parseInt(slider.max, 10);
-        const val = parseInt(slider.value, 10);
-
-        const percent = (val - min) / (max - min);
-
-        const thumbHeight = 15;
-        const trackHeight = slider.offsetHeight;
-        const topPos = (1 - percent) * (trackHeight - thumbHeight) + (thumbHeight / 2);
-        
-        label.style.top = `${topPos}px`;
-        label.textContent = `Zoom: ${val}%`;
-        label.style.display = 'block';
-
-        clearTimeout(hideLabelTimeout);
-        hideLabelTimeout = setTimeout(() => {
-            label.style.display = 'none';
-        }, 1500);
-    }
-
-    zoomSlider.addEventListener('input', () => {
-        const cx = canvas.width/2, cy = canvas.height/2;
-        const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
-        let pct = Number(zoomSlider.value);
-        const targetScale = (pct / 100) * baseScale;
-        cam.scale = Math.max(minFitScale, Math.min(maxPct / 100 * baseScale, targetScale));
-        cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
-        clampCamera();
-        updateFloatingZoomLabel();
-    });
-    
-    zoomSlider.addEventListener('mousedown', () => {
-        clearTimeout(hideLabelTimeout);
-        updateFloatingZoomLabel();
-    });
-
-
-  function changeZoomBy(delta) {
-    const cx = canvas.width/2, cy = canvas.height/2;
-    const wx = (cx - cam.x)/cam.scale, wy = (cy - cam.y)/cam.scale;
-    let pct = Math.round((cam.scale / baseScale) * 100) + delta;
-    const targetScale = (pct / 100) * baseScale;
-    cam.scale = Math.max(minFitScale, Math.min(maxPct / 100 * baseScale, targetScale));
-    cam.x = cx - wx*cam.scale; cam.y = cy - wy*cam.scale;
-    clampCamera();
-  }
-  zoomDecBtn.addEventListener('click', ()=>changeZoomBy(-1));
-  zoomIncBtn.addEventListener('click', ()=>changeZoomBy(+1));
-
-  presetBtns.forEach(b => {
-    const zoomVal = b.dataset.zoom;
-    if (zoomVal === 'Fit') {
-        b.textContent = 'Fit';
-        b.addEventListener('click', zoomToFit);
-        return;
-    }
-
-    b.addEventListener('click', () => {
-        const cx = canvas.width/2, cy = canvas.height/2;
-        let pct = Number(zoomVal);
-        const targetScale = (pct / 100) * baseScale;
-        animateZoom(targetScale, cx, cy, 200);
-    });
-  });
-
-  window.addEventListener('keydown', e=>{
-    if (e.target.tagName==='INPUT') return;
-    switch(e.key) {
-      case '+': case '=': changeZoomBy(+1); break;
-      case '-': changeZoomBy(-1); break;
-      case 'q': changeZoomBy(+1); break;
-      case 'e': changeZoomBy(-1); break;
-      case 'ArrowUp':    cam.y += tileW * 5; clampCamera(); break;
-      case 'ArrowDown':  cam.y -= tileW * 5; clampCamera(); break;
-      case 'ArrowLeft':  cam.x += tileW * 5; clampCamera(); break;
-      case 'ArrowRight': cam.x -= tileW * 5; clampCamera(); break;
-    }
-  });
-
-  function doSearch() {
-    const x = +inpX.value, y = +inpY.value;
-    if (x>=0 && y>=0 && x<N && y<N) {
-      const building = getBuildingAt(x, y);
-      selection = building || { x, y };
-
-      const targetScale = (150 / 100) * baseScale;
-      
-      const [screenX, screenY] = worldToScreen(x, y);
-      const targetCamX = canvas.width/2 - screenX * targetScale;
-      const targetCamY = canvas.height/2 - screenY * targetScale;
-      
-      animatePanZoom(targetScale, targetCamX, targetCamY);
-    }
-  }
-
-  function animatePanZoom(targetScale, targetX, targetY, duration=300) {
-      const startScale = cam.scale, startX = cam.x, startY = cam.y;
-      const start = performance.now();
-
-      function step(now) {
-          const t = Math.min(1, (now - start)/duration);
-          const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
-          
-          cam.scale = startScale + (targetScale - startScale)*k;
-          cam.x = startX + (targetX - startX)*k;
-          cam.y = startY + (targetY - startY)*k;
-          
-          clampCamera();
-          if (t < 1) requestAnimationFrame(step);
-      }
-      requestAnimationFrame(step);
-  }
-  btnGo.addEventListener('click', doSearch);
-  [inpX,inpY].forEach(i=>{
-    i.addEventListener('keydown', e=>{ if (e.key==='Enter') doSearch(); });
-  });
-
-  let touchMode = null;
-  let startDist, startScale, pinchCenter;
-
-canvas.addEventListener('touchstart', e=>{
-    e.preventDefault();
-    if (e.touches.length===1) {
-      touchMode = 'pan';
-      const t = e.touches[0];
-      lastX = t.clientX;
-      lastY = t.clientY;
-      clickStartX = t.clientX;
-      clickStartY = t.clientY;
-      touchStartTime = performance.now();
-    } else if (e.touches.length===2) {
-      touchMode = 'pinch';
-      const [a,b] = e.touches;
-      startDist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
-      startScale= cam.scale;
-      pinchCenter = { x: (a.clientX + b.clientX)/2, y: (a.clientY + b.clientY)/2 };
-    }
-  }, { passive:false });
-
-  canvas.addEventListener('touchmove', e=>{
-    e.preventDefault();
-    if (touchMode==='pan' && e.touches.length===1) {
-      const t = e.touches[0];
-      const dx = t.clientX - lastX, dy = t.clientY - lastY;
-      cam.x += dx; cam.y += dy;
-      lastX = t.clientX; lastY = t.clientY;
-      clampCamera();
-    }
-    else if (touchMode==='pinch' && e.touches.length===2) {
-      const [a,b] = e.touches;
-      const dist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
-      let scaleFactor = dist / startDist;
-      let newScale = startScale * scaleFactor;
-      newScale = Math.max(minFitScale, Math.min(maxPct/100 * baseScale, newScale));
-      const wx = (pinchCenter.x - cam.x)/cam.scale, wy = (pinchCenter.y - cam.y)/cam.scale;
-      cam.scale = newScale;
-      cam.x = pinchCenter.x - wx*newScale;
-      cam.y = pinchCenter.y - wy*newScale;
-      clampCamera();
-    }
-  }, { passive:false });
-
-  canvas.addEventListener('touchend', e=>{
-    if (touchMode === 'pan' && e.changedTouches.length === 1) {
-      const t = e.changedTouches[0];
-      const dist = Math.hypot(t.clientX - clickStartX, t.clientY - clickStartY);
-      const duration = performance.now() - touchStartTime;
-
-      if (duration < 200 && dist < 10) {
-        const [worldX, worldY] = screenToWorld(t.clientX, t.clientY);
-        if (worldX >= 0 && worldX < N && worldY >= 0 && worldY < N) {
-          const building = getBuildingAt(worldX, worldY);
-          
-          if (building) {
-            selection = building;
-            inpX.value = building.x;
-            inpY.value = building.y;
-          } else {
-            selection = { x: worldX, y: worldY };
-            inpX.value = worldX;
-            inpY.value = worldY;
-          }
-        }
-      }
-    }
-    
-    if (e.touches.length<2) touchMode = null;
-  });
-  
-  function getChunkLevelForZoom(pct) {
-    const detailThreshold = parseInt(tileDetailSelect.value, 10);
-
-    // If zoom is above the user's chosen detail threshold, show individual tiles
+  getChunkLevelForZoom(pct) {
+    const detailThreshold = parseInt(this.dom.tileDetailSelect.value, 10);
     if (pct > detailThreshold) return -1;
-    
-    // The rest of the LOD logic scales based on that threshold
     if (pct > detailThreshold / 2) return 0;
     if (pct > detailThreshold / 5) return 1;
     if (pct > detailThreshold / 10) return 2;
     return 3;
-  }
+  },
 
-  function mainLoop(now) {
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    const [centerX, centerY] = screenToWorld(canvas.width/2, canvas.height/2);
-    centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
-    
-    const pct = Math.round((cam.scale / baseScale) * 100);
-    zoomLevelEl.textContent = `Zoom: ${pct}%`;
-    
-    if (pct > zoomSlider.max) {
-      zoomSlider.max = pct;
+  // —— UI & INTERACTION HANDLERS ——
+  showPatchNotes() {
+    const versions = Object.keys(this.state.patchNotes);
+    if (versions.length === 0) {
+        this.dom.patchNotesBody.innerHTML = `<p>No patch notes are available at this time.</p>`;
+    } else {
+        versions.sort((a, b) => {
+            const partsA = a.split('.').map(Number);
+            const partsB = b.split('.').map(Number);
+            for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+                const numA = partsA[i] || 0;
+                const numB = partsB[i] || 0;
+                if (numA !== numB) return numB - numA;
+            }
+            return 0;
+        });
+        let content = '';
+        versions.forEach((version, index) => {
+            content += `<h4>Version ${version}</h4><ul>${this.state.patchNotes[version].map(note => `<li>${note}</li>`).join('')}</ul>`;
+            if (index < versions.length - 1) content += '<hr style="border-color: #444; border-top: 0;">';
+        });
+        this.dom.patchNotesBody.innerHTML = content;
     }
-    zoomSlider.value = pct;
+    this.dom.modalOverlay.style.display = 'block';
+    this.dom.patchNotesModal.style.display = 'block';
+  },
+
+  hidePatchNotes() {
+    if (this.dom.hidePatchNotesCheckbox.checked) {
+        localStorage.setItem('lastSeenVersion', this.config.CURRENT_VERSION);
+    }
+    this.dom.modalOverlay.style.display = 'none';
+    this.dom.patchNotesModal.style.display = 'none';
+  },
+
+  handleMouseDown(e) {
+    if (e.button===0) {
+      this.state.dragging = true;
+      this.state.lastX = e.clientX;
+      this.state.lastY = e.clientY;
+      this.state.clickStartX = e.clientX;
+      this.state.clickStartY = e.clientY;
+    }
+  },
+
+  handleMouseMove(e) {
+    if (!this.state.dragging) return;
+    this.state.cam.x += e.clientX - this.state.lastX;
+    this.state.cam.y += e.clientY - this.state.lastY;
+    this.state.lastX = e.clientX;
+    this.state.lastY = e.clientY;
+    this.clampCamera();
+  },
+
+  handleCanvasClick(e) {
+    const dist = Math.hypot(e.clientX - this.state.clickStartX, e.clientY - this.state.clickStartY);
+    if (dist > 5) return;
     
-    tileCount = 0;
+    const [worldX, worldY] = this.screenToWorld(e.offsetX, e.offsetY);
+    if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
+      const building = this.getBuildingAt(worldX, worldY);
+      this.state.selection = building || { x: worldX, y: worldY };
+      this.state.selection.pingStart = performance.now(); // Trigger ping
+      this.dom.inpX.value = this.state.selection.x;
+      this.dom.inpY.value = this.state.selection.y;
+    }
+  },
+
+  handleWheel(e) {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    const mx = e.offsetX, my = e.offsetY;
+    const wx = (mx - this.state.cam.x)/this.state.cam.scale;
+    const wy = (my - this.state.cam.y)/this.state.cam.scale;
+    this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct/100 * this.config.baseScale, this.state.cam.scale * factor));
+    this.state.cam.x = mx - wx * this.state.cam.scale;
+    this.state.cam.y = my - wy * this.state.cam.scale;
+    this.clampCamera();
+  },
+
+  handleDblClick(e) {
+    e.preventDefault();
+    const curPct = Math.round((this.state.cam.scale / this.config.baseScale) * 100);
+    const targetPct = e.button === 2 ? curPct - 75 : curPct + 75;
+    const targetScale = (targetPct / 100) * this.config.baseScale;
+    this.animateZoom(Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale)), e.offsetX, e.offsetY);
+  },
+
+  handleZoomSlider() {
+    const cx = this.dom.canvas.width/2, cy = this.dom.canvas.height/2;
+    const wx = (cx - this.state.cam.x)/this.state.cam.scale, wy = (cy - this.state.cam.y)/this.state.cam.scale;
+    const pct = Number(this.dom.zoomSlider.value);
+    const targetScale = (pct / 100) * this.config.baseScale;
+    this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
+    this.state.cam.x = cx - wx*this.state.cam.scale; 
+    this.state.cam.y = cy - wy*this.state.cam.scale;
+    this.clampCamera();
+    this.updateFloatingZoomLabel();
+  },
+
+  handleKeyDown(e) {
+    if (e.target.tagName==='INPUT') return;
+    switch(e.key) {
+      case '+': case '=': this.changeZoomBy(+1); break;
+      case '-': this.changeZoomBy(-1); break;
+      case 'q': this.changeZoomBy(+1); break;
+      case 'e': this.changeZoomBy(-1); break;
+      case 'ArrowUp':    this.state.cam.y += this.config.tileW * 5; this.clampCamera(); break;
+      case 'ArrowDown':  this.state.cam.y -= this.config.tileW * 5; this.clampCamera(); break;
+      case 'ArrowLeft':  this.state.cam.x += this.config.tileW * 5; this.clampCamera(); break;
+      case 'ArrowRight': this.state.cam.x -= this.config.tileW * 5; this.clampCamera(); break;
+    }
+  },
+
+  handleTouchStart(e) {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+        this.state.touchMode = 'pan';
+        const t = e.touches[0];
+        this.state.lastX = t.clientX;
+        this.state.lastY = t.clientY;
+        this.state.clickStartX = t.clientX;
+        this.state.clickStartY = t.clientY;
+        this.state.touchStartTime = performance.now();
+    } else if (e.touches.length === 2) {
+        this.state.touchMode = 'pinch';
+        const [a,b] = e.touches;
+        this.state.startDist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
+        this.state.startScale = this.state.cam.scale;
+        this.state.pinchCenter = { x: (a.clientX + b.clientX)/2, y: (a.clientY + b.clientY)/2 };
+    }
+  },
+
+  handleTouchMove(e) {
+    e.preventDefault();
+    if (this.state.touchMode === 'pan' && e.touches.length === 1) {
+        const t = e.touches[0];
+        this.state.cam.x += t.clientX - this.state.lastX;
+        this.state.cam.y += t.clientY - this.state.lastY;
+        this.state.lastX = t.clientX; this.state.lastY = t.clientY;
+        this.clampCamera();
+    } else if (this.state.touchMode === 'pinch' && e.touches.length === 2) {
+        const [a,b] = e.touches;
+        const dist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
+        const newScale = this.state.startScale * (dist / this.state.startDist);
+        const pc = this.state.pinchCenter;
+        const wx = (pc.x - this.state.cam.x)/this.state.cam.scale;
+        const wy = (pc.y - this.state.cam.y)/this.state.cam.scale;
+        this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct/100 * this.config.baseScale, newScale));
+        this.state.cam.x = pc.x - wx*this.state.cam.scale;
+        this.state.cam.y = pc.y - wy*this.state.cam.scale;
+        this.clampCamera();
+    }
+  },
+
+  handleTouchEnd(e) {
+    if (this.state.touchMode === 'pan' && e.changedTouches.length === 1) {
+      const t = e.changedTouches[0];
+      const dist = Math.hypot(t.clientX - this.state.clickStartX, t.clientY - this.state.clickStartY);
+      const duration = performance.now() - this.state.touchStartTime;
+      if (duration < 200 && dist < 10) {
+          const [worldX, worldY] = this.screenToWorld(t.clientX, t.clientY);
+          if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
+              const building = this.getBuildingAt(worldX, worldY);
+              this.state.selection = building || { x: worldX, y: worldY };
+              this.state.selection.pingStart = performance.now(); // Trigger ping
+              this.dom.inpX.value = this.state.selection.x;
+              this.dom.inpY.value = this.state.selection.y;
+          }
+      }
+    }
+    if (e.touches.length < 2) this.state.touchMode = null;
+  },
+
+  // —— CORE LOGIC ——
+  doSearch() {
+    const x = +this.dom.inpX.value, y = +this.dom.inpY.value;
+    if (x >= 0 && y >= 0 && x < this.config.N && y < this.config.N) {
+      this.state.selection = this.getBuildingAt(x, y) || { x, y };
+      this.state.selection.pingStart = performance.now(); // Trigger ping
+      const targetScale = (150 / 100) * this.config.baseScale;
+      const [screenX, screenY] = this.worldToScreen(x, y);
+      const targetCamX = this.dom.canvas.width/2 - screenX * targetScale;
+      const targetCamY = this.dom.canvas.height/2 - screenY * targetScale;
+      this.animatePanZoom(targetScale, targetCamX, targetCamY);
+    }
+  },
+  
+  centerOn(x,y) {
+    const [lx, ly] = this.worldToScreen(x,y);
+    this.state.cam.x = this.dom.canvas.width*0.5 - lx*this.state.cam.scale;
+    this.state.cam.y = this.dom.canvas.height*0.5 - ly*this.state.cam.scale;
+  },
+  
+  zoomToFit() {
+    this.state.cam.scale = this.state.minFitScale;
+    this.clampCamera();
+  },
+
+  resize() {
+    this.dom.canvas.width  = window.innerWidth;
+    this.dom.canvas.height = window.innerHeight;
+    const mapTotalWidth = (this.config.N - 1) * this.config.tileW;
+    const mapTotalHeight = (this.config.N - 1) * this.config.tileH;
+    const scaleX = this.dom.canvas.width / mapTotalWidth;
+    const scaleY = this.dom.canvas.height / mapTotalHeight;
+    this.state.minFitScale = Math.min(scaleX, scaleY) * 0.95;
+    if (this.state.isInitialLoad) {
+        this.zoomToFit();
+        this.state.isInitialLoad = false;
+    } else {
+        this.clampCamera();
+    }
+  },
+
+  clampCamera() {
+    const s = this.state.cam.scale;
+    const mapTotalWidth = (this.config.N - 1) * this.config.tileW;
+    const mapTotalHeight = (this.config.N - 1) * this.config.tileH;
+    const mapScaledWidth = mapTotalWidth * s;
+    const mapScaledHeight = mapTotalHeight * s;
+    const worldHalfWidth = mapScaledWidth / 2;
+    const overscrollX = this.dom.canvas.width * 0.5;
+    const overscrollY = this.dom.canvas.height * 0.5;
+    if (mapScaledWidth < this.dom.canvas.width) {
+      this.state.cam.x = this.dom.canvas.width / 2;
+    } else {
+      this.state.cam.x = Math.max(this.dom.canvas.width - worldHalfWidth - overscrollX, Math.min(worldHalfWidth + overscrollX, this.state.cam.x));
+    }
+    if (mapScaledHeight < this.dom.canvas.height) {
+      this.state.cam.y = this.dom.canvas.height / 2 + mapScaledHeight / 2;
+    } else {
+      this.state.cam.y = Math.max(this.dom.canvas.height - overscrollY, Math.min(mapScaledHeight + overscrollY, this.state.cam.y));
+    }
+  },
+
+  changeZoomBy(delta) {
+    const cx = this.dom.canvas.width/2, cy = this.dom.canvas.height/2;
+    const wx = (cx - this.state.cam.x)/this.state.cam.scale, wy = (cy - this.state.cam.y)/this.state.cam.scale;
+    let pct = Math.round((this.state.cam.scale / this.config.baseScale) * 100) + delta;
+    const targetScale = (pct / 100) * this.config.baseScale;
+    this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
+    this.state.cam.x = cx - wx*this.state.cam.scale; this.state.cam.y = cy - wy*this.state.cam.scale;
+    this.clampCamera();
+  },
+
+  // —— ANIMATION & DRAWING ——
+  animateZoom(targetScale, anchorX, anchorY, duration=150) {
+    const startScale = this.state.cam.scale;
+    const startX = this.state.cam.x, startY = this.state.cam.y;
+    const start = performance.now();
+    const wx = (anchorX - startX)/startScale;
+    const wy = (anchorY - startY)/startScale;
+    const step = (now) => {
+      const t = Math.min(1, (now - start)/duration);
+      const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+      this.state.cam.scale = startScale + (targetScale - startScale)*k;
+      this.state.cam.x = anchorX - wx * this.state.cam.scale;
+      this.state.cam.y = anchorY - wy * this.state.cam.scale;
+      this.clampCamera();
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  },
+
+  animatePanZoom(targetScale, targetX, targetY, duration=300) {
+    const startScale = this.state.cam.scale, startX = this.state.cam.x, startY = this.state.cam.y;
+    const start = performance.now();
+    const step = (now) => {
+        const t = Math.min(1, (now - start)/duration);
+        const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+        this.state.cam.scale = startScale + (targetScale - startScale)*k;
+        this.state.cam.x = startX + (targetX - startX)*k;
+        this.state.cam.y = startY + (targetY - startY)*k;
+        this.clampCamera();
+        if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  },
+  
+  updateFloatingZoomLabel() {
+    const slider = this.dom.zoomSlider;
+    const label = this.dom.floatingZoomLabel;
+    const min = parseInt(slider.min, 10);
+    const max = parseInt(slider.max, 10);
+    const val = parseInt(slider.value, 10);
+    const percent = (val - min) / (max - min);
+    const thumbHeight = 15;
+    const trackHeight = slider.offsetHeight;
+    const topPos = (1 - percent) * (trackHeight - thumbHeight) + (thumbHeight / 2);
+    label.style.top = `${topPos}px`;
+    label.textContent = `Zoom: ${val}%`;
+    label.style.display = 'block';
+    clearTimeout(this.state.hideLabelTimeout);
+    this.state.hideLabelTimeout = setTimeout(() => { label.style.display = 'none'; }, 1500);
+  },
+
+  drawTile(x, y, drawBorder = true) {
+    this.state.tileCount++;
+    const [sx,sy] = this.worldToScreen(x,y);
+    const { ctx, config } = this;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - config.tileH/2); ctx.lineTo(sx + config.tileW/2, sy);
+    ctx.lineTo(sx, sy + config.tileH/2); ctx.lineTo(sx - config.tileW/2, sy);
+    ctx.closePath();
+
+    ctx.fillStyle = config.biomeColors[this.getBiomeForTile(x, y)];
+    ctx.fill();
+    if (drawBorder) ctx.stroke();
+
+    const building = this.getBuildingAt(x, y);
+    if (building && building.hideCoordinates) return;
+
+    const pct = Math.round((this.state.cam.scale / config.baseScale) * 100);
+    const showThreshold = this.dom.coordsToggle.checked ? 80 : 200;
+    if (pct <= showThreshold) return;
+    
+    const text = `${x}, ${y}`;
+    let optimalFontSize = Math.min(
+      config.tileH * 0.8 * 0.5,
+      (config.tileW * 0.8 / text.length) * 1.8
+    ) * 0.7;
+    if ((optimalFontSize * this.state.cam.scale) < 5) return;
+
+    ctx.fillStyle = config.textColor;
+    ctx.font = `${optimalFontSize}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, sx, sy);
+  },
+
+  drawChunk(chunk, drawBorder = true) {
+    this.state.tileCount += chunk.size * chunk.size;
+    const { x, y, size, biome } = chunk;
+    const { ctx, config } = this;
+    const inflation = drawBorder ? 0 : (1 / this.state.cam.scale);
+    const x0 = x, y0 = y, w = size, h = size;
+    const [sbx, sby] = this.worldToScreen(x0, y0);
+    const [srx, sry] = this.worldToScreen(x0 + w - 1, y0);
+    const [stx, sty] = this.worldToScreen(x0 + w - 1, y0 + h - 1);
+    const [slx, sly] = this.worldToScreen(x0, y0 + h - 1);
+    const p_bottom = { x: sbx, y: sby + config.tileH/2 + inflation };
+    const p_right  = { x: srx + config.tileW/2 + inflation, y: sry };
+    const p_top    = { x: stx, y: sty - config.tileH/2 - inflation };
+    const p_left   = { x: slx - config.tileW/2 - inflation, y: sly };
+    ctx.beginPath();
+    ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x,  p_right.y);
+    ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y);
+    ctx.closePath();
+    ctx.fillStyle = config.biomeColors[biome];
+    ctx.fill();
+    if (drawBorder) ctx.stroke();
+  },
+  
+  drawBuildingFootprint(b, highlightStyle = null, drawBorder = true) {
+    const { ctx, config, state } = this;
+    const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
+    const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
+    const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
+    const [sbx, sby] = this.worldToScreen(x0, y0);
+    const [srx, sry] = this.worldToScreen(x0 + w - 1, y0);
+    const [stx, sty] = this.worldToScreen(x0 + w - 1, y0 + h - 1);
+    const [slx, sly] = this.worldToScreen(x0, y0 + h - 1);
+    const p_bottom = { x: sbx, y: sby + config.tileH/2 };
+    const p_right  = { x: srx + config.tileW/2, y: sry };
+    const p_top    = { x: stx, y: sty - config.tileH/2 };
+    const p_left   = { x: slx - config.tileW/2, y: sly };
+    ctx.beginPath();
+    ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x,  p_right.y);
+    ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.strokeStyle = border; 
+    ctx.lineWidth = highlightStyle ? config.strokeW * 2 : config.strokeW;
+    if (drawBorder) ctx.stroke();
+    if (state.cam.scale > 0.4 && b.displayName) {
+      const availableWidth = (p_right.x - p_left.x) * 0.8;
+      const availableHeight = p_bottom.y - p_top.y;
+      if (availableWidth < 10 || availableHeight < 10) return;
+      const hasCoords = b.displayCoordinates;
+      const heightFactor = hasCoords ? 0.5 : 1.0; 
+      const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9;
+      ctx.font = `bold 100px sans-serif`;
+      const fontSizeBasedOnWidth = (availableWidth / ctx.measureText(b.displayName).width) * 100;
+      const optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
+      if (optimalFontSize * state.cam.scale < 7) return;
+      const centerX = (p_left.x + p_right.x) / 2;
+      const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
+      const centerY = (p_top.y + p_bottom.y) / 2 + yOffset;
+      ctx.fillStyle = config.textColor;
+      ctx.font = `bold ${optimalFontSize}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(b.displayName, centerX, centerY);
+      if (b.displayCoordinates) {
+        const coordFontSize = optimalFontSize * 0.7;
+        ctx.font = `${coordFontSize}px sans-serif`;
+        ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.9);
+      }
+    }
+  },
+
+  // —— MAIN RENDER LOOP ——
+  mainLoop(now) {
+    const { ctx, dom, state, config } = this;
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,dom.canvas.width,dom.canvas.height);
+
+    const [centerX, centerY] = this.screenToWorld(dom.canvas.width/2, dom.canvas.height/2);
+    dom.centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
+    
+    const pct = Math.round((state.cam.scale / config.baseScale) * 100);
+    dom.zoomLevelEl.textContent = `Zoom: ${pct}%`;
+    if (pct > dom.zoomSlider.max) dom.zoomSlider.max = pct;
+    dom.zoomSlider.value = pct;
+    state.tileCount = 0;
 
     ctx.save();
-    ctx.setTransform(cam.scale,0,0,cam.scale,cam.x,cam.y);
+    ctx.setTransform(state.cam.scale,0,0,state.cam.scale,state.cam.x,state.cam.y);
+    ctx.strokeStyle = config.borderColor;
+    ctx.lineWidth = config.strokeW;
     
-    ctx.strokeStyle = borderColor;
-    ctx.lineWidth = strokeW;
-    
-    const [tl_x, tl_y] = screenToWorld(0, 0);
-    const [tr_x, tr_y] = screenToWorld(canvas.width, 0);
-    const [bl_x, bl_y] = screenToWorld(0, canvas.height);
-    const [br_x, br_y] = screenToWorld(canvas.width, canvas.height);
-
-    const buffer = 2;
+    const [tl_x, tl_y] = this.screenToWorld(0, 0);
+    const [tr_x, tr_y] = this.screenToWorld(dom.canvas.width, 0);
+    const [bl_x, bl_y] = this.screenToWorld(0, dom.canvas.height);
+    const [br_x, br_y] = this.screenToWorld(dom.canvas.width, dom.canvas.height);
     const viewBounds = {
-      minX: Math.min(tl_x, tr_x, bl_x, br_x) - buffer,
-      maxX: Math.max(tl_x, tr_x, bl_x, br_x) + buffer,
-      minY: Math.min(tl_y, tr_y, bl_y, br_y) - buffer,
-      maxY: Math.max(tl_y, tr_y, bl_y, br_y) + buffer,
+      minX: Math.min(tl_x, tr_x, bl_x, br_x) - 2,
+      maxX: Math.max(tl_x, tr_x, bl_x, br_x) + 2,
+      minY: Math.min(tl_y, tr_y, bl_y, br_y) - 2,
+      maxY: Math.max(tl_y, tr_y, bl_y, br_y) + 2,
     };
 
-    const chunkLevel = getChunkLevelForZoom(pct);
+    const chunkLevel = this.getChunkLevelForZoom(pct);
     
-    // --- High Detail Rendering ---
     if (chunkLevel === -1) {
-      // --- FIX: Define shouldDrawBorders here, where pct is known ---
-      const shouldDrawBorders = gridlinesToggle.checked && pct > 50;
-
-      // Draw individual background tiles
+      const shouldDrawBorders = dom.gridlinesToggle.checked && pct > 50;
       const minSum = Math.floor(viewBounds.minX + viewBounds.minY);
       const maxSum = Math.ceil(viewBounds.maxX + viewBounds.maxY);
       for (let sum = minSum; sum <= maxSum; sum++) {
@@ -1179,36 +1026,29 @@ canvas.addEventListener('touchstart', e=>{
         const endX = Math.ceil(Math.min(viewBounds.maxX, (sum - viewBounds.minY)));
         for (let x = startX; x <= endX; x++) {
             const y = sum - x;
-            if (x < 0 || x >= N || y < 0 || y >= N) continue;
-            if (!getBuildingAt(x, y)) drawTile(x, y, shouldDrawBorders);
+            if (x < 0 || x >= config.N || y < 0 || y >= config.N) continue;
+            if (!this.getBuildingAt(x, y)) this.drawTile(x, y, shouldDrawBorders);
         }
       }
       
-      // Filter and draw buildings
-      const buildingsToRender = allBuildings.filter(b => !b.isRss || allianceRssToggle.checked);
-      buildingsToRender.filter(b => 
-        !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY)
-      ).forEach(b => {
-          drawBuildingFootprint(b, null, shouldDrawBorders);
-      });
+      state.allBuildings
+        .filter(b => !b.isRss || dom.allianceRssToggle.checked)
+        .filter(b => !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY))
+        .forEach(b => this.drawBuildingFootprint(b, null, shouldDrawBorders));
 
-      // Draw resource tiles
       ctx.fillStyle = '#444';
-      baseMap.unoccupiableTiles.forEach(([x,y])=>{
-        if (getBuildingAt(x, y)) return;
+      state.baseMap.unoccupiableTiles.forEach(([x,y])=>{
+        if (this.getBuildingAt(x, y)) return;
         if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return;
-        const [sx,sy] = worldToScreen(x,y);
+        const [sx,sy] = this.worldToScreen(x,y);
         ctx.beginPath();
-        ctx.moveTo(sx, sy - tileH/2); ctx.lineTo(sx + tileW/2, sy);
-        ctx.lineTo(sx, sy + tileH/2); ctx.lineTo(sx - tileW/2, sy);
-        ctx.closePath();
-        ctx.fill();
+        ctx.moveTo(sx, sy - config.tileH/2); ctx.lineTo(sx + config.tileW/2, sy);
+        ctx.lineTo(sx, sy + config.tileH/2); ctx.lineTo(sx - config.tileW/2, sy);
+        ctx.closePath(); ctx.fill();
       });
 
-    // --- Chunk-Based LOD Rendering ---
     } else {
-      // Draw the base chunks for the current LOD level
-      const chunksToDraw = chunkLevels[chunkLevel];
+      const chunksToDraw = state.chunkLevels[chunkLevel];
       const chunkSize = Math.pow(2, chunkLevel + 1);
       const startChunkX = Math.floor(viewBounds.minX / chunkSize) * chunkSize;
       const endChunkX = Math.ceil(viewBounds.maxX / chunkSize) * chunkSize;
@@ -1217,76 +1057,75 @@ canvas.addEventListener('touchstart', e=>{
       for (let x = startChunkX; x <= endChunkX; x += chunkSize) {
         for (let y = startChunkY; y <= endChunkY; y += chunkSize) {
             const chunk = chunksToDraw.get(`${x},${y}`);
-            if (chunk) drawChunk(chunk, false);
+            if (chunk) this.drawChunk(chunk, false);
         }
       }
 
-      // Draw important buildings on ALL chunked levels
-      baseMap.defaultBuildings.filter(b => 
-          !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY)
-      ).forEach(b => {
-          drawBuildingFootprint(b, null, false);
-      });
+      state.baseMap.defaultBuildings
+        .filter(b => !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY))
+        .forEach(b => this.drawBuildingFootprint(b, null, false));
       
-      // If both toggles are enabled, draw RSS buildings even in chunked view
-      if (allianceRssToggle.checked && allianceRssAlwaysVisibleToggle.checked) {
-        allBuildings.filter(b => 
-            b.isRss && 
-            !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY)
-        ).forEach(b => {
-            drawBuildingFootprint(b, null, false);
-        });
+      if (dom.allianceRssToggle.checked && dom.allianceRssAlwaysVisibleToggle.checked) {
+        state.allBuildings
+          .filter(b => b.isRss && !(b.x > viewBounds.maxX || b.x + b.w < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h < viewBounds.minY))
+          .forEach(b => this.drawBuildingFootprint(b, null, false));
       }
       
-      // Only draw resource tiles on the closer chunk levels
       if (chunkLevel < 2) {
           ctx.fillStyle = '#444';
-          baseMap.unoccupiableTiles.forEach(([x,y])=>{
-            if (getBuildingAt(x, y)) return;
+          state.baseMap.unoccupiableTiles.forEach(([x,y])=>{
+            if (this.getBuildingAt(x, y)) return;
             if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return;
-            const [sx,sy] = worldToScreen(x,y);
+            const [sx,sy] = this.worldToScreen(x,y);
             ctx.beginPath();
-            ctx.moveTo(sx, sy - tileH/2); ctx.lineTo(sx + tileW/2, sy);
-            ctx.lineTo(sx, sy + tileH/2); ctx.lineTo(sx - tileW/2, sy);
-            ctx.closePath();
-            ctx.fill();
+            ctx.moveTo(sx, sy - config.tileH/2); ctx.lineTo(sx + config.tileW/2, sy);
+            ctx.lineTo(sx, sy + config.tileH/2); ctx.lineTo(sx - config.tileW/2, sy);
+            ctx.closePath(); ctx.fill();
           });
       }
     }
 
-    // Always draw the current selection on top
-    if (selection) {
-      if (selection.w) {
-        drawBuildingFootprint(selection, selectionColor, true);
+    if (state.selection) {
+      let highlightColor = config.selectionColor;
+      if (state.selection.pingStart && now - state.selection.pingStart < config.pingDuration) {
+          if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) {
+              highlightColor = config.pingColor;
+          }
+      }
+      if (state.selection.w) {
+        this.drawBuildingFootprint(state.selection, highlightColor, true);
       } else {
-        const [sx, sy] = worldToScreen(selection.x, selection.y);
+        const [sx, sy] = this.worldToScreen(state.selection.x, state.selection.y);
         ctx.beginPath();
-        ctx.moveTo(sx, sy - tileH/2); ctx.lineTo(sx + tileW/2, sy);
-        ctx.lineTo(sx, sy + tileH/2); ctx.lineTo(sx - tileW/2, sy);
+        ctx.moveTo(sx, sy - config.tileH/2); ctx.lineTo(sx + config.tileW/2, sy);
+        ctx.lineTo(sx, sy + config.tileH/2); ctx.lineTo(sx - config.tileW/2, sy);
         ctx.closePath();
-        ctx.strokeStyle = selectionColor;
-        ctx.lineWidth = strokeW * 1.5;
+        ctx.strokeStyle = highlightColor;
+        ctx.lineWidth = config.strokeW * 1.5;
         ctx.stroke();
       }
     }
     
     ctx.restore();
 
-    // Stats update
-    const dt  = now - lastFrame;
-    lastFrame = now;
-    lastFPS   = Math.round(1000/dt);
-    lastTiles = tileCount;
-    
+    const dt  = now - state.lastFrame;
+    state.lastFrame = now;
+    state.lastFPS   = Math.round(1000/dt);
+    state.lastTiles = state.tileCount;
     if (!mainLoop.t0) mainLoop.t0 = now;
     if (now - mainLoop.t0 > 500) {
-      statsFPSEl.textContent   = `FPS:   ${lastFPS}`;
-      statsTilesEl.textContent = `Tiles: ${lastTiles}`;
+      dom.statsFPSEl.textContent   = `FPS:   ${state.lastFPS}`;
+      dom.statsTilesEl.textContent = `Tiles: ${state.lastTiles}`;
       mainLoop.t0 = now;
     }
     
-    requestAnimationFrame(mainLoop);
+    requestAnimationFrame(this.mainLoop.bind(this));
   }
-  </script>
+};
+
+// Start the application
+KingshotPlanner.init();
+
+</script>
 </body>
 </html>

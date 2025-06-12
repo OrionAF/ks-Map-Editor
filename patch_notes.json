@@ -1,4 +1,10 @@
 {
+  "0.2.6.0": [
+    "Major internal code refactor for improved long-term stability and easier future updates.",
+    "Added a 'ping' effect: selections now flash briefly to make them easier to locate on the map.",
+    "The settings panel in the top-right has been reorganized with headers for better clarity.",
+    "Fixed a minor performance issue where buildings were being drawn twice."
+  ],
   "0.2.5.12": [
     "Added a new 'Always Show RSS' toggle for Alliance RSS buildings.",
     "When enabled, this new option will keep Alliance RSS buildings visible on the map at all zoom levels.",
