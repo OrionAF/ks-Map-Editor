@@ -1014,7 +1014,8 @@ const KingshotPlanner = {
 
   // —— MAIN RENDER LOOP ——
   mainLoop(now) {
-    const { ctx, dom, state, config } = this;
+    const { dom, state, config } = this;
+    const { ctx } = dom; // Or simply use dom.ctx directly
     ctx.setTransform(1,0,0,1,0,0);
     ctx.clearRect(0,0,dom.canvas.width,dom.canvas.height);
 
