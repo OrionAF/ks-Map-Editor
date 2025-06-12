@@ -838,27 +838,37 @@ const KingshotPlanner = {
 
   clampCamera() {
     const s = this.state.cam.scale;
-    const mapTotalWidth = (this.config.N - 1) * this.config.tileW;
-    const mapTotalHeight = (this.config.N - 1) * this.config.tileH;
-    const mapScaledWidth = mapTotalWidth * s;
-    const mapScaledHeight = mapTotalHeight * s;
+    const canvasW = this.dom.canvas.width;
+    const canvasH = this.dom.canvas.height;
     
-    const worldHalfWidth = mapScaledWidth / 2;
-    const overscrollX = this.dom.canvas.width * 0.4;
-    const overscrollY = this.dom.canvas.height * 0.4;
+    // Calculate the full visual dimensions of the isometric map in screen space
+    const mapScreenW = (this.config.N - 1) * this.config.tileW * s;
+    const mapScreenH = (this.config.N - 1) * this.config.tileH * s;
 
-    // Clamp X (symmetrical)
-    if (mapScaledWidth > this.dom.canvas.width) {
-      this.state.cam.x = Math.max(this.dom.canvas.width - worldHalfWidth - overscrollX, Math.min(worldHalfWidth + overscrollX, this.state.cam.x));
+    // --- X-axis clamping ---
+    // The visual width is from -mapScreenW/2 to +mapScreenW/2 around the camera's x-origin.
+    if (mapScreenW > canvasW) {
+        // If map is wider than the canvas, clamp camera so edges don't cross the screen.
+        const minCamX = canvasW - mapScreenW / 2;
+        const maxCamX = mapScreenW / 2;
+        this.state.cam.x = Math.max(minCamX, Math.min(maxCamX, this.state.cam.x));
+    } else {
+        // If map is narrower, just center it.
+        this.state.cam.x = canvasW / 2;
     }
-    
-    // Clamp Y (asymmetrical for this projection)
-    if (mapScaledHeight > this.dom.canvas.height) {
-        // Derived from first principles: the lower bound is determined by the top of the map
-        // and the upper bound is determined by the bottom of the map.
-        const lowerBound = mapScaledHeight - overscrollY;
-        const upperBound = this.dom.canvas.height + overscrollY;
-        this.state.cam.y = Math.max(lowerBound, Math.min(upperBound, this.state.cam.y));
+
+    // --- Y-axis clamping ---
+    // The visual height is from -mapScreenH to 0.
+    if (mapScreenH > canvasH) {
+        // If map is taller than canvas, clamp camera.
+        const minCamY = canvasH; // Prevents the bottom edge (y=0) from going above the bottom of the canvas.
+        const maxCamY = mapScreenH; // Prevents the top edge (y=-mapScreenH) from going below the top of the canvas.
+        this.state.cam.y = Math.max(minCamY, Math.min(maxCamY, this.state.cam.y));
+    } else {
+        // If map is shorter, center it vertically.
+        // The camera's y is the screen position of the map's y=0 point.
+        // We position it so the map's visual center (-mapScreenH/2) is at the canvas's center.
+        this.state.cam.y = canvasH / 2 + mapScreenH / 2;
     }
   },
 
