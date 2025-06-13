@@ -311,7 +311,7 @@
       <div class="patch-notes-body" id="patchNotesBody">
           <!-- Content will be injected by JS -->
       </div>
-      <div class="patch-notes-footer">
+      <div class.patch-notes-footer">
           <input type="checkbox" id="hidePatchNotesCheckbox">
           <label for="hidePatchNotesCheckbox">Do not show this again until the next update.</label>
       </div>
@@ -324,7 +324,7 @@
 const KingshotPlanner = {
   // —— CONFIGURATION ——
   config: {
-    CURRENT_VERSION: '0.2.6.1',
+    CURRENT_VERSION: '0.2.6.2',
     N: 1200,
     tileW: 10, tileH: 10,
     strokeW: 0.3, 
@@ -377,7 +377,7 @@ const KingshotPlanner = {
     startDist: 0, startScale: 1, pinchCenter: null,
     startCamX: 0, startCamY: 0,
     hideLabelTimeout: null,
-    statsUpdateTime: 0, // For throttling stats display
+    statsUpdateTime: 0, 
     animationId: null 
   },
 
@@ -717,7 +717,7 @@ const KingshotPlanner = {
     const factor = e.deltaY < 0 ? 1.2 : 0.8;
     let targetScale = this.state.cam.scale * factor;
     targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-    this.animateZoom(targetScale, e.offsetX, e.offsetY, 60);
+    this.animateZoom(targetScale, e.offsetX, e.offsetY, 150); // Adjusted duration
   },
 
   handleDblClick(e) {
@@ -846,7 +846,7 @@ const KingshotPlanner = {
       const [screenX, screenY] = this.worldToScreen(x, y);
       const targetCamX = this.dom.canvas.width/2 - screenX * targetScale;
       const targetCamY = this.dom.canvas.height/2 - screenY * targetScale;
-      this.animatePanZoom(targetScale, targetCamX, targetCamY);
+      this.animatePanZoom(targetScale, targetCamX, targetCamY); // Uses 300ms duration by default
     }
   },
   
@@ -858,10 +858,18 @@ const KingshotPlanner = {
   },
   
   zoomToFit() {
-    this.state.cam.scale = this.state.minFitScale; 
-    this.state.cam.x = this.dom.canvas.width / 2;
-    this.state.cam.y = this.dom.canvas.height / 2 + ((this.config.N - 1) * this.config.tileH / 2) * this.state.cam.scale;
-    this.clampCamera(); 
+    // For zoomToFit, an animation might be nice too, matching other transitions.
+    // Let's find the current center of the screen in world coordinates
+    const currentScreenCenterX = this.dom.canvas.width / 2;
+    const currentScreenCenterY = this.dom.canvas.height / 2;
+    
+    // Calculate target camera position for the new scale
+    const targetScale = this.state.minFitScale;
+    const targetCamX = this.dom.canvas.width / 2;
+    const targetCamY = this.dom.canvas.height / 2 + ((this.config.N - 1) * this.config.tileH / 2) * targetScale;
+
+    // Animate to this new state
+    this.animatePanZoom(targetScale, targetCamX, targetCamY, 200); // Using 200ms like preset buttons
   },
 
   resize() {
@@ -880,7 +888,11 @@ const KingshotPlanner = {
     if (isNaN(this.state.minFitScale)) this.state.minFitScale = 0.001; 
     
     if (this.state.isInitialLoad) {
-        this.zoomToFit();
+        // For initial load, snap to fit without animation
+        this.state.cam.scale = this.state.minFitScale; 
+        this.state.cam.x = this.dom.canvas.width / 2;
+        this.state.cam.y = this.dom.canvas.height / 2 + ((this.config.N - 1) * this.config.tileH / 2) * this.state.cam.scale;
+        this.clampCamera(); 
         this.state.isInitialLoad = false;
     } else {
         this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
@@ -926,7 +938,7 @@ const KingshotPlanner = {
     if(isNaN(targetScale)) targetScale = this.state.cam.scale; 
 
     const cx = this.dom.canvas.width / 2, cy = this.dom.canvas.height / 2;
-    this.animateZoom(targetScale, cx, cy, 100);
+    this.animateZoom(targetScale, cx, cy, 150); // Adjusted duration
   },
 
   // —— ANIMATION & DRAWING ——
@@ -956,7 +968,7 @@ const KingshotPlanner = {
 
     const step = (now) => {
       const t = duration === 0 ? 1 : Math.min(1, (now - start)/duration);
-      const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+      const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; // easeInOutCubic
       this.state.cam.scale = startScale + (targetScale - startScale)*k;
       this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale); 
       if(isNaN(this.state.cam.scale)) this.state.cam.scale = startScale; 
@@ -982,7 +994,7 @@ const KingshotPlanner = {
     const start = performance.now();
     const step = (now) => {
         const t = Math.min(1, (now - start)/duration);
-        const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+        const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; // easeInOutCubic
         this.state.cam.scale = startScale + (targetScale - startScale)*k;
         this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
         if(isNaN(this.state.cam.scale)) this.state.cam.scale = startScale; 
@@ -1292,7 +1304,6 @@ const KingshotPlanner = {
         }
         state.lastTiles = state.tileCount;
         
-        // *** FIX APPLIED HERE for stats update logic ***
         if (now - state.statsUpdateTime > 500) { 
           if(dom.statsFPSEl) dom.statsFPSEl.textContent   = `FPS:   ${state.lastFPS}`;
           if(dom.statsTilesEl) dom.statsTilesEl.textContent = `Tiles: ${state.lastTiles}`;
