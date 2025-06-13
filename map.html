@@ -384,7 +384,7 @@
 const KingshotPlanner = {
   // —— CONFIGURATION ——
   config: {
-    CURRENT_VERSION: '0.2.7.0', // Version bump for minimap UI
+    CURRENT_VERSION: '0.2.7.0', // Version bump for this cleanup
     N: 1200,
     tileW: 10, tileH: 10,
     strokeW: 0.3, 
@@ -411,15 +411,14 @@ const KingshotPlanner = {
       stone: { displayName: 'Stone', fillColor: 'rgba(128,128,128,1)', borderColor: 'rgba(102,102,102,1)' },
       iron:  { displayName: 'Iron',  fillColor: 'rgba(192,192,192,1)', borderColor: 'rgba(153,153,153,1)' },
     },
-    minimap: { // Configuration for the minimap
-        width: 200, // Display width (CSS)
-        height: 150, // Display height (CSS)
-        // internalWidth/Height will be set in init based on canvas element
+    minimap: { 
+        width: 200, 
+        height: 150, 
         padding: 5, 
         bgColor: 'rgba(40,40,40,0.8)',
         viewportFillColor: 'rgba(255,255,255,0.2)',
         viewportBorderColor: 'rgba(255,255,255,0.7)',
-        buildingColor: 'rgba(200,200,200,0.7)', // Generic color for buildings on minimap
+        buildingColor: 'rgba(200,200,200,0.7)', 
         kingCastleColor: 'rgba(255,215,0,0.8)'
     }
   },
@@ -438,7 +437,7 @@ const KingshotPlanner = {
     lastFPS: 0,
     lastTiles: 0,
     selection: null, 
-    minFitScale: 0.001, 
+    minFitScale: 0.1, // Adjusted practical minimum, will be refined by resize()
     isInitialLoad: true,
     touchStartTime: 0,
     dragging: false, 
@@ -450,7 +449,7 @@ const KingshotPlanner = {
     hideLabelTimeout: null,
     statsUpdateTime: 0, 
     currentTileDetailThreshold: 50, 
-    minimapActualScale: 0.1, // Will be calculated
+    minimapActualScale: 0.1, 
     animationId: null 
   },
 
@@ -465,8 +464,8 @@ const KingshotPlanner = {
     patchNotesBody: null, closePatchNotesBtn: null, hidePatchNotesCheckbox: null,
     tileDetailSelect: null, gridlinesToggle: null, allianceRssToggle: null,
     allianceRssAlwaysVisibleToggle: null,
-    settingsBtn: null, settingsPanel: null, // New for settings
-    minimapCanvas: null, minimapCtx: null // New for minimap
+    settingsBtn: null, settingsPanel: null, 
+    minimapCanvas: null, minimapCtx: null 
   },
 
   // —— INITIALIZATION ——
@@ -486,7 +485,6 @@ const KingshotPlanner = {
         return; 
     }
 
-    // Existing DOM elements
     this.dom.inpX = document.getElementById('inpX');
     this.dom.inpY = document.getElementById('inpY');
     this.dom.btnGo = document.getElementById('btnGo');
@@ -515,13 +513,10 @@ const KingshotPlanner = {
     this.dom.gridlinesToggle = document.getElementById('gridlinesToggle');
     this.dom.allianceRssToggle = document.getElementById('allianceRssToggle');
     this.dom.allianceRssAlwaysVisibleToggle = document.getElementById('allianceRssAlwaysVisibleToggle');
-
-    // New DOM elements for UI rearrangement
     this.dom.settingsBtn = document.getElementById('settingsBtn');
     this.dom.settingsPanel = document.getElementById('settingsPanel');
     this.dom.minimapCanvas = document.getElementById('minimapCanvas');
     if (this.dom.minimapCanvas) {
-        // Set actual canvas drawing surface size (higher resolution for clarity)
         this.dom.minimapCanvas.width = this.config.minimap.width * (window.devicePixelRatio || 1);
         this.dom.minimapCanvas.height = this.config.minimap.height * (window.devicePixelRatio || 1);
         this.dom.minimapCtx = this.dom.minimapCanvas.getContext('2d');
@@ -547,7 +542,7 @@ const KingshotPlanner = {
 
         self.preProcessBuildings();
         self.preCalculateChunks();
-        self.calculateMinimapScale(); // Calculate once data is ready
+        self.calculateMinimapScale(); 
         self.initializeUI();
         self.resize(); 
         
@@ -560,14 +555,11 @@ const KingshotPlanner = {
   },
 
   initializeUI() {
-    // Settings Panel Toggle
     if(this.dom.settingsBtn && this.dom.settingsPanel) {
         this.dom.settingsBtn.addEventListener('click', () => this.dom.settingsPanel.classList.toggle('open'));
     }
-
     if(this.dom.infoBtn && this.dom.infoPanel) this.dom.infoBtn.addEventListener('click', ()=>this.dom.infoPanel.classList.toggle('open'));
     if(this.dom.statsBtn && this.dom.statsPanel) this.dom.statsBtn.addEventListener('click', ()=>this.dom.statsPanel.classList.toggle('open'));
-
     if(this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
     if(this.dom.patchNotesBtn) this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
     if(this.dom.closePatchNotesBtn) this.dom.closePatchNotesBtn.addEventListener('click', this.hidePatchNotes.bind(this));
@@ -587,7 +579,6 @@ const KingshotPlanner = {
             this.state.currentTileDetailThreshold = parseInt(this.dom.tileDetailSelect.value, 10); 
         });
     }
-
     if(this.dom.allianceRssAlwaysVisibleToggle) {
         const savedAlwaysVisible = localStorage.getItem('mapAlwaysShowRss') === 'true';
         this.dom.allianceRssAlwaysVisibleToggle.checked = savedAlwaysVisible;
@@ -608,10 +599,8 @@ const KingshotPlanner = {
         this.dom.coordsToggle.checked = savedCoords;
         this.dom.coordsToggle.addEventListener('change', () => localStorage.setItem('mapShowCoords', this.dom.coordsToggle.checked));
     }
-
     if(this.dom.btnGo) this.dom.btnGo.addEventListener('click', this.doSearch.bind(this));
     if(this.dom.inpX && this.dom.inpY) [this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => { if (e.key==='Enter') this.doSearch(); }));
-
     if(this.dom.zoomDecBtn) this.dom.zoomDecBtn.addEventListener('click', () => this.changeZoomBy(-1));
     if(this.dom.zoomIncBtn) this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(+1));
     if(this.dom.presetBtns) this.dom.presetBtns.forEach(b => {
@@ -644,24 +633,26 @@ const KingshotPlanner = {
     this.dom.canvas.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
     this.dom.canvas.addEventListener('dblclick', this.handleDblClick.bind(this));
     this.dom.canvas.addEventListener('contextmenu', e => e.preventDefault());
-    
     this.dom.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
     this.dom.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
     this.dom.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
 
-    // Minimap click listener (Phase 2)
     if (this.dom.minimapCanvas) {
         this.dom.minimapCanvas.addEventListener('click', this.handleMinimapClick.bind(this));
     }
   },
 
-  // —— DATA PROCESSING & HELPERS ——
   calculateMinimapScale() {
     if (!this.dom.minimapCanvas) return;
     const { minimap, N } = this.config;
-    const drawWidth = this.dom.minimapCanvas.width - 2 * minimap.padding * (window.devicePixelRatio || 1);
-    const drawHeight = this.dom.minimapCanvas.height - 2 * minimap.padding * (window.devicePixelRatio || 1);
+    const dpr = window.devicePixelRatio || 1;
+    const drawWidth = this.dom.minimapCanvas.width - 2 * minimap.padding * dpr;
+    const drawHeight = this.dom.minimapCanvas.height - 2 * minimap.padding * dpr;
     this.state.minimapActualScale = Math.min(drawWidth / N, drawHeight / N);
+    if (this.state.minimapActualScale <= 0) { // Ensure scale is positive
+        console.warn("Minimap scale calculated to be zero or negative. Setting to a small positive value.");
+        this.state.minimapActualScale = 0.01;
+    }
   },
 
   preProcessBuildings() {
@@ -722,6 +713,10 @@ const KingshotPlanner = {
         console.error("tileW or tileH is zero in config!");
         return [0,0]; 
     }
+    if (scale === 0) { // Should be caught by the ternary above, but as an extra guard
+        console.error("screenToWorld: scale is zero!");
+        return [0,0];
+    }
 
     const lx = (sx - this.state.cam.x)/scale;
     const ly = (sy - this.state.cam.y)/scale;
@@ -753,22 +748,225 @@ const KingshotPlanner = {
     return 3;
   },
 
-  // —— UI & INTERACTION HANDLERS (Existing ones mostly unchanged) ——
-  showPatchNotes() { /* ... same ... */ },
-  hidePatchNotes() { /* ... same ... */ },
-  handleMouseDown(e) { /* ... same ... */ },
-  handleMouseMove(e) { /* ... same ... */ },
-  handleCanvasClick(e) { /* ... same ... */ },
-  handleWheel(e) { /* ... same ... */ },
-  handleDblClick(e) { /* ... same ... */ },
-  handleZoomSlider() { /* ... same ... */ },
-  handleKeyDown(e) { /* ... same ... */ },
-  handleTouchStart(e) { /* ... same ... */ },
-  handleTouchMove(e) { /* ... same ... */ },
-  handleTouchEnd(e) { /* ... same ... */ },
-  doSearch() { /* ... same ... */ },
-  centerOn(x,y) { /* ... same ... */ },
-  zoomToFit() { /* ... same ... */ },
+  showPatchNotes() {
+    if (!this.dom.patchNotesBody || !this.dom.modalOverlay || !this.dom.patchNotesModal) return;
+    const versions = Object.keys(this.state.patchNotes || {});
+    if (versions.length === 0) {
+        this.dom.patchNotesBody.innerHTML = `<p>No patch notes are available at this time.</p>`;
+    } else {
+        versions.sort((a, b) => {
+            const partsA = a.split('.').map(Number);
+            const partsB = b.split('.').map(Number);
+            for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+                const numA = partsA[i] || 0;
+                const numB = partsB[i] || 0;
+                if (numA !== numB) return numB - numA;
+            }
+            return 0;
+        });
+        let content = '';
+        versions.forEach((version, index) => {
+            content += `<h4>Version ${version}</h4><ul>${(this.state.patchNotes[version] || []).map(note => `<li>${note}</li>`).join('')}</ul>`;
+            if (index < versions.length - 1) content += '<hr style="border-color: #444; border-top: 0;">';
+        });
+        this.dom.patchNotesBody.innerHTML = content;
+    }
+    this.dom.modalOverlay.style.display = 'block';
+    this.dom.patchNotesModal.style.display = 'block';
+  },
+
+  hidePatchNotes() {
+    if (!this.dom.modalOverlay || !this.dom.patchNotesModal) return;
+    if (this.dom.hidePatchNotesCheckbox && this.dom.hidePatchNotesCheckbox.checked) {
+        localStorage.setItem('lastSeenVersion', this.config.CURRENT_VERSION);
+    }
+    this.dom.modalOverlay.style.display = 'none';
+    this.dom.patchNotesModal.style.display = 'none';
+  },
+
+  handleMouseDown(e) {
+    if (e.button===0) {
+      this.state.dragging = true;
+      this.state.lastX = e.clientX;
+      this.state.lastY = e.clientY;
+      this.state.clickStartX = e.clientX;
+      this.state.clickStartY = e.clientY;
+    }
+  },
+
+  handleMouseMove(e) {
+    if (!this.state.dragging) return;
+    this.state.cam.x += e.clientX - this.state.lastX;
+    this.state.cam.y += e.clientY - this.state.lastY;
+    this.state.lastX = e.clientX;
+    this.state.lastY = e.clientY;
+    this.clampCamera();
+  },
+
+  handleCanvasClick(e) {
+    const dist = Math.hypot(e.clientX - this.state.clickStartX, e.clientY - this.state.clickStartY);
+    if (dist > 5) return;
+    
+    const [worldX, worldY] = this.screenToWorld(e.offsetX, e.offsetY);
+    if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
+      const building = this.getBuildingAt(worldX, worldY);
+      this.state.selection = building || { x: worldX, y: worldY };
+      if(this.state.selection) this.state.selection.pingStart = performance.now(); 
+      if(this.dom.inpX && this.state.selection) this.dom.inpX.value = this.state.selection.x;
+      if(this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
+    }
+  },
+
+  handleWheel(e) {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.2 : 0.8;
+    let targetScale = this.state.cam.scale * factor;
+    targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
+    this.animateZoom(targetScale, e.offsetX, e.offsetY, 150); 
+  },
+
+  handleDblClick(e) {
+    e.preventDefault();
+    const factor = e.button === 2 ? 0.5 : 2.0;
+    let targetScale = this.state.cam.scale * factor;
+    targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
+    this.animateZoom(targetScale, e.offsetX, e.offsetY, 150);
+  },
+
+  handleZoomSlider() {
+    if(!this.dom.zoomSlider) return;
+    const pct = Number(this.dom.zoomSlider.value);
+    let targetScale = (pct / 100) * this.config.baseScale;
+    targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
+    const cx = this.dom.canvas.width / 2, cy = this.dom.canvas.height / 2;
+    this.animateZoom(targetScale, cx, cy, 0); 
+    this.updateFloatingZoomLabel();
+  },
+
+  handleKeyDown(e) {
+    if (e.target && e.target.tagName==='INPUT') return;
+    switch(e.key) {
+      case '+': case '=': this.changeZoomBy(+1); break;
+      case '-': this.changeZoomBy(-1); break;
+      case 'q': this.changeZoomBy(+1); break;
+      case 'e': this.changeZoomBy(-1); break;
+      case 'ArrowUp':    this.state.cam.y += this.config.tileW * 5; this.clampCamera(); break;
+      case 'ArrowDown':  this.state.cam.y -= this.config.tileW * 5; this.clampCamera(); break;
+      case 'ArrowLeft':  this.state.cam.x += this.config.tileW * 5; this.clampCamera(); break;
+      case 'ArrowRight': this.state.cam.x -= this.config.tileW * 5; this.clampCamera(); break;
+    }
+  },
+
+  handleTouchStart(e) {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+        this.state.touchMode = 'pan';
+        const t = e.touches[0];
+        this.state.lastX = t.clientX;
+        this.state.lastY = t.clientY;
+        this.state.clickStartX = t.clientX;
+        this.state.clickStartY = t.clientY;
+        this.state.touchStartTime = performance.now();
+    } else if (e.touches.length === 2) {
+        this.state.touchMode = 'pinch';
+        const [a,b] = e.touches;
+        this.state.startDist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
+        this.state.startScale = this.state.cam.scale;
+        this.state.pinchCenter = { x: (a.clientX + b.clientX)/2, y: (a.clientY + b.clientY)/2 };
+        
+        this.state.startCamX = this.state.cam.x;
+        this.state.startCamY = this.state.cam.y;
+    }
+  },
+
+  handleTouchMove(e) {
+    e.preventDefault();
+    if (this.state.animationId) {
+        cancelAnimationFrame(this.state.animationId);
+        this.state.animationId = null;
+    }
+
+    if (this.state.touchMode === 'pan' && e.touches.length === 1) {
+        const t = e.touches[0];
+        this.state.cam.x += t.clientX - this.state.lastX;
+        this.state.cam.y += t.clientY - this.state.lastY;
+        this.state.lastX = t.clientX; this.state.lastY = t.clientY;
+        this.clampCamera();
+    } else if (this.state.touchMode === 'pinch' && e.touches.length === 2) {
+        const [a,b] = e.touches;
+        const dist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
+
+        if (this.state.startDist === 0) {
+            return; 
+        }
+
+        let newScale = this.state.startScale * (dist / this.state.startDist);
+        
+        this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct/100 * this.config.baseScale, newScale));
+        if (isNaN(this.state.cam.scale)) this.state.cam.scale = this.state.startScale; 
+
+        const safeStartScale = (this.state.startScale === 0 || isNaN(this.state.startScale)) ? this.state.minFitScale : this.state.startScale;
+
+        const wx = (this.state.pinchCenter.x - this.state.startCamX) / safeStartScale;
+        const wy = (this.state.pinchCenter.y - this.state.startCamY) / safeStartScale;
+
+        if (isNaN(wx) || isNaN(wy)) { 
+             this.state.cam.x = this.state.startCamX;
+             this.state.cam.y = this.state.startCamY;
+        } else {
+            this.state.cam.x = this.state.pinchCenter.x - wx * this.state.cam.scale;
+            this.state.cam.y = this.state.pinchCenter.y - wy * this.state.cam.scale;
+        }
+        this.clampCamera();
+    }
+  },
+
+  handleTouchEnd(e) {
+    if (this.state.touchMode === 'pan' && e.changedTouches.length === 1) {
+      const t = e.changedTouches[0];
+      const dist = Math.hypot(t.clientX - this.state.clickStartX, t.clientY - this.state.clickStartY);
+      const duration = performance.now() - this.state.touchStartTime;
+      if (duration < 200 && dist < 10) {
+          const [worldX, worldY] = this.screenToWorld(t.clientX, t.clientY);
+          if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
+              const building = this.getBuildingAt(worldX, worldY);
+              this.state.selection = building || { x: worldX, y: worldY };
+              if(this.state.selection) this.state.selection.pingStart = performance.now(); 
+              if(this.dom.inpX && this.state.selection) this.dom.inpX.value = this.state.selection.x;
+              if(this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
+          }
+      }
+    }
+    if (e.touches.length < 2) this.state.touchMode = null;
+  },
+
+  doSearch() {
+    if(!this.dom.inpX || !this.dom.inpY) return;
+    const x = +this.dom.inpX.value, y = +this.dom.inpY.value;
+    if (x >= 0 && y >= 0 && x < this.config.N && y < this.config.N) {
+      this.state.selection = this.getBuildingAt(x, y) || { x, y };
+      if(this.state.selection) this.state.selection.pingStart = performance.now(); 
+      const targetScale = (150 / 100) * this.config.baseScale;
+      const [screenX, screenY] = this.worldToScreen(x, y);
+      const targetCamX = this.dom.canvas.width/2 - screenX * targetScale;
+      const targetCamY = this.dom.canvas.height/2 - screenY * targetScale;
+      this.animatePanZoom(targetScale, targetCamX, targetCamY); 
+    }
+  },
+  
+  centerOn(x,y) {
+    const [lx, ly] = this.worldToScreen(x,y);
+    this.state.cam.x = this.dom.canvas.width*0.5 - lx*this.state.cam.scale;
+    this.state.cam.y = this.dom.canvas.height*0.5 - ly*this.state.cam.scale;
+    this.clampCamera();
+  },
+  
+  zoomToFit() {
+    const targetScale = this.state.minFitScale;
+    const targetCamX = this.dom.canvas.width / 2;
+    const targetCamY = this.dom.canvas.height / 2 + ((this.config.N - 1) * this.config.tileH / 2) * targetScale;
+    this.animatePanZoom(targetScale, targetCamX, targetCamY, 200); 
+  },
   
   resize() {
     this.dom.canvas.width  = window.innerWidth;
@@ -790,20 +988,11 @@ const KingshotPlanner = {
     const scaleX = this.dom.canvas.width / safeMapTotalWidth;
     const scaleY = this.dom.canvas.height / safeMapTotalHeight;
     
-    // --- MODIFIED minFitScale calculation ---
-    let calculatedMinFit = Math.min(scaleX, scaleY) * 0.95; // Calculate the true geometric fit
-
-    // Ensure minFitScale is not impractically small for visibility.
-    // 0.025 is chosen as a practical minimum. If baseScale is 5, this is 0.5% zoom.
-    // This means "Fit" will not zoom out beyond this practical limit,
-    // even if the geometric fit would be smaller.
-    this.state.minFitScale = Math.max(0.1, calculatedMinFit); 
-    
-    // Failsafe if calculatedMinFit somehow resulted in NaN (e.g., if canvas dimensions were 0 and division by 0 occurred, though safeMapTotalWidth should prevent that)
+    let calculatedMinFit = Math.min(scaleX, scaleY) * 0.95; 
+    this.state.minFitScale = Math.max(0.1, calculatedMinFit); // Using 0.1 as a practical minimum
     if (isNaN(this.state.minFitScale)) {
         this.state.minFitScale = 0.1; 
     }
-    // --- END MODIFICATION ---
     
     if (this.state.isInitialLoad) {
         this.state.cam.scale = this.state.minFitScale; 
@@ -812,43 +1001,169 @@ const KingshotPlanner = {
         this.clampCamera(); 
         this.state.isInitialLoad = false;
     } else {
-        // When resizing after initial load, ensure current scale respects the new minFitScale
         this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
-        if(isNaN(this.state.cam.scale)) { // Failsafe for cam.scale
+        if(isNaN(this.state.cam.scale)) { 
              this.state.cam.scale = this.state.minFitScale; 
         }
         this.clampCamera();
     }
   },
 
-  clampCamera() { /* ... same ... */ },
-  changeZoomBy(delta) { /* ... same ... */ },
-  animateZoom(targetScale, anchorX, anchorY, duration=150) { /* ... same ... */ },
-  animatePanZoom(targetScale, targetX, targetY, duration=300) { /* ... same ... */ },
-  updateFloatingZoomLabel() { /* ... same ... */ },
+  clampCamera() {
+    const s = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
+    const canvasW = this.dom.canvas.width;
+    const canvasH = this.dom.canvas.height;
+    
+    const mapScreenW = (this.config.N - 1) * this.config.tileW * s;
+    const mapScreenH = (this.config.N - 1) * this.config.tileH * s;
 
-  // --- MINIMAP FUNCTIONS ---
+    if (mapScreenW > canvasW) {
+        const minCamX = canvasW - mapScreenW / 2;
+        const maxCamX = mapScreenW / 2;
+        this.state.cam.x = Math.max(minCamX, Math.min(maxCamX, this.state.cam.x));
+    } else {
+        this.state.cam.x = canvasW / 2;
+    }
+
+    if (mapScreenH > canvasH) {
+        const minCamY = canvasH; 
+        const maxCamY = mapScreenH; 
+        this.state.cam.y = Math.max(minCamY, Math.min(maxCamY, this.state.cam.y));
+    } else {
+        this.state.cam.y = canvasH / 2 + mapScreenH / 2;
+    }
+    if(isNaN(this.state.cam.x)) this.state.cam.x = canvasW / 2; 
+    if(isNaN(this.state.cam.y)) this.state.cam.y = canvasH / 2; 
+  },
+
+  changeZoomBy(delta) {
+    let currentPct = (this.state.cam.scale / this.config.baseScale) * 100;
+    if(isNaN(currentPct)) currentPct = (this.state.minFitScale / this.config.baseScale) * 100;
+
+    const changeAmt = delta > 0 ? currentPct * 0.25 : currentPct * -0.2;
+    let targetScale = ((currentPct + changeAmt) / 100) * this.config.baseScale;
+    targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
+    if(isNaN(targetScale)) targetScale = this.state.cam.scale; 
+
+    const cx = this.dom.canvas.width / 2, cy = this.dom.canvas.height / 2;
+    this.animateZoom(targetScale, cx, cy, 150); 
+  },
+
+  animateZoom(targetScale, anchorX, anchorY, duration=150) {
+    if (this.state.animationId) {
+        cancelAnimationFrame(this.state.animationId);
+    }
+    const startScale = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
+    const startX = this.state.cam.x, startY = this.state.cam.y;
+    const start = performance.now();
+
+    if (startScale === 0) { 
+        console.error("animateZoom called with startScale 0");
+        this.state.cam.scale = targetScale; 
+        this.clampCamera();
+        return;
+    }
+
+    const wx = (anchorX - startX)/startScale;
+    const wy = (anchorY - startY)/startScale;
+
+    if (isNaN(wx) || isNaN(wy)) { 
+        this.state.cam.scale = targetScale;
+        this.clampCamera();
+        return;
+    }
+
+    const step = (now) => {
+      const t = duration === 0 ? 1 : Math.min(1, (now - start)/duration);
+      const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; // easeInOutCubic
+      this.state.cam.scale = startScale + (targetScale - startScale)*k;
+      this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale); 
+      if(isNaN(this.state.cam.scale)) this.state.cam.scale = startScale; 
+
+      this.state.cam.x = anchorX - wx * this.state.cam.scale;
+      this.state.cam.y = anchorY - wy * this.state.cam.scale;
+      this.clampCamera();
+      if (t < 1) {
+          this.state.animationId = requestAnimationFrame(step);
+      } else {
+          this.state.animationId = null;
+      }
+    };
+    this.state.animationId = requestAnimationFrame(step);
+  },
+
+  animatePanZoom(targetScale, targetX, targetY, duration=300) {
+    if (this.state.animationId) {
+        cancelAnimationFrame(this.state.animationId);
+    }
+    const startScale = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
+    const startX = this.state.cam.x, startY = this.state.cam.y;
+    const start = performance.now();
+    const step = (now) => {
+        const t = Math.min(1, (now - start)/duration);
+        const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; // easeInOutCubic
+        this.state.cam.scale = startScale + (targetScale - startScale)*k;
+        this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
+        if(isNaN(this.state.cam.scale)) this.state.cam.scale = startScale; 
+
+        this.state.cam.x = startX + (targetX - startX)*k;
+        this.state.cam.y = startY + (targetY - startY)*k;
+        this.clampCamera();
+        if (t < 1) {
+            this.state.animationId = requestAnimationFrame(step);
+        } else {
+            this.state.animationId = null;
+        }
+    };
+    this.state.animationId = requestAnimationFrame(step);
+  },
+  
+  updateFloatingZoomLabel() {
+    if(!this.dom.zoomSlider || !this.dom.floatingZoomLabel) return;
+    const slider = this.dom.zoomSlider;
+    const label = this.dom.floatingZoomLabel;
+    const min = parseInt(slider.min, 10);
+    const max = parseInt(slider.max, 10);
+    const val = parseInt(slider.value, 10);
+
+    if (max === min) { 
+        label.style.display = 'none';
+        return;
+    }
+
+    const percent = (val - min) / (max - min);
+    const thumbHeight = 15;
+    const trackHeight = slider.offsetHeight;
+    const topPos = (1 - percent) * (trackHeight - thumbHeight) + (thumbHeight / 2);
+    label.style.top = `${topPos}px`;
+    label.textContent = `Zoom: ${val}%`;
+    label.style.display = 'block';
+    clearTimeout(this.state.hideLabelTimeout);
+    this.state.hideLabelTimeout = setTimeout(() => { label.style.display = 'none'; }, 1500);
+  },
+
   handleMinimapClick(e) {
     if (!this.dom.minimapCanvas) return;
     const { minimap, N } = this.config;
     const dpr = window.devicePixelRatio || 1;
     const rect = this.dom.minimapCanvas.getBoundingClientRect();
-    const clickX = (e.clientX - rect.left) * dpr; // Scale click to canvas internal resolution
+    const clickX = (e.clientX - rect.left) * dpr; 
     const clickY = (e.clientY - rect.top) * dpr;
 
     const padding = minimap.padding * dpr;
     const minimapScale = this.state.minimapActualScale;
 
-    // Convert minimap click to world coordinates
+    if (minimapScale <= 0) { // Prevent division by zero if minimap scale is bad
+        console.error("Minimap scale is zero or negative, cannot process click.");
+        return;
+    }
+
     let worldX = (clickX - padding) / minimapScale;
     let worldY = (clickY - padding) / minimapScale;
 
-    // Clamp to world bounds
     worldX = Math.max(0, Math.min(N - 1, worldX));
     worldY = Math.max(0, Math.min(N - 1, worldY));
     
-    // Center main map on these world coordinates
-    // We want the clicked point to be the new center of the main view
     const [screenX, screenY] = this.worldToScreen(worldX, worldY);
     const targetCamX = this.dom.canvas.width/2 - screenX * this.state.cam.scale;
     const targetCamY = this.dom.canvas.height/2 - screenY * this.state.cam.scale;
@@ -856,7 +1171,7 @@ const KingshotPlanner = {
   },
 
   drawMinimap(mainViewBounds) {
-    if (!this.dom.minimapCtx) return;
+    if (!this.dom.minimapCtx || this.state.minimapActualScale <= 0) return; // Also check scale
 
     const ctx = this.dom.minimapCtx;
     const { minimap, N, biomeRegions, biomeColors } = this.config;
@@ -870,7 +1185,6 @@ const KingshotPlanner = {
     ctx.fillStyle = minimap.bgColor;
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // Draw Biome Regions (simplified as 2D top-down)
     for (const biomeName in biomeRegions) {
         const region = biomeRegions[biomeName];
         ctx.fillStyle = biomeColors[biomeName];
@@ -881,45 +1195,155 @@ const KingshotPlanner = {
         ctx.fillRect(x, y, w, h);
     }
     
-    // Draw Key Buildings (e.g., King's Castle, Fortresses)
     (this.state.baseMap.defaultBuildings || []).forEach(b => {
         if (b.displayName === "King's Castle") {
             ctx.fillStyle = minimap.kingCastleColor;
         } else if (b.displayName.startsWith("Fortress")) {
-            ctx.fillStyle = this.config.ALLIANCE_RSS_STYLES.stone.borderColor; // Use a fortress-like color
+            ctx.fillStyle = this.config.ALLIANCE_RSS_STYLES.stone.borderColor; 
         } else {
-            return; // Only draw specific key buildings for clarity, or use a generic color
-            // ctx.fillStyle = minimap.buildingColor; 
+            return; 
         }
         const bx = mPadding + b.x * mScale;
         const by = mPadding + b.y * mScale;
-        const bw = Math.max(1 * dpr, b.w * mScale); // Ensure min 1 pixel width
-        const bh = Math.max(1 * dpr, b.h * mScale); // Ensure min 1 pixel height
+        const bw = Math.max(1 * dpr, b.w * mScale); 
+        const bh = Math.max(1 * dpr, b.h * mScale); 
         ctx.fillRect(bx, by, bw, bh);
     });
 
-
-    // Draw Viewport Rectangle
-    if (mainViewBounds) {
+    if (mainViewBounds && !isNaN(mainViewBounds.minX) && !isNaN(mainViewBounds.minY) && !isNaN(mainViewBounds.maxX) && !isNaN(mainViewBounds.maxY)) {
         const vx = mPadding + mainViewBounds.minX * mScale;
         const vy = mPadding + mainViewBounds.minY * mScale;
         const vw = (mainViewBounds.maxX - mainViewBounds.minX) * mScale;
         const vh = (mainViewBounds.maxY - mainViewBounds.minY) * mScale;
 
-        ctx.fillStyle = minimap.viewportFillColor;
-        ctx.fillRect(vx, vy, vw, vh);
-        ctx.strokeStyle = minimap.viewportBorderColor;
-        ctx.lineWidth = 1 * dpr;
-        ctx.strokeRect(vx, vy, vw, vh);
+        if (vw > 0 && vh > 0) { // Only draw if dimensions are positive
+            ctx.fillStyle = minimap.viewportFillColor;
+            ctx.fillRect(vx, vy, vw, vh);
+            ctx.strokeStyle = minimap.viewportBorderColor;
+            ctx.lineWidth = 1 * dpr;
+            ctx.strokeRect(vx, vy, vw, vh);
+        }
     }
   },
 
-  // —— DRAWING FUNCTIONS (Main Canvas) ——
-  drawTile(x, y, drawBorder = true) { /* ... same ... */ },
-  drawChunk(chunk, drawBorder = true) { /* ... same ... */ },
-  drawBuildingFootprint(b, highlightStyle = null, drawBorder = true) { /* ... same ... */ },
+  drawTile(x, y, drawBorder = true) {
+    this.state.tileCount++;
+    const [sx,sy] = this.worldToScreen(x,y);
+    const { config } = this;
+    const ctx = this.dom.ctx;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - config.tileH/2); ctx.lineTo(sx + config.tileW/2, sy);
+    ctx.lineTo(sx, sy + config.tileH/2); ctx.lineTo(sx - config.tileW/2, sy);
+    ctx.closePath();
 
-  // —— MAIN RENDER LOOP ——
+    ctx.fillStyle = config.biomeColors[this.getBiomeForTile(x, y)];
+    ctx.fill();
+    if (drawBorder) ctx.stroke();
+
+    const building = this.getBuildingAt(x, y);
+    if (building && building.hideCoordinates) return;
+
+    const currentCamScale = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
+    const pct = Math.round((currentCamScale / config.baseScale) * 100);
+    const showCoords = this.dom.coordsToggle ? this.dom.coordsToggle.checked : false;
+    const showThreshold = showCoords ? 80 : 200;
+
+    if (pct <= showThreshold) return;
+    
+    const text = `${x}, ${y}`;
+    let optimalFontSize = Math.min(
+      config.tileH * 0.8 * 0.5,
+      (config.tileW * 0.8 / (text.length || 1)) * 1.8 
+    ) * 0.7;
+    if ((optimalFontSize * currentCamScale) < 5) return;
+
+    ctx.fillStyle = config.textColor;
+    ctx.font = `${optimalFontSize}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, sx, sy);
+  },
+
+  drawChunk(chunk, drawBorder = true) {
+    this.state.tileCount += chunk.size * chunk.size;
+    const { x, y, size, biome } = chunk;
+    const { config } = this;
+    const ctx = this.dom.ctx;
+    const currentCamScale = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
+    const inflation = drawBorder || currentCamScale === 0 ? 0 : (1 / currentCamScale); 
+    const x0 = x, y0 = y, w = size, h = size;
+    const [sbx, sby] = this.worldToScreen(x0, y0);
+    const [srx, sry] = this.worldToScreen(x0 + w - 1, y0);
+    const [stx, sty] = this.worldToScreen(x0 + w - 1, y0 + h - 1);
+    const [slx, sly] = this.worldToScreen(x0, y0 + h - 1);
+    const p_bottom = { x: sbx, y: sby + config.tileH/2 + inflation };
+    const p_right  = { x: srx + config.tileW/2 + inflation, y: sry };
+    const p_top    = { x: stx, y: sty - config.tileH/2 - inflation };
+    const p_left   = { x: slx - config.tileW/2 - inflation, y: sly };
+    ctx.beginPath();
+    ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x,  p_right.y);
+    ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y);
+    ctx.closePath();
+    ctx.fillStyle = config.biomeColors[biome];
+    ctx.fill();
+    if (drawBorder) ctx.stroke();
+  },
+  
+  drawBuildingFootprint(b, highlightStyle = null, drawBorder = true) {
+    const { config, state } = this;
+    const ctx = this.dom.ctx;
+    const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
+    const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
+    const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
+    const [sbx, sby] = this.worldToScreen(x0, y0);
+    const [srx, sry] = this.worldToScreen(x0 + w - 1, y0);
+    const [stx, sty] = this.worldToScreen(x0 + w - 1, y0 + h - 1);
+    const [slx, sly] = this.worldToScreen(x0, y0 + h - 1);
+    const p_bottom = { x: sbx, y: sby + config.tileH/2 };
+    const p_right  = { x: srx + config.tileW/2, y: sry };
+    const p_top    = { x: stx, y: sty - config.tileH/2 };
+    const p_left   = { x: slx - config.tileW/2, y: sly };
+    ctx.beginPath();
+    ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x,  p_right.y);
+    ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.strokeStyle = border; 
+    ctx.lineWidth = highlightStyle ? config.strokeW * 2 : config.strokeW;
+    if (drawBorder) ctx.stroke();
+
+    const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
+    if (currentCamScale > 0.4 && b.displayName) {
+      const availableWidth = (p_right.x - p_left.x) * 0.8;
+      const availableHeight = p_bottom.y - p_top.y;
+      if (availableWidth < 10 || availableHeight < 10) return;
+      const hasCoords = b.displayCoordinates;
+      const heightFactor = hasCoords ? 0.5 : 1.0; 
+      const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9;
+      ctx.font = `bold 100px sans-serif`; 
+      const textMetrics = ctx.measureText(b.displayName);
+      const displayNameWidth = textMetrics.width || 1; 
+      const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
+      const optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
+
+      if (optimalFontSize * currentCamScale < 7) return;
+      const centerX = (p_left.x + p_right.x) / 2;
+      const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
+      const centerY = (p_top.y + p_bottom.y) / 2 + yOffset;
+      ctx.fillStyle = config.textColor;
+      ctx.font = `bold ${optimalFontSize}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(b.displayName, centerX, centerY);
+      if (b.displayCoordinates) {
+        const coordFontSize = optimalFontSize * 0.7;
+        ctx.font = `${coordFontSize}px sans-serif`;
+        ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.9);
+      }
+    }
+  },
+
   mainLoop(now) {
     const { dom, state, config } = this;
     const ctx = dom.ctx; 
@@ -936,27 +1360,26 @@ const KingshotPlanner = {
 
         if(dom.zoomLevelEl) dom.zoomLevelEl.textContent = `Zoom: ${pct}%`;
         if(dom.zoomSlider) {
-            if (pct > parseInt(dom.zoomSlider.max,10)) dom.zoomSlider.max = pct.toString();
-            if (pct < parseInt(dom.zoomSlider.min,10)) dom.zoomSlider.min = pct.toString();
-            dom.zoomSlider.value = pct.toString();
+            // Ensure slider min/max are valid before setting value
+            const sliderMin = parseInt(dom.zoomSlider.min,10);
+            const sliderMax = parseInt(dom.zoomSlider.max,10);
+            if (pct > sliderMax) dom.zoomSlider.max = pct.toString();
+            // Only set min if pct is less AND it doesn't make min > max
+            if (pct < sliderMin && pct < sliderMax) dom.zoomSlider.min = pct.toString(); 
+            else if (sliderMin > sliderMax) dom.zoomSlider.min = sliderMax.toString(); // Correct if min > max
+
+            if (pct >= parseInt(dom.zoomSlider.min,10) && pct <= parseInt(dom.zoomSlider.max,10)) {
+                 dom.zoomSlider.value = pct.toString();
+            } else if (pct < parseInt(dom.zoomSlider.min,10)) {
+                 dom.zoomSlider.value = dom.zoomSlider.min;
+            } else {
+                 dom.zoomSlider.value = dom.zoomSlider.max;
+            }
         }
         state.tileCount = 0;
 
-        // --- BEGIN LOGGING ---
-        console.log(`Before save/transform: scale=${currentCamScale}, camX=${state.cam.x}, camY=${state.cam.y}`);
-        // --- END LOGGING ---
-
         ctx.save();
         ctx.setTransform(currentCamScale,0,0,currentCamScale,state.cam.x,state.cam.y);
-
-        // --- BEGIN LOGGING ---
-        // Get the current transform matrix to verify
-        const currentMatrix = ctx.getTransform();
-        console.log('After setTransform - Matrix:', 
-            currentMatrix.a, currentMatrix.d, // scaleX, scaleY
-            currentMatrix.e, currentMatrix.f  // translateX, translateY
-        );
-        // --- END LOGGING ---
         ctx.strokeStyle = config.borderColor;
         ctx.lineWidth = config.strokeW;
         
@@ -964,7 +1387,7 @@ const KingshotPlanner = {
         const [tr_x, tr_y] = this.screenToWorld(dom.canvas.width, 0);
         const [bl_x, bl_y] = this.screenToWorld(0, dom.canvas.height);
         const [br_x, br_y] = this.screenToWorld(dom.canvas.width, dom.canvas.height);
-        const viewBounds = { // These are world coordinates of the main view
+        const viewBounds = { 
           minX: Math.min(tl_x, tr_x, bl_x, br_x) - 2,
           maxX: Math.max(tl_x, tr_x, bl_x, br_x) + 2,
           minY: Math.min(tl_y, tr_y, bl_y, br_y) - 2,
@@ -972,9 +1395,9 @@ const KingshotPlanner = {
         };
 
         if (isNaN(viewBounds.minX) || isNaN(viewBounds.maxX) || isNaN(viewBounds.minY) || isNaN(viewBounds.maxY)) {
-            console.error("View bounds are NaN, skipping render cycle.", viewBounds);
+            console.error("View bounds are NaN, skipping render cycle. Cam State:", state.cam, "Calculated Bounds:", viewBounds);
             ctx.restore();
-            this.drawMinimap(null); // Draw minimap without viewport if bounds are bad
+            this.drawMinimap(null); 
             requestAnimationFrame(this.mainLoop.bind(this));
             return;
         }
@@ -984,7 +1407,6 @@ const KingshotPlanner = {
         const showRss = dom.allianceRssToggle ? dom.allianceRssToggle.checked : false;
         const alwaysShowRss = dom.allianceRssAlwaysVisibleToggle ? dom.allianceRssAlwaysVisibleToggle.checked : false;
 
-        // ... (Main map drawing logic - same as before) ...
         if (chunkLevel === -1) {
           const shouldDrawBorders = showGrid && pct > 50;
           const minSum = Math.floor(viewBounds.minX + viewBounds.minY);
@@ -1014,7 +1436,7 @@ const KingshotPlanner = {
             ctx.lineTo(sx, sy + config.tileH/2); ctx.lineTo(sx - config.tileW/2, sy);
             ctx.closePath(); ctx.fill();
           });
-        } else { // Chunked view
+        } else { 
           if (state.chunkLevels && state.chunkLevels[chunkLevel]) {
             const chunksToDraw = state.chunkLevels[chunkLevel];
             const chunkSize = Math.pow(2, chunkLevel + 1);
@@ -1054,13 +1476,30 @@ const KingshotPlanner = {
           }
         }
 
-        if (state.selection) { /* ... same selection drawing ... */ }
+        if (state.selection) { 
+            let highlightColor = config.selectionColor;
+            if (state.selection.pingStart && now - state.selection.pingStart < config.pingDuration) {
+                if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) {
+                    highlightColor = config.pingColor;
+                }
+            }
+            if (state.selection.w) { 
+              this.drawBuildingFootprint(state.selection, highlightColor, true);
+            } else { 
+              const [sx, sy] = this.worldToScreen(state.selection.x, state.selection.y);
+              ctx.beginPath();
+              ctx.moveTo(sx, sy - config.tileH/2); ctx.lineTo(sx + config.tileW/2, sy);
+              ctx.lineTo(sx, sy + config.tileH/2); ctx.lineTo(sx - config.tileW/2, sy);
+              ctx.closePath();
+              ctx.strokeStyle = highlightColor;
+              ctx.lineWidth = config.strokeW * 1.5;
+              ctx.stroke();
+            }
+        }
         
-        ctx.restore(); // Restore main canvas transform
+        ctx.restore(); 
 
-        // Draw Minimap
         this.drawMinimap(viewBounds);
-
 
         const dt  = now - state.lastFrame;
         state.lastFrame = now;
