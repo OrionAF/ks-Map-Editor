@@ -367,7 +367,7 @@ const KingshotPlanner = {
     lastFPS: 0,
     lastTiles: 0,
     selection: null, 
-    minFitScale: 0.01,
+    minFitScale: 0.01, // Initial placeholder, will be calculated in resize
     isInitialLoad: true,
     touchStartTime: 0,
     dragging: false, 
@@ -377,7 +377,7 @@ const KingshotPlanner = {
     startDist: 0, startScale: 1, pinchCenter: null,
     startCamX: 0, startCamY: 0,
     hideLabelTimeout: null,
-    animationId: null // <<< ADD THIS LINE
+    animationId: null 
   },
 
   // —— DOM REFERENCES ——
@@ -397,7 +397,6 @@ const KingshotPlanner = {
   init() {
     const self = this; 
 
-    // --- CORRECTED: Explicitly assign ALL DOM references ---
     this.dom.canvas = document.getElementById('map');
     this.dom.ctx = this.dom.canvas.getContext('2d');
     this.dom.inpX = document.getElementById('inpX');
@@ -431,7 +430,6 @@ const KingshotPlanner = {
     
     this.state.lastFrame = performance.now();
     
-    // Fetch data and then start the app
     Promise.all([
       fetch('baseMap.json').then(r => r.ok ? r.json() : Promise.resolve({ unoccupiableTiles:[], defaultBuildings:[] })),
       fetch('patch_notes.json').then(r => r.ok ? r.json() : Promise.resolve({}))
@@ -443,7 +441,7 @@ const KingshotPlanner = {
         self.preProcessBuildings();
         self.preCalculateChunks();
         self.initializeUI();
-        self.resize();
+        self.resize(); // This will calculate minFitScale correctly and call zoomToFit
         
         requestAnimationFrame(self.mainLoop.bind(self));
     })
@@ -454,11 +452,9 @@ const KingshotPlanner = {
   },
 
   initializeUI() {
-    // Info & Stats Panels
     this.dom.infoBtn.addEventListener('click', ()=>this.dom.infoPanel.classList.toggle('open'));
     this.dom.statsBtn.addEventListener('click', ()=>this.dom.statsPanel.classList.toggle('open'));
 
-    // Version and Patch Notes
     this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
     this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
     this.dom.closePatchNotesBtn.addEventListener('click', this.hidePatchNotes.bind(this));
@@ -468,7 +464,6 @@ const KingshotPlanner = {
         this.showPatchNotes();
     }
 
-    // --- Control Settings Logic ---
     const savedDetail = localStorage.getItem('mapTileDetail') || '50';
     this.dom.tileDetailSelect.value = savedDetail;
     this.dom.tileDetailSelect.addEventListener('change', () => localStorage.setItem('mapTileDetail', this.dom.tileDetailSelect.value));
@@ -490,11 +485,9 @@ const KingshotPlanner = {
     this.dom.coordsToggle.addEventListener('change', () => localStorage.setItem('mapShowCoords', this.dom.coordsToggle.checked));
 
 
-    // Search
     this.dom.btnGo.addEventListener('click', this.doSearch.bind(this));
     [this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => { if (e.key==='Enter') this.doSearch(); }));
 
-    // Zoom Controls
     this.dom.zoomDecBtn.addEventListener('click', () => this.changeZoomBy(-1));
     this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(+1));
     this.dom.presetBtns.forEach(b => {
@@ -515,7 +508,6 @@ const KingshotPlanner = {
         this.updateFloatingZoomLabel();
     });
 
-    // Event Listeners with context binding
     window.addEventListener('resize', this.resize.bind(this));
     window.addEventListener('mousemove', this.handleMouseMove.bind(this));
     window.addEventListener('mouseup', () => { this.state.dragging = false; });
@@ -582,8 +574,11 @@ const KingshotPlanner = {
   },
 
   screenToWorld(sx,sy) {
-    const lx = (sx - this.state.cam.x)/this.state.cam.scale;
-    const ly = (sy - this.state.cam.y)/this.state.cam.scale;
+    // Ensure cam.scale is not zero to prevent division by zero errors.
+    // This should be guaranteed by minFitScale in resize() and scale clamping elsewhere.
+    const scale = this.state.cam.scale === 0 ? 0.001 : this.state.cam.scale;
+    const lx = (sx - this.state.cam.x)/scale;
+    const ly = (sy - this.state.cam.y)/scale;
     const u  = lx/(this.config.tileW/2);
     const v  = -ly/(this.config.tileH/2);
     const x = Math.round((u+v)/2);
@@ -673,7 +668,7 @@ const KingshotPlanner = {
     if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
       const building = this.getBuildingAt(worldX, worldY);
       this.state.selection = building || { x: worldX, y: worldY };
-      this.state.selection.pingStart = performance.now(); // Trigger ping
+      this.state.selection.pingStart = performance.now(); 
       this.dom.inpX.value = this.state.selection.x;
       this.dom.inpY.value = this.state.selection.y;
     }
@@ -735,7 +730,6 @@ const KingshotPlanner = {
         this.state.startScale = this.state.cam.scale;
         this.state.pinchCenter = { x: (a.clientX + b.clientX)/2, y: (a.clientY + b.clientY)/2 };
         
-        // Capture the camera's starting position for a stable pinch-zoom
         this.state.startCamX = this.state.cam.x;
         this.state.startCamY = this.state.cam.y;
     }
@@ -743,7 +737,6 @@ const KingshotPlanner = {
 
   handleTouchMove(e) {
     e.preventDefault();
-    // A direct user interaction should ALWAYS cancel any ongoing programmatic animation.
     if (this.state.animationId) {
         cancelAnimationFrame(this.state.animationId);
         this.state.animationId = null;
@@ -760,10 +753,8 @@ const KingshotPlanner = {
         const dist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
         let newScale = this.state.startScale * (dist / this.state.startDist);
         
-        // Clamp the new scale to the allowed min/max
         this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct/100 * this.config.baseScale, newScale));
 
-        // Use the state from touchStart for a stable anchor point
         const wx = (this.state.pinchCenter.x - this.state.startCamX) / this.state.startScale;
         const wy = (this.state.pinchCenter.y - this.state.startCamY) / this.state.startScale;
 
@@ -783,7 +774,7 @@ const KingshotPlanner = {
           if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
               const building = this.getBuildingAt(worldX, worldY);
               this.state.selection = building || { x: worldX, y: worldY };
-              this.state.selection.pingStart = performance.now(); // Trigger ping
+              this.state.selection.pingStart = performance.now(); 
               this.dom.inpX.value = this.state.selection.x;
               this.dom.inpY.value = this.state.selection.y;
           }
@@ -797,7 +788,7 @@ const KingshotPlanner = {
     const x = +this.dom.inpX.value, y = +this.dom.inpY.value;
     if (x >= 0 && y >= 0 && x < this.config.N && y < this.config.N) {
       this.state.selection = this.getBuildingAt(x, y) || { x, y };
-      this.state.selection.pingStart = performance.now(); // Trigger ping
+      this.state.selection.pingStart = performance.now(); 
       const targetScale = (150 / 100) * this.config.baseScale;
       const [screenX, screenY] = this.worldToScreen(x, y);
       const targetCamX = this.dom.canvas.width/2 - screenX * targetScale;
@@ -813,11 +804,10 @@ const KingshotPlanner = {
   },
   
   zoomToFit() {
-    this.state.cam.scale = this.state.minFitScale;
+    this.state.cam.scale = this.state.minFitScale; // minFitScale is guaranteed positive by resize()
     this.state.cam.x = this.dom.canvas.width / 2;
-    // This calculation positions the VISUAL CENTER of the map at the screen center.
-    // It accounts for the isometric projection's negative Y-offset.
     this.state.cam.y = this.dom.canvas.height / 2 + ((this.config.N - 1) * this.config.tileH / 2) * this.state.cam.scale;
+    this.clampCamera(); // Ensure camera is clamped after zoomToFit
   },
 
   resize() {
@@ -825,13 +815,27 @@ const KingshotPlanner = {
     this.dom.canvas.height = window.innerHeight;
     const mapTotalWidth = (this.config.N - 1) * this.config.tileW;
     const mapTotalHeight = (this.config.N - 1) * this.config.tileH;
-    const scaleX = this.dom.canvas.width / mapTotalWidth;
-    const scaleY = this.dom.canvas.height / mapTotalHeight;
-    this.state.minFitScale = Math.min(scaleX, scaleY) * 0.95;
+
+    // Ensure mapTotalWidth/Height are positive to prevent division by zero if N was small (not an issue here with N=1200)
+    const safeMapTotalWidth = Math.max(1, mapTotalWidth);
+    const safeMapTotalHeight = Math.max(1, mapTotalHeight);
+
+    // Calculate scales. If canvas dimensions are 0, scaleX/Y will be 0.
+    const scaleX = this.dom.canvas.width / safeMapTotalWidth;
+    const scaleY = this.dom.canvas.height / safeMapTotalHeight;
+    
+    // *** FIX APPLIED HERE ***
+    // Ensure minFitScale is always a small positive number, never zero or negative.
+    // If scaleX or scaleY is 0 (due to 0 canvas dimension), Math.min will be 0.
+    // Then 0 * 0.95 is 0. Math.max(0.001, 0) will correctly result in 0.001.
+    this.state.minFitScale = Math.max(0.001, Math.min(scaleX, scaleY) * 0.95);
+    
     if (this.state.isInitialLoad) {
         this.zoomToFit();
         this.state.isInitialLoad = false;
     } else {
+        // If not initial load, ensure current scale is not below new minFitScale
+        this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
         this.clampCamera();
     }
   },
@@ -841,33 +845,22 @@ const KingshotPlanner = {
     const canvasW = this.dom.canvas.width;
     const canvasH = this.dom.canvas.height;
     
-    // Calculate the full visual dimensions of the isometric map in screen space
     const mapScreenW = (this.config.N - 1) * this.config.tileW * s;
     const mapScreenH = (this.config.N - 1) * this.config.tileH * s;
 
-    // --- X-axis clamping ---
-    // The visual width is from -mapScreenW/2 to +mapScreenW/2 around the camera's x-origin.
     if (mapScreenW > canvasW) {
-        // If map is wider than the canvas, clamp camera so edges don't cross the screen.
         const minCamX = canvasW - mapScreenW / 2;
         const maxCamX = mapScreenW / 2;
         this.state.cam.x = Math.max(minCamX, Math.min(maxCamX, this.state.cam.x));
     } else {
-        // If map is narrower, just center it.
         this.state.cam.x = canvasW / 2;
     }
 
-    // --- Y-axis clamping ---
-    // The visual height is from -mapScreenH to 0.
     if (mapScreenH > canvasH) {
-        // If map is taller than canvas, clamp camera.
-        const minCamY = canvasH; // Prevents the bottom edge (y=0) from going above the bottom of the canvas.
-        const maxCamY = mapScreenH; // Prevents the top edge (y=-mapScreenH) from going below the top of the canvas.
+        const minCamY = canvasH; 
+        const maxCamY = mapScreenH; 
         this.state.cam.y = Math.max(minCamY, Math.min(maxCamY, this.state.cam.y));
     } else {
-        // If map is shorter, center it vertically.
-        // The camera's y is the screen position of the map's y=0 point.
-        // We position it so the map's visual center (-mapScreenH/2) is at the canvas's center.
         this.state.cam.y = canvasH / 2 + mapScreenH / 2;
     }
   },
@@ -895,6 +888,8 @@ const KingshotPlanner = {
       const t = duration === 0 ? 1 : Math.min(1, (now - start)/duration);
       const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
       this.state.cam.scale = startScale + (targetScale - startScale)*k;
+      // Ensure scale doesn't go below minFitScale during animation
+      this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale); 
       this.state.cam.x = anchorX - wx * this.state.cam.scale;
       this.state.cam.y = anchorY - wy * this.state.cam.scale;
       this.clampCamera();
@@ -917,6 +912,8 @@ const KingshotPlanner = {
         const t = Math.min(1, (now - start)/duration);
         const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
         this.state.cam.scale = startScale + (targetScale - startScale)*k;
+        // Ensure scale doesn't go below minFitScale during animation
+        this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
         this.state.cam.x = startX + (targetX - startX)*k;
         this.state.cam.y = startY + (targetY - startY)*k;
         this.clampCamera();
@@ -1035,8 +1032,9 @@ const KingshotPlanner = {
       const hasCoords = b.displayCoordinates;
       const heightFactor = hasCoords ? 0.5 : 1.0; 
       const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9;
-      ctx.font = `bold 100px sans-serif`;
-      const fontSizeBasedOnWidth = (availableWidth / ctx.measureText(b.displayName).width) * 100;
+      ctx.font = `bold 100px sans-serif`; // Temporary for measurement
+      const textMetrics = ctx.measureText(b.displayName);
+      const fontSizeBasedOnWidth = (availableWidth / textMetrics.width) * 100;
       const optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
       if (optimalFontSize * state.cam.scale < 7) return;
       const centerX = (p_left.x + p_right.x) / 2;
@@ -1068,6 +1066,7 @@ const KingshotPlanner = {
     const pct = Math.round((state.cam.scale / config.baseScale) * 100);
     dom.zoomLevelEl.textContent = `Zoom: ${pct}%`;
     if (pct > dom.zoomSlider.max) dom.zoomSlider.max = pct;
+    if (pct < dom.zoomSlider.min) dom.zoomSlider.min = pct; // Ensure slider min can also adjust if needed
     dom.zoomSlider.value = pct;
     state.tileCount = 0;
 
@@ -1195,7 +1194,6 @@ const KingshotPlanner = {
   }
 };
 
-// Start the application
 KingshotPlanner.init();
 
 </script>
