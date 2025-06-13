@@ -928,6 +928,11 @@ const KingshotPlanner = {
         ctx.setTransform(1,0,0,1,0,0);
         ctx.clearRect(0,0,dom.canvas.width,dom.canvas.height);
 
+        // =============== TEMPORARY DIAGNOSTIC ===============
+        ctx.fillStyle = 'lime'; // A very bright, obvious color
+        ctx.fillRect(10, 10, dom.canvas.width - 20, dom.canvas.height - 20); // Draw a large rectangle
+        // ==================================================
+
         const [centerX, centerY] = this.screenToWorld(dom.canvas.width/2, dom.canvas.height/2);
         if(dom.centerTileEl) dom.centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
         
