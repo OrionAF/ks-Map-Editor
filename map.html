@@ -797,11 +797,11 @@ const KingshotPlanner = {
     // 0.025 is chosen as a practical minimum. If baseScale is 5, this is 0.5% zoom.
     // This means "Fit" will not zoom out beyond this practical limit,
     // even if the geometric fit would be smaller.
-    this.state.minFitScale = Math.max(0.025, calculatedMinFit); 
+    this.state.minFitScale = Math.max(0.1, calculatedMinFit); 
     
     // Failsafe if calculatedMinFit somehow resulted in NaN (e.g., if canvas dimensions were 0 and division by 0 occurred, though safeMapTotalWidth should prevent that)
     if (isNaN(this.state.minFitScale)) {
-        this.state.minFitScale = 0.025; 
+        this.state.minFitScale = 0.1; 
     }
     // --- END MODIFICATION ---
     
@@ -928,11 +928,6 @@ const KingshotPlanner = {
         ctx.setTransform(1,0,0,1,0,0);
         ctx.clearRect(0,0,dom.canvas.width,dom.canvas.height);
 
-        // =============== TEMPORARY DIAGNOSTIC ===============
-        ctx.fillStyle = 'lime'; // A very bright, obvious color
-        ctx.fillRect(10, 10, dom.canvas.width - 20, dom.canvas.height - 20); // Draw a large rectangle
-        // ==================================================
-
         const [centerX, centerY] = this.screenToWorld(dom.canvas.width/2, dom.canvas.height/2);
         if(dom.centerTileEl) dom.centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
         
@@ -947,8 +942,21 @@ const KingshotPlanner = {
         }
         state.tileCount = 0;
 
+        // --- BEGIN LOGGING ---
+        console.log(`Before save/transform: scale=${currentCamScale}, camX=${state.cam.x}, camY=${state.cam.y}`);
+        // --- END LOGGING ---
+
         ctx.save();
         ctx.setTransform(currentCamScale,0,0,currentCamScale,state.cam.x,state.cam.y);
+
+        // --- BEGIN LOGGING ---
+        // Get the current transform matrix to verify
+        const currentMatrix = ctx.getTransform();
+        console.log('After setTransform - Matrix:', 
+            currentMatrix.a, currentMatrix.d, // scaleX, scaleY
+            currentMatrix.e, currentMatrix.f  // translateX, translateY
+        );
+        // --- END LOGGING ---
         ctx.strokeStyle = config.borderColor;
         ctx.lineWidth = config.strokeW;
         
