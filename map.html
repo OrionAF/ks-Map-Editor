@@ -774,11 +774,11 @@ const KingshotPlanner = {
     this.dom.canvas.width  = window.innerWidth;
     this.dom.canvas.height = window.innerHeight;
     
-    if (this.dom.minimapCanvas) { // Also resize minimap's drawing surface if needed
+    if (this.dom.minimapCanvas) { 
         const dpr = window.devicePixelRatio || 1;
         this.dom.minimapCanvas.width = this.config.minimap.width * dpr;
         this.dom.minimapCanvas.height = this.config.minimap.height * dpr;
-        this.calculateMinimapScale(); // Recalculate scale on resize
+        this.calculateMinimapScale(); 
     }
 
     const mapTotalWidth = (this.config.N - 1) * this.config.tileW;
@@ -790,8 +790,20 @@ const KingshotPlanner = {
     const scaleX = this.dom.canvas.width / safeMapTotalWidth;
     const scaleY = this.dom.canvas.height / safeMapTotalHeight;
     
-    this.state.minFitScale = Math.max(0.001, Math.min(scaleX, scaleY) * 0.95);
-    if (isNaN(this.state.minFitScale)) this.state.minFitScale = 0.001; 
+    // --- MODIFIED minFitScale calculation ---
+    let calculatedMinFit = Math.min(scaleX, scaleY) * 0.95; // Calculate the true geometric fit
+
+    // Ensure minFitScale is not impractically small for visibility.
+    // 0.025 is chosen as a practical minimum. If baseScale is 5, this is 0.5% zoom.
+    // This means "Fit" will not zoom out beyond this practical limit,
+    // even if the geometric fit would be smaller.
+    this.state.minFitScale = Math.max(0.025, calculatedMinFit); 
+    
+    // Failsafe if calculatedMinFit somehow resulted in NaN (e.g., if canvas dimensions were 0 and division by 0 occurred, though safeMapTotalWidth should prevent that)
+    if (isNaN(this.state.minFitScale)) {
+        this.state.minFitScale = 0.025; 
+    }
+    // --- END MODIFICATION ---
     
     if (this.state.isInitialLoad) {
         this.state.cam.scale = this.state.minFitScale; 
@@ -800,8 +812,11 @@ const KingshotPlanner = {
         this.clampCamera(); 
         this.state.isInitialLoad = false;
     } else {
+        // When resizing after initial load, ensure current scale respects the new minFitScale
         this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
-        if(isNaN(this.state.cam.scale)) this.state.cam.scale = this.state.minFitScale; 
+        if(isNaN(this.state.cam.scale)) { // Failsafe for cam.scale
+             this.state.cam.scale = this.state.minFitScale; 
+        }
         this.clampCamera();
     }
   },
