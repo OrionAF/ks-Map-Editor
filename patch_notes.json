@@ -1,4 +1,8 @@
 {
+  "0.2.7.5": [
+    "**Optimization:**",
+    "- Made some improvements to the minimap."
+  ],
   "0.2.7.4": [
     "**Patch Notes Enhanced!**",
     "- Implemented **Markdown** support for displaying patch notes using the `marked.js` library.",

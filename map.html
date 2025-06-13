@@ -264,9 +264,10 @@
         position: absolute;
         /* Push it below the settings button. Adjust 45px if button height changes. */
         top: 10px; 
-        margin-top: 45px; 
+        margin-top: 40px; 
         right: 10px;
         z-index: 900; /* Ensure it's above main canvas, below settings modal if it were ever to overlap */
+        transition: margin-top 0.3s ease-out; /* Add this line */
     }
     #minimapCanvas {
         width: 200px; /* Desired display width */
@@ -424,7 +425,7 @@ const KingshotPlanner = {
         buildingColor: 'rgba(200,200,200,0.7)', 
         kingCastleColor: 'rgba(255,215,0,0.8)',
         zoomFactorMin: 1.0, // How much of the world is shown when main map is max zoomed OUT (1.0 = whole world)
-        zoomFactorMax: 4.0, // How much minimap "zooms in" when main map is max zoomed IN (higher = more zoom)
+        zoomFactorMax: 8.0, // How much minimap "zooms in" when main map is max zoomed IN (higher = more zoom)
                             // This factor scales the baseMinimapScale.
         mainMapZoomThresholdForMinimapZoom: 0.2 // Main map scale (relative to baseScale) below which minimap starts zooming
     }
@@ -564,9 +565,13 @@ const KingshotPlanner = {
   },
 
   initializeUI() {
+    // Original simple settingsBtn listener is REMOVED/COMMENTED to avoid conflicts
+    /* 
     if(this.dom.settingsBtn && this.dom.settingsPanel) {
         this.dom.settingsBtn.addEventListener('click', () => this.dom.settingsPanel.classList.toggle('open'));
     }
+    */
+
     if(this.dom.infoBtn && this.dom.infoPanel) this.dom.infoBtn.addEventListener('click', ()=>this.dom.infoPanel.classList.toggle('open'));
     if(this.dom.statsBtn && this.dom.statsPanel) this.dom.statsBtn.addEventListener('click', ()=>this.dom.statsPanel.classList.toggle('open'));
     if(this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
@@ -624,6 +629,79 @@ const KingshotPlanner = {
             });
         }
     });
+
+    // --- Logic for settings button and minimap interaction ---
+    let originalMinimapMarginTopValue = '40px'; // Default from CSS
+    if (this.dom.minimapContainer) {
+        // Attempt to get computed style. Ensure this runs after DOM is ready and styles are applied.
+        // If getComputedStyle is called too early, it might not reflect the CSS.
+        // However, within initializeUI (called after DOM elements are fetched), this should generally be fine.
+        try { // Add try-catch for robustness if getComputedStyle fails for any reason early on
+            originalMinimapMarginTopValue = getComputedStyle(this.dom.minimapContainer).marginTop;
+        } catch(e) {
+            console.warn("Could not get computed style for minimapContainer.marginTop, using default.", e);
+        }
+    }
+
+    if(this.dom.settingsBtn && this.dom.settingsPanel && this.dom.minimapContainer) {
+        const panel = this.dom.settingsPanel;
+        const minimap = this.dom.minimapContainer;
+        const settingsBtn = this.dom.settingsBtn;
+        const gap = 10; // Desired gap in pixels between panel and minimap
+
+        const updateMinimapPosition = () => {
+            const settingsButtonHeight = settingsBtn.offsetHeight;
+            let settingsButtonMarginBottom = 0;
+            try {
+                 settingsButtonMarginBottom = parseInt(getComputedStyle(settingsBtn).marginBottom, 10) || 0;
+            } catch(e) {
+                console.warn("Could not get computed style for settingsBtn.marginBottom.", e);
+            }
+
+
+            if (panel.classList.contains('open')) {
+                // Panel is open, position minimap below it
+                const panelHeight = panel.offsetHeight;
+                minimap.style.marginTop = `${settingsButtonHeight + settingsButtonMarginBottom + panelHeight + gap}px`;
+            } else {
+                // Panel is closed, reset minimap position
+                minimap.style.marginTop = originalMinimapMarginTopValue;
+            }
+        };
+
+        // Listen for transitionend on the panel to update after its animation
+        panel.addEventListener('transitionend', (event) => {
+            // Ensure we're reacting to the max-height transition from the panel itself
+            if (event.target === panel && event.propertyName === 'max-height') {
+                updateMinimapPosition();
+            }
+        });
+
+        // This is the SOLE click listener for settingsBtn related to panel toggle and minimap
+        this.dom.settingsBtn.addEventListener('click', () => {
+            panel.classList.toggle('open');
+            
+            // If panel is closing, or if there's no transition / it's instantaneous,
+            // update minimap position. 
+            // For opening with a transition, 'transitionend' provides a more accurate final height.
+            if (!panel.classList.contains('open')) { // Panel is now closed or closing
+                 minimap.style.marginTop = originalMinimapMarginTopValue; // Reset minimap margin immediately
+            } else { // Panel is now open or opening
+                // If the panel already has a height (e.g. was already open, or no transition defined),
+                // update position. Otherwise, 'transitionend' will handle it more accurately.
+                // This helps if the panel was opened by default or if transitions are disabled in CSS.
+                if (panel.offsetHeight > 0) {
+                    updateMinimapPosition();
+                }
+                // If offsetHeight is 0 (e.g. max-height was 0 and now transitioning to 500px),
+                // the `transitionend` event listener will call `updateMinimapPosition` 
+                // once the panel has expanded.
+            }
+        });
+    }
+    // --- End of logic for settings button and minimap interaction ---
+
+
     if(this.dom.zoomSlider) {
         this.dom.zoomSlider.addEventListener('input', this.handleZoomSlider.bind(this));
         this.dom.zoomSlider.addEventListener('mousedown', () => {
@@ -1210,7 +1288,7 @@ const KingshotPlanner = {
     this.animatePanZoom(this.state.cam.scale, targetCamX, targetCamY, 200);
   },
 
-  drawMinimap(mainViewBounds) {
+    drawMinimap(mainViewBounds) {
     if (!this.dom.minimapCtx || this.state.baseMinimapScale <= 0) return;
 
     const mmCtx = this.dom.minimapCtx;
@@ -1224,10 +1302,8 @@ const KingshotPlanner = {
     // --- Dynamic Minimap Zoom Logic ---
     const mainZoomRatio = mainCam.scale / mainBaseScale; // How zoomed in is main map (e.g., 1.0 = base, >1 = zoomed in)
     let currentMinimapZoomFactor = minimap.zoomFactorMin;
+    const mainMapRatioForMinimapMaxZoom = 2.0;     
     if (mainZoomRatio > minimap.mainMapZoomThresholdForMinimapZoom) {
-        // Lerp or scale the zoom factor
-        // Example: linear scaling from zoomFactorMin to zoomFactorMax
-        // Progress from threshold to max possible zoom (e.g., maxPct/100)
         const maxMainZoomRatio = this.config.maxPct / 100;
         let progress = (mainZoomRatio - minimap.mainMapZoomThresholdForMinimapZoom) / 
                        (maxMainZoomRatio - minimap.mainMapZoomThresholdForMinimapZoom);
@@ -1236,23 +1312,35 @@ const KingshotPlanner = {
     }
     
     const mScale = baseMinimapScale * currentMinimapZoomFactor;
+    this.state.minimapActualScale = mScale; // Add this line
     // --- End Dynamic Minimap Zoom Logic ---
 
 
-    mmCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-    mmCtx.fillStyle = minimap.bgColor;
-    mmCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+      mmCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+      mmCtx.fillStyle = minimap.bgColor;
+      mmCtx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // Determine the world coordinates for the center of the minimap view
-    // This should be the same as the center of the main camera's view
-    const [minimapViewCenterX, minimapViewCenterY] = this.screenToWorld(this.dom.canvas.width / 2, this.dom.canvas.height / 2);
+      // Determine the world coordinates for the center of the minimap view
+      const [minimapViewCenterX, minimapViewCenterY] = this.screenToWorld(this.dom.canvas.width / 2, this.dom.canvas.height / 2);
+      const minimapWorldWidthVisible = (canvasWidth - 2 * mPadding) / mScale;        
+      const minimapWorldHeightVisible = (canvasHeight - 2 * mPadding) / mScale;
+      
+      const worldOffsetX = minimapViewCenterX - (minimapWorldWidthVisible / 2);
+      const worldOffsetY = minimapViewCenterY - (minimapWorldHeightVisible / 2);
 
-    // Calculate the world coordinates of the top-left corner of the minimap's visible area
-    const minimapWorldWidth = canvasWidth / mScale;
-    const minimapWorldHeight = canvasHeight / mScale;
-    
-    const worldOffsetX = minimapViewCenterX - (minimapWorldWidth / 2) + (mPadding / mScale);
-    const worldOffsetY = minimapViewCenterY - (minimapWorldHeight / 2) + (mPadding / mScale);
+      // --- Corrected Biome Drawing Section ---
+      const biomeDrawOrder = ['badlands', 'plains', 'fertile']; // Define your draw order
+      for (const biomeName of biomeDrawOrder) { // Iterate using the defined order
+          if (biomeRegions[biomeName]) { 
+              const region = biomeRegions[biomeName];
+              mmCtx.fillStyle = biomeColors[biomeName];
+              const x = mPadding + (region.x1 - worldOffsetX) * mScale;
+              const y = mPadding + (region.y1 - worldOffsetY) * mScale;
+              const w = (region.x2 - region.x1 + 1) * mScale;
+              const h = (region.y2 - region.y1 + 1) * mScale;
+              mmCtx.fillRect(x, y, w, h);
+          }
+      }
 
     // Draw Biome Regions, offset by minimap's view
     for (const biomeName in biomeRegions) {
