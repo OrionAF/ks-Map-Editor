@@ -1,18 +1,29 @@
 {
+  "0.2.7.3": [
+    "Minimap Enhancements:",
+    "  Dynamic Minimap Zoom: The minimap now dynamically zooms relative to the main map's zoom level, offering a more detailed local overview when zoomed in.",
+    "  Minimap Centering: The minimap's view now centers on the main map's current viewport.",
+    "UI Fixes & Improvements:",
+    "  Resolved UI Overlap: Fixed an issue where the Settings panel would overlap the minimap when opened.",
+    "  Restored Drawing Functions: Corrected main map drawing functions to resolve a black screen issue.",
+    "  Improved Initial Zoom: Adjusted the 'Fit' zoom level to ensure better map visibility on load.",
+    "Internal & Robustness:",
+    "  Improved minimap scale calculation and added further guards against invalid numeric states."
+  ],
   "0.2.7.0": [
-    "**New Feature: Minimap Implemented!**",
+    "New Feature: Minimap Implemented!",
     "- A new minimap is now available in the top-right corner, providing an overview of the entire game world.",
     "- Key structures (King's Castle, Fortresses) and Biome regions are displayed on the minimap.",
     "- A white rectangle on the minimap indicates your current viewport on the main map.",
-    "- **Click to Pan:** Clicking on the minimap will instantly pan the main map to that location.",
-    "**UI Enhancements & Reorganization:**",
+    "- Click to Pan: Clicking on the minimap will instantly pan the main map to that location.",
+    "UI Enhancements & Reorganization:",
     "- The 'Go To' coordinate search has been moved to the top of the left-side panel.",
     "- Display toggles, Performance settings, and Info/Stats are now consolidated into a new collapsible '⚙️ Settings' panel in the top-right.",
     "- Updated the Stats button icon to 📊.",
-    "**Internal & Performance:**",
+    "Internal & Performance:",
     "- Minor performance improvement by caching the 'Tile Detail' threshold.",
     "- Consolidated some internal filtering logic for building visibility.",
-    "**Bug Fixes:**",
+    "Bug Fixes:",
     "- Corrected a minor HTML class name typo in the patch notes modal footer."
   ],
   "0.2.6.3": [

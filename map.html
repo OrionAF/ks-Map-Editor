@@ -38,10 +38,10 @@
     }
 
     /* --- MODIFIED: Settings Panel (Top Right) --- */
-    #settingsContainer { /* New container for settings button and panel */
-      position:absolute; top:10px; right:10px; z-index:10;
-      width: 210px; 
-      text-align: right;
+    #settingsContainer { /* Ensure settings has higher z-index to pop over everything if panel opens wide */
+        position:absolute; top:10px; right:10px; z-index:1000;
+        width: 210px; 
+        text-align: right;
     }
     #settingsBtn {
       margin-bottom: 5px; /* Space between button and panel */
@@ -261,9 +261,11 @@
     /* --- NEW: Minimap Styles --- */
     #minimapContainer {
         position: absolute;
-        top: 50px; /* Below settings button, adjust as needed */
+        /* Push it below the settings button. Adjust 45px if button height changes. */
+        top: 10px; 
+        margin-top: 45px; 
         right: 10px;
-        z-index: 9; /* Below settings panel if it overlaps */
+        z-index: 900; /* Ensure it's above main canvas, below settings modal if it were ever to overlap */
     }
     #minimapCanvas {
         width: 200px; /* Desired display width */
@@ -384,7 +386,7 @@
 const KingshotPlanner = {
   // —— CONFIGURATION ——
   config: {
-    CURRENT_VERSION: '0.2.7.0', // Version bump for this cleanup
+    CURRENT_VERSION: '0.2.7.3', // Version bump for minimap enhancements
     N: 1200,
     tileW: 10, tileH: 10,
     strokeW: 0.3, 
@@ -394,7 +396,7 @@ const KingshotPlanner = {
     selectionColor: '#ff0',
     pingColor: '#fff',
     pingDuration: 500, 
-    baseScale: 5,
+    baseScale: 5, // Main map base scale
     biomeColors: {
       fertile:  'rgb(109, 159, 62)',
       plains:   'rgb(158, 180, 103)',
@@ -419,7 +421,11 @@ const KingshotPlanner = {
         viewportFillColor: 'rgba(255,255,255,0.2)',
         viewportBorderColor: 'rgba(255,255,255,0.7)',
         buildingColor: 'rgba(200,200,200,0.7)', 
-        kingCastleColor: 'rgba(255,215,0,0.8)'
+        kingCastleColor: 'rgba(255,215,0,0.8)',
+        zoomFactorMin: 1.0, // How much of the world is shown when main map is max zoomed OUT (1.0 = whole world)
+        zoomFactorMax: 4.0, // How much minimap "zooms in" when main map is max zoomed IN (higher = more zoom)
+                            // This factor scales the baseMinimapScale.
+        mainMapZoomThresholdForMinimapZoom: 0.2 // Main map scale (relative to baseScale) below which minimap starts zooming
     }
   },
 
@@ -431,13 +437,13 @@ const KingshotPlanner = {
     buildingMap: new Map(),
     chunkLevels: [],
     userBuildings: [],
-    cam: { x:0, y:0, scale:1 },
+    cam: { x:0, y:0, scale:1 }, // Main camera
     lastFrame: 0,
     tileCount: 0,
     lastFPS: 0,
     lastTiles: 0,
     selection: null, 
-    minFitScale: 0.1, // Adjusted practical minimum, will be refined by resize()
+    minFitScale: 0.1, 
     isInitialLoad: true,
     touchStartTime: 0,
     dragging: false, 
@@ -449,7 +455,9 @@ const KingshotPlanner = {
     hideLabelTimeout: null,
     statsUpdateTime: 0, 
     currentTileDetailThreshold: 50, 
-    minimapActualScale: 0.1, 
+    
+    baseMinimapScale: 0.1, // Scale to fit entire world on minimap (calculated once)
+    // minimapActualScale is now dynamic, calculated in drawMinimap
     animationId: null 
   },
 
@@ -542,7 +550,7 @@ const KingshotPlanner = {
 
         self.preProcessBuildings();
         self.preCalculateChunks();
-        self.calculateMinimapScale(); 
+        self.calculateBaseMinimapScale(); 
         self.initializeUI();
         self.resize(); 
         
@@ -642,16 +650,17 @@ const KingshotPlanner = {
     }
   },
 
-  calculateMinimapScale() {
+  calculateBaseMinimapScale() {
     if (!this.dom.minimapCanvas) return;
     const { minimap, N } = this.config;
     const dpr = window.devicePixelRatio || 1;
     const drawWidth = this.dom.minimapCanvas.width - 2 * minimap.padding * dpr;
     const drawHeight = this.dom.minimapCanvas.height - 2 * minimap.padding * dpr;
-    this.state.minimapActualScale = Math.min(drawWidth / N, drawHeight / N);
-    if (this.state.minimapActualScale <= 0) { // Ensure scale is positive
-        console.warn("Minimap scale calculated to be zero or negative. Setting to a small positive value.");
-        this.state.minimapActualScale = 0.01;
+    
+    this.state.baseMinimapScale = Math.min(drawWidth / N, drawHeight / N);
+    if (this.state.baseMinimapScale <= 0) {
+        console.warn("Base minimap scale calculated to be zero or negative. Setting to a small positive value.");
+        this.state.baseMinimapScale = 0.01; // Default small positive value
     }
   },
 
@@ -976,7 +985,7 @@ const KingshotPlanner = {
         const dpr = window.devicePixelRatio || 1;
         this.dom.minimapCanvas.width = this.config.minimap.width * dpr;
         this.dom.minimapCanvas.height = this.config.minimap.height * dpr;
-        this.calculateMinimapScale(); 
+        this.calculateBaseMinimapScale(); 
     }
 
     const mapTotalWidth = (this.config.N - 1) * this.config.tileW;
@@ -1171,57 +1180,93 @@ const KingshotPlanner = {
   },
 
   drawMinimap(mainViewBounds) {
-    if (!this.dom.minimapCtx || this.state.minimapActualScale <= 0) return; // Also check scale
+    if (!this.dom.minimapCtx || this.state.baseMinimapScale <= 0) return;
 
-    const ctx = this.dom.minimapCtx;
-    const { minimap, N, biomeRegions, biomeColors } = this.config;
+    const mmCtx = this.dom.minimapCtx;
+    const { minimap, N, biomeRegions, biomeColors, baseScale: mainBaseScale } = this.config;
+    const { cam: mainCam, baseMinimapScale } = this.state;
     const dpr = window.devicePixelRatio || 1;
     const canvasWidth = this.dom.minimapCanvas.width;
     const canvasHeight = this.dom.minimapCanvas.height;
-    const mScale = this.state.minimapActualScale;
     const mPadding = minimap.padding * dpr;
 
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    ctx.fillStyle = minimap.bgColor;
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-    for (const biomeName in biomeRegions) {
-        const region = biomeRegions[biomeName];
-        ctx.fillStyle = biomeColors[biomeName];
-        const x = mPadding + region.x1 * mScale;
-        const y = mPadding + region.y1 * mScale;
-        const w = (region.x2 - region.x1 + 1) * mScale;
-        const h = (region.y2 - region.y1 + 1) * mScale;
-        ctx.fillRect(x, y, w, h);
+    // --- Dynamic Minimap Zoom Logic ---
+    const mainZoomRatio = mainCam.scale / mainBaseScale; // How zoomed in is main map (e.g., 1.0 = base, >1 = zoomed in)
+    let currentMinimapZoomFactor = minimap.zoomFactorMin;
+    if (mainZoomRatio > minimap.mainMapZoomThresholdForMinimapZoom) {
+        // Lerp or scale the zoom factor
+        // Example: linear scaling from zoomFactorMin to zoomFactorMax
+        // Progress from threshold to max possible zoom (e.g., maxPct/100)
+        const maxMainZoomRatio = this.config.maxPct / 100;
+        let progress = (mainZoomRatio - minimap.mainMapZoomThresholdForMinimapZoom) / 
+                       (maxMainZoomRatio - minimap.mainMapZoomThresholdForMinimapZoom);
+        progress = Math.max(0, Math.min(1, progress)); // Clamp 0-1
+        currentMinimapZoomFactor = minimap.zoomFactorMin + progress * (minimap.zoomFactorMax - minimap.zoomFactorMin);
     }
     
+    const mScale = baseMinimapScale * currentMinimapZoomFactor;
+    // --- End Dynamic Minimap Zoom Logic ---
+
+
+    mmCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+    mmCtx.fillStyle = minimap.bgColor;
+    mmCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // Determine the world coordinates for the center of the minimap view
+    // This should be the same as the center of the main camera's view
+    const [minimapViewCenterX, minimapViewCenterY] = this.screenToWorld(this.dom.canvas.width / 2, this.dom.canvas.height / 2);
+
+    // Calculate the world coordinates of the top-left corner of the minimap's visible area
+    const minimapWorldWidth = canvasWidth / mScale;
+    const minimapWorldHeight = canvasHeight / mScale;
+    
+    const worldOffsetX = minimapViewCenterX - (minimapWorldWidth / 2) + (mPadding / mScale);
+    const worldOffsetY = minimapViewCenterY - (minimapWorldHeight / 2) + (mPadding / mScale);
+
+    // Draw Biome Regions, offset by minimap's view
+    for (const biomeName in biomeRegions) {
+        const region = biomeRegions[biomeName];
+        mmCtx.fillStyle = biomeColors[biomeName];
+        // Calculate region's position relative to the minimap's camera/view
+        const x = mPadding + (region.x1 - worldOffsetX) * mScale;
+        const y = mPadding + (region.y1 - worldOffsetY) * mScale;
+        const w = (region.x2 - region.x1 + 1) * mScale;
+        const h = (region.y2 - region.y1 + 1) * mScale;
+        mmCtx.fillRect(x, y, w, h);
+    }
+    
+    // Draw Key Buildings, offset by minimap's view
     (this.state.baseMap.defaultBuildings || []).forEach(b => {
+        let buildingFillStyle = null;
         if (b.displayName === "King's Castle") {
-            ctx.fillStyle = minimap.kingCastleColor;
+            buildingFillStyle = minimap.kingCastleColor;
         } else if (b.displayName.startsWith("Fortress")) {
-            ctx.fillStyle = this.config.ALLIANCE_RSS_STYLES.stone.borderColor; 
-        } else {
-            return; 
+            buildingFillStyle = this.config.ALLIANCE_RSS_STYLES.stone.borderColor; 
         }
-        const bx = mPadding + b.x * mScale;
-        const by = mPadding + b.y * mScale;
-        const bw = Math.max(1 * dpr, b.w * mScale); 
-        const bh = Math.max(1 * dpr, b.h * mScale); 
-        ctx.fillRect(bx, by, bw, bh);
+        
+        if(buildingFillStyle){
+            mmCtx.fillStyle = buildingFillStyle;
+            const bx = mPadding + (b.x - worldOffsetX) * mScale;
+            const by = mPadding + (b.y - worldOffsetY) * mScale;
+            const bw = Math.max(1 * dpr, b.w * mScale); 
+            const bh = Math.max(1 * dpr, b.h * mScale); 
+            mmCtx.fillRect(bx, by, bw, bh);
+        }
     });
 
+    // Draw Viewport Rectangle (mainViewBounds are already world coords)
     if (mainViewBounds && !isNaN(mainViewBounds.minX) && !isNaN(mainViewBounds.minY) && !isNaN(mainViewBounds.maxX) && !isNaN(mainViewBounds.maxY)) {
-        const vx = mPadding + mainViewBounds.minX * mScale;
-        const vy = mPadding + mainViewBounds.minY * mScale;
+        const vx = mPadding + (mainViewBounds.minX - worldOffsetX) * mScale;
+        const vy = mPadding + (mainViewBounds.minY - worldOffsetY) * mScale;
         const vw = (mainViewBounds.maxX - mainViewBounds.minX) * mScale;
         const vh = (mainViewBounds.maxY - mainViewBounds.minY) * mScale;
 
-        if (vw > 0 && vh > 0) { // Only draw if dimensions are positive
-            ctx.fillStyle = minimap.viewportFillColor;
-            ctx.fillRect(vx, vy, vw, vh);
-            ctx.strokeStyle = minimap.viewportBorderColor;
-            ctx.lineWidth = 1 * dpr;
-            ctx.strokeRect(vx, vy, vw, vh);
+        if (vw > 0 && vh > 0) { 
+            mmCtx.fillStyle = minimap.viewportFillColor;
+            mmCtx.fillRect(vx, vy, vw, vh);
+            mmCtx.strokeStyle = minimap.viewportBorderColor;
+            mmCtx.lineWidth = 1 * dpr;
+            mmCtx.strokeRect(vx, vy, vw, vh);
         }
     }
   },
