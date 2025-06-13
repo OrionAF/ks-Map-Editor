@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Kingshot map editor & planner</title>
-<style>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
     body {
       margin:0; background:#111; overflow:hidden;
       -webkit-user-select:none; user-select:none;
@@ -386,7 +387,7 @@
 const KingshotPlanner = {
   // —— CONFIGURATION ——
   config: {
-    CURRENT_VERSION: '0.2.7.3', // Version bump for minimap enhancements
+    CURRENT_VERSION: '0.2.7.4', // Version bump for minimap enhancements
     N: 1200,
     tileW: 10, tileH: 10,
     strokeW: 0.3, 
@@ -757,8 +758,25 @@ const KingshotPlanner = {
     return 3;
   },
 
+// In your KingshotPlanner object:
+
   showPatchNotes() {
     if (!this.dom.patchNotesBody || !this.dom.modalOverlay || !this.dom.patchNotesModal) return;
+    
+    // Optional: Configure marked.js - do this once, perhaps in init or here.
+    // For trusted content, default options are often fine.
+    // Enabling GFM (GitHub Flavored Markdown) and breaks for newlines is common.
+    if (typeof marked !== 'undefined') { // Ensure marked is loaded
+        marked.setOptions({
+            gfm: true,      // Enable GitHub Flavored Markdown (tables, strikethrough, etc.)
+            breaks: true,   // Convert single newlines in Markdown to <br>
+            sanitize: false // IMPORTANT: Set to true if parsing untrusted content. 
+        });
+    } else {
+        console.warn("marked.js library not loaded. Markdown processing will be basic.");
+    }
+
+
     const versions = Object.keys(this.state.patchNotes || {});
     if (versions.length === 0) {
         this.dom.patchNotesBody.innerHTML = `<p>No patch notes are available at this time.</p>`;
@@ -775,7 +793,20 @@ const KingshotPlanner = {
         });
         let content = '';
         versions.forEach((version, index) => {
-            content += `<h4>Version ${version}</h4><ul>${(this.state.patchNotes[version] || []).map(note => `<li>${note}</li>`).join('')}</ul>`;
+            const notesForVersion = this.state.patchNotes[version] || [];
+            const notesHtml = notesForVersion.map(noteText => {
+                let htmlOutput = '';
+                if (typeof marked !== 'undefined') {
+                    htmlOutput = marked.parse(noteText.trim()); // Use marked.parse()
+                } else {
+                    // Fallback to basic text if marked.js isn't loaded
+                    // You could add your simple regex parser here as a fallback if desired
+                    htmlOutput = noteText.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">"); 
+                }
+                return `<li>${htmlOutput}</li>`;
+            }).join('');
+
+            content += `<h4>Version ${version}</h4><ul>${notesHtml}</ul>`;
             if (index < versions.length - 1) content += '<hr style="border-color: #444; border-top: 0;">';
         });
         this.dom.patchNotesBody.innerHTML = content;
