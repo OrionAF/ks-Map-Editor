@@ -324,7 +324,7 @@
 const KingshotPlanner = {
   // —— CONFIGURATION ——
   config: {
-    CURRENT_VERSION: '0.2.6.0',
+    CURRENT_VERSION: '0.2.6.1',
     N: 1200,
     tileW: 10, tileH: 10,
     strokeW: 0.3, 
@@ -367,7 +367,7 @@ const KingshotPlanner = {
     lastFPS: 0,
     lastTiles: 0,
     selection: null, 
-    minFitScale: 0.001, // Initial sensible minimum, will be refined by resize()
+    minFitScale: 0.001, 
     isInitialLoad: true,
     touchStartTime: 0,
     dragging: false, 
@@ -377,6 +377,7 @@ const KingshotPlanner = {
     startDist: 0, startScale: 1, pinchCenter: null,
     startCamX: 0, startCamY: 0,
     hideLabelTimeout: null,
+    statsUpdateTime: 0, // For throttling stats display
     animationId: null 
   },
 
@@ -439,9 +440,8 @@ const KingshotPlanner = {
     this.dom.allianceRssToggle = document.getElementById('allianceRssToggle');
     this.dom.allianceRssAlwaysVisibleToggle = document.getElementById('allianceRssAlwaysVisibleToggle');
     
-    // Check if all essential DOM elements are found (optional, but good for robustness)
     for (const key in this.dom) {
-        if (this.dom[key] === null && key !== 'ctx' && key !== 'canvas') { // ctx and canvas checked above
+        if (this.dom[key] === null && key !== 'ctx' && key !== 'canvas') { 
             console.warn(`DOM element for '${key}' not found.`);
         }
     }
@@ -571,7 +571,7 @@ const KingshotPlanner = {
     this.state.allBuildings = buildings;
     this.state.buildingMap.clear();
     for (const b of this.state.allBuildings) {
-      if (typeof b.w === 'number' && typeof b.h === 'number') { // Ensure b.w and b.h are valid
+      if (typeof b.w === 'number' && typeof b.h === 'number') { 
         for (let dx = 0; dx < b.w; dx++) {
           for (let dy = 0; dy < b.h; dy++) {
             this.state.buildingMap.set(`${b.x + dx},${b.y + dy}`, b);
@@ -583,7 +583,7 @@ const KingshotPlanner = {
 
   preCalculateChunks() {
     const numLevels = 4;
-    this.state.chunkLevels = []; // Ensure it's reset if called multiple times
+    this.state.chunkLevels = []; 
     for (let level = 0; level < numLevels; level++) {
       const chunkSize = Math.pow(2, level + 1);
       const levelMap = new Map();
@@ -607,7 +607,7 @@ const KingshotPlanner = {
     const tileW_half = this.config.tileW / 2;
     const tileH_half = this.config.tileH / 2;
 
-    if (tileW_half === 0 || tileH_half === 0) { // Prevent division by zero if tileW/H are misconfigured
+    if (tileW_half === 0 || tileH_half === 0) { 
         console.error("tileW or tileH is zero in config!");
         return [0,0]; 
     }
@@ -633,7 +633,7 @@ const KingshotPlanner = {
   },
 
   getChunkLevelForZoom(pct) {
-    if (isNaN(pct)) pct = (this.state.cam.scale / this.config.baseScale) * 100; // Recalculate if NaN
+    if (isNaN(pct)) pct = (this.state.cam.scale / this.config.baseScale) * 100; 
     const detailThreshold = parseInt(this.dom.tileDetailSelect ? this.dom.tileDetailSelect.value : '50', 10);
     if (pct > detailThreshold) return -1;
     if (pct > detailThreshold / 2) return 0;
@@ -791,28 +791,21 @@ const KingshotPlanner = {
         const [a,b] = e.touches;
         const dist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
 
-        // *** FIX APPLIED HERE ***
         if (this.state.startDist === 0) {
-            // If startDist was 0, it means the initial two touch points were identical.
-            // Avoid division by zero.
-            // If points are still identical, do nothing.
-            // If they have separated, we could re-initialize the pinch, but for now,
-            // simply not processing the zoom change prevents NaN.
             return; 
         }
 
         let newScale = this.state.startScale * (dist / this.state.startDist);
         
         this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct/100 * this.config.baseScale, newScale));
-        if (isNaN(this.state.cam.scale)) this.state.cam.scale = this.state.startScale; // Failsafe for NaN
+        if (isNaN(this.state.cam.scale)) this.state.cam.scale = this.state.startScale; 
 
-        // Ensure startScale used for calculating wx, wy is not zero.
         const safeStartScale = (this.state.startScale === 0 || isNaN(this.state.startScale)) ? this.state.minFitScale : this.state.startScale;
 
         const wx = (this.state.pinchCenter.x - this.state.startCamX) / safeStartScale;
         const wy = (this.state.pinchCenter.y - this.state.startCamY) / safeStartScale;
 
-        if (isNaN(wx) || isNaN(wy)) { // If wx/wy became NaN, reset to prevent further issues
+        if (isNaN(wx) || isNaN(wy)) { 
              this.state.cam.x = this.state.startCamX;
              this.state.cam.y = this.state.startCamY;
         } else {
@@ -884,14 +877,14 @@ const KingshotPlanner = {
     const scaleY = this.dom.canvas.height / safeMapTotalHeight;
     
     this.state.minFitScale = Math.max(0.001, Math.min(scaleX, scaleY) * 0.95);
-    if (isNaN(this.state.minFitScale)) this.state.minFitScale = 0.001; // Failsafe
+    if (isNaN(this.state.minFitScale)) this.state.minFitScale = 0.001; 
     
     if (this.state.isInitialLoad) {
         this.zoomToFit();
         this.state.isInitialLoad = false;
     } else {
         this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
-        if(isNaN(this.state.cam.scale)) this.state.cam.scale = this.state.minFitScale; // Failsafe
+        if(isNaN(this.state.cam.scale)) this.state.cam.scale = this.state.minFitScale; 
         this.clampCamera();
     }
   },
@@ -919,8 +912,8 @@ const KingshotPlanner = {
     } else {
         this.state.cam.y = canvasH / 2 + mapScreenH / 2;
     }
-    if(isNaN(this.state.cam.x)) this.state.cam.x = canvasW / 2; // Failsafe
-    if(isNaN(this.state.cam.y)) this.state.cam.y = canvasH / 2; // Failsafe
+    if(isNaN(this.state.cam.x)) this.state.cam.x = canvasW / 2; 
+    if(isNaN(this.state.cam.y)) this.state.cam.y = canvasH / 2; 
   },
 
   changeZoomBy(delta) {
@@ -930,7 +923,7 @@ const KingshotPlanner = {
     const changeAmt = delta > 0 ? currentPct * 0.25 : currentPct * -0.2;
     let targetScale = ((currentPct + changeAmt) / 100) * this.config.baseScale;
     targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-    if(isNaN(targetScale)) targetScale = this.state.cam.scale; // Failsafe
+    if(isNaN(targetScale)) targetScale = this.state.cam.scale; 
 
     const cx = this.dom.canvas.width / 2, cy = this.dom.canvas.height / 2;
     this.animateZoom(targetScale, cx, cy, 100);
@@ -945,9 +938,9 @@ const KingshotPlanner = {
     const startX = this.state.cam.x, startY = this.state.cam.y;
     const start = performance.now();
 
-    if (startScale === 0) { // Should not happen with minFitScale logic
+    if (startScale === 0) { 
         console.error("animateZoom called with startScale 0");
-        this.state.cam.scale = targetScale; // Just jump to target
+        this.state.cam.scale = targetScale; 
         this.clampCamera();
         return;
     }
@@ -955,7 +948,7 @@ const KingshotPlanner = {
     const wx = (anchorX - startX)/startScale;
     const wy = (anchorY - startY)/startScale;
 
-    if (isNaN(wx) || isNaN(wy)) { // Failsafe if anchor calculation is NaN
+    if (isNaN(wx) || isNaN(wy)) { 
         this.state.cam.scale = targetScale;
         this.clampCamera();
         return;
@@ -966,7 +959,7 @@ const KingshotPlanner = {
       const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
       this.state.cam.scale = startScale + (targetScale - startScale)*k;
       this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale); 
-      if(isNaN(this.state.cam.scale)) this.state.cam.scale = startScale; // Failsafe
+      if(isNaN(this.state.cam.scale)) this.state.cam.scale = startScale; 
 
       this.state.cam.x = anchorX - wx * this.state.cam.scale;
       this.state.cam.y = anchorY - wy * this.state.cam.scale;
@@ -992,7 +985,7 @@ const KingshotPlanner = {
         const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
         this.state.cam.scale = startScale + (targetScale - startScale)*k;
         this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
-        if(isNaN(this.state.cam.scale)) this.state.cam.scale = startScale; // Failsafe
+        if(isNaN(this.state.cam.scale)) this.state.cam.scale = startScale; 
 
         this.state.cam.x = startX + (targetX - startX)*k;
         this.state.cam.y = startY + (targetY - startY)*k;
@@ -1014,7 +1007,7 @@ const KingshotPlanner = {
     const max = parseInt(slider.max, 10);
     const val = parseInt(slider.value, 10);
 
-    if (max === min) { // Avoid division by zero if slider range is 0
+    if (max === min) { 
         label.style.display = 'none';
         return;
     }
@@ -1057,7 +1050,7 @@ const KingshotPlanner = {
     const text = `${x}, ${y}`;
     let optimalFontSize = Math.min(
       config.tileH * 0.8 * 0.5,
-      (config.tileW * 0.8 / (text.length || 1)) * 1.8 // Ensure text.length is not 0
+      (config.tileW * 0.8 / (text.length || 1)) * 1.8 
     ) * 0.7;
     if ((optimalFontSize * currentCamScale) < 5) return;
 
@@ -1127,7 +1120,7 @@ const KingshotPlanner = {
       const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9;
       ctx.font = `bold 100px sans-serif`; 
       const textMetrics = ctx.measureText(b.displayName);
-      const displayNameWidth = textMetrics.width || 1; // Ensure not zero
+      const displayNameWidth = textMetrics.width || 1; 
       const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
       const optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
 
@@ -1151,7 +1144,7 @@ const KingshotPlanner = {
   // —— MAIN RENDER LOOP ——
   mainLoop(now) {
     const { dom, state, config } = this;
-    const ctx = dom.ctx; // Assumed to be valid by checks in init()
+    const ctx = dom.ctx; 
     
     try {
         ctx.setTransform(1,0,0,1,0,0);
@@ -1204,9 +1197,9 @@ const KingshotPlanner = {
           const minSum = Math.floor(viewBounds.minX + viewBounds.minY);
           const maxSum = Math.ceil(viewBounds.maxX + viewBounds.maxY);
           for (let sum = minSum; sum <= maxSum; sum++) {
-            const startX = Math.floor(Math.max(viewBounds.minX, (sum - viewBounds.maxY)));
-            const endX = Math.ceil(Math.min(viewBounds.maxX, (sum - viewBounds.minY)));
-            for (let x = startX; x <= endX; x++) {
+            const startXCoord = Math.floor(Math.max(viewBounds.minX, (sum - viewBounds.maxY)));
+            const endXCoord = Math.ceil(Math.min(viewBounds.maxX, (sum - viewBounds.minY)));
+            for (let x = startXCoord; x <= endXCoord; x++) {
                 const y = sum - x;
                 if (x < 0 || x >= config.N || y < 0 || y >= config.N) continue;
                 if (!this.getBuildingAt(x, y)) this.drawTile(x, y, shouldDrawBorders);
@@ -1276,9 +1269,9 @@ const KingshotPlanner = {
                   highlightColor = config.pingColor;
               }
           }
-          if (state.selection.w) { // It's a building
+          if (state.selection.w) { 
             this.drawBuildingFootprint(state.selection, highlightColor, true);
-          } else { // It's a tile
+          } else { 
             const [sx, sy] = this.worldToScreen(state.selection.x, state.selection.y);
             ctx.beginPath();
             ctx.moveTo(sx, sy - config.tileH/2); ctx.lineTo(sx + config.tileW/2, sy);
@@ -1294,21 +1287,20 @@ const KingshotPlanner = {
 
         const dt  = now - state.lastFrame;
         state.lastFrame = now;
-        if (dt > 0) { // Avoid division by zero if dt is 0
+        if (dt > 0) { 
             state.lastFPS   = Math.round(1000/dt);
         }
         state.lastTiles = state.tileCount;
-        if (!mainLoop.t0) mainLoop.t0 = now;
-        if (now - mainLoop.t0 > 500) {
+        
+        // *** FIX APPLIED HERE for stats update logic ***
+        if (now - state.statsUpdateTime > 500) { 
           if(dom.statsFPSEl) dom.statsFPSEl.textContent   = `FPS:   ${state.lastFPS}`;
           if(dom.statsTilesEl) dom.statsTilesEl.textContent = `Tiles: ${state.lastTiles}`;
-          mainLoop.t0 = now;
+          state.statsUpdateTime = now; 
         }
+
     } catch (error) {
         console.error("Error in mainLoop:", error);
-        // Optionally, stop the loop if errors are too frequent or critical
-        // cancelAnimationFrame(this.state.animationId); // Or however you store the main loop's ID
-        // alert("A critical error occurred in the rendering loop. Please refresh.");
     }
     
     requestAnimationFrame(this.mainLoop.bind(this));

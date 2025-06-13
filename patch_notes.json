@@ -1,4 +1,7 @@
 {
+  "0.2.6.1": [
+    "Attempt to fix the status panel."
+  ],
   "0.2.6.0": [
     "Major internal code refactor for improved long-term stability and easier future updates.",
     "Added a 'ping' effect: selections now flash briefly to make them easier to locate on the map.",
