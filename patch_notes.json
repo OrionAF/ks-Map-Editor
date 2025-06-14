@@ -1,4 +1,11 @@
 {
+  "0.2.7.7": [
+    "**Minimap Visual Refinements:**",
+    "- *Viewport Shape:* The minimap viewport indicator is now drawn as a diamond, accurately reflecting the main map's isometric camera view.",
+    "- *Viewport Contrast:* The fill and border colors of the minimap viewport indicator have been adjusted for better contrast against biome colors.",
+    "- *Toggle Button Appearance:* The minimap toggle button has been made slimmer with reduced padding and a slightly smaller font for a less obtrusive look.",
+    "- *Reduced Internal Border:* Minimap canvas internal padding has been significantly reduced, minimizing the visible 'border' effect from the background color and allowing drawn content to fill more of the canvas."
+  ],
   "0.2.7.6": [
     "**Minimap Overhaul & Enhancements:**",
     "- *Size Increase:* The minimap has been significantly enlarged (approximately doubled in size) for better visibility and detail.",

@@ -262,24 +262,23 @@
     /* --- NEW: Minimap Styles --- */
     #minimapContainer {
         position: absolute;
-        /* Push it below the settings button. Adjust 45px if button height changes. */
         top: 10px; 
         margin-top: 40px; 
         right: 10px;
-        z-index: 900; /* Ensure it's above main canvas, below settings modal if it were ever to overlap */
-        transition: margin-top 0.3s ease-out; /* Add this line */
-        width: 400px; /* NEW: Set width to match new canvas width */
+        z-index: 900; 
+        transition: margin-top 0.3s ease-out; 
+        width: 400px; 
     }
-    #minimapToggleBtn { /* NEW: Styles for the toggle button */
+    #minimapToggleBtn { 
         display: block;
         width: 100%;
-        padding: 5px 0;
-        background-color: #282828; /* Dark background for the button */
+        padding: 3px 0; /* MODIFIED: Reduced vertical padding */
+        background-color: #282828; 
         color: #ddd;
         border: 1px solid #444;
-        border-bottom: none; /* Seamless with canvas border if canvas is visible */
+        border-bottom: none; 
         font-family: sans-serif;
-        font-size: 13px;
+        font-size: 12px; /* MODIFIED: Slightly smaller font */
         text-align: center;
         cursor: pointer;
         box-sizing: border-box;
@@ -287,14 +286,15 @@
         -webkit-user-select: none;
     }
     #minimapCanvas {
-        width: 400px; /* MODIFIED: Desired display width (doubled) */
-        height: 300px; /* MODIFIED: Desired display height (doubled) */
-        border: 1px solid #444; /* MODIFIED: Match button border color */
-        /* border-top: none; */ /* Optional: if you want the button to form the top edge visually, but keeping it makes it look contained */
+        width: 400px; 
+        height: 300px; 
+        border: 1px solid #444; 
+        /* The canvas top border will meet the button's non-existent bottom border */
+        /* border-top: none; */ /* Keep this if you want the button to truly be the top edge */
         background-color: rgba(0,0,0,0.5); 
-        display: block; /* Ensure it's block for consistent layout */
+        display: block; 
     }
-    #minimapCanvas.hidden { /* NEW: Class to hide canvas */
+    #minimapCanvas.hidden {
         display: none;
     }
 
@@ -399,7 +399,7 @@
       <div class="patch-notes-body" id="patchNotesBody">
           <!-- Content will be injected by JS -->
       </div>
-      <div class.patch-notes-footer"> <!-- Corrected class name -->
+      <div class.patch-notes-footer"> 
           <input type="checkbox" id="hidePatchNotesCheckbox">
           <label for="hidePatchNotesCheckbox">Do not show this again until the next update.</label>
       </div>
@@ -411,7 +411,7 @@
 const KingshotPlanner = {
   // —— CONFIGURATION ——
   config: {
-    CURRENT_VERSION: '0.2.7.6', // Version bump for minimap toggle & resize
+    CURRENT_VERSION: '0.2.7.7', // Version bump for minimap appearance & viewport
     N: 1200,
     tileW: 10, tileH: 10,
     strokeW: 0.3, 
@@ -421,7 +421,7 @@ const KingshotPlanner = {
     selectionColor: '#ff0',
     pingColor: '#fff',
     pingDuration: 500, 
-    baseScale: 5, // Main map base scale
+    baseScale: 5, 
     biomeColors: {
       fertile:  'rgb(109, 159, 62)',
       plains:   'rgb(158, 180, 103)',
@@ -439,12 +439,12 @@ const KingshotPlanner = {
       iron:  { displayName: 'Iron',  fillColor: 'rgba(192,192,192,1)', borderColor: 'rgba(153,153,153,1)' },
     },
     minimap: { 
-        width: 400,      // MODIFIED: Doubled width
-        height: 300,     // MODIFIED: Doubled height
-        padding: 2,      // MODIFIED: Reduced padding to make "border" thinner
+        width: 400,      
+        height: 300,     
+        padding: 1,      // MODIFIED: Drastically reduced padding
         bgColor: 'rgba(40,40,40,0.8)',
-        viewportFillColor: 'rgba(255,255,255,0.2)',
-        viewportBorderColor: 'rgba(255,255,255,0.7)',
+        viewportFillColor: 'rgba(0, 0, 0, 0.25)',       // MODIFIED: Darker fill
+        viewportBorderColor: 'rgba(20, 20, 20, 0.85)',  // MODIFIED: Darker, more opaque border
         buildingColor: 'rgba(200,200,200,0.7)', 
         kingCastleColor: 'rgba(255,215,0,0.8)',
         zoomFactorMin: 1.0, 
@@ -484,7 +484,7 @@ const KingshotPlanner = {
     minimapActualScale: 0.1, 
     minimapWorldOffsetX: 0,  
     minimapWorldOffsetY: 0,  
-    isMinimapVisible: true, // NEW: State for minimap visibility
+    isMinimapVisible: true, 
     animationId: null 
   },
 
@@ -502,7 +502,7 @@ const KingshotPlanner = {
     settingsBtn: null, settingsPanel: null, 
     minimapCanvas: null, minimapCtx: null,
     minimapContainer: null,
-    minimapToggleBtn: null // NEW: DOM reference for the toggle button
+    minimapToggleBtn: null 
   },
 
   // —— INITIALIZATION ——
@@ -553,10 +553,9 @@ const KingshotPlanner = {
     this.dom.settingsBtn = document.getElementById('settingsBtn');
     this.dom.settingsPanel = document.getElementById('settingsPanel');
     this.dom.minimapContainer = document.getElementById('minimapContainer');
-    this.dom.minimapToggleBtn = document.getElementById('minimapToggleBtn'); // NEW: Get the toggle button
+    this.dom.minimapToggleBtn = document.getElementById('minimapToggleBtn'); 
     this.dom.minimapCanvas = document.getElementById('minimapCanvas');
     if (this.dom.minimapCanvas) {
-        // config.minimap.width and height are now the new doubled values
         this.dom.minimapCanvas.width = this.config.minimap.width * (window.devicePixelRatio || 1);
         this.dom.minimapCanvas.height = this.config.minimap.height * (window.devicePixelRatio || 1);
         this.dom.minimapCtx = this.dom.minimapCanvas.getContext('2d');
@@ -703,9 +702,7 @@ const KingshotPlanner = {
         });
     }
 
-    // NEW: Minimap Toggle Logic
     if (this.dom.minimapToggleBtn && this.dom.minimapCanvas) {
-        // Set initial state based on this.state.isMinimapVisible
         this.dom.minimapCanvas.classList.toggle('hidden', !this.state.isMinimapVisible);
         this.dom.minimapToggleBtn.textContent = this.state.isMinimapVisible ? 'Hide Minimap' : 'Show Minimap';
 
@@ -713,21 +710,7 @@ const KingshotPlanner = {
             this.state.isMinimapVisible = !this.state.isMinimapVisible;
             this.dom.minimapCanvas.classList.toggle('hidden', !this.state.isMinimapVisible);
             this.dom.minimapToggleBtn.textContent = this.state.isMinimapVisible ? 'Hide Minimap' : 'Show Minimap';
-            
-            // Optional: Store preference in localStorage
-            localStorage.setItem('minimapVisible', this.state.isMinimapVisible);
-
-            // If minimap is now visible, might need to trigger a redraw if it wasn't drawing while hidden
-            // However, mainLoop runs continuously, so it should pick up drawing when visible.
         });
-
-        // Optional: Load preference from localStorage
-        const savedMinimapVisibility = localStorage.getItem('minimapVisible');
-        if (savedMinimapVisibility !== null) {
-            this.state.isMinimapVisible = savedMinimapVisibility === 'true';
-            this.dom.minimapCanvas.classList.toggle('hidden', !this.state.isMinimapVisible);
-            this.dom.minimapToggleBtn.textContent = this.state.isMinimapVisible ? 'Hide Minimap' : 'Show Minimap';
-        }
     }
 
 
@@ -759,27 +742,14 @@ const KingshotPlanner = {
   },
 
   calculateBaseMinimapScale() {
-    if (!this.dom.minimapCanvas || !this.config.minimap) return; // Added !this.config.minimap check
+    if (!this.dom.minimapCanvas || !this.config.minimap) return; 
     const { minimap, N } = this.config;
     const dpr = window.devicePixelRatio || 1;
-    // Use minimap.width and minimap.height from config, as these are the logical dimensions
-    const drawWidth = minimap.width * dpr - 2 * minimap.padding * dpr;
-    const drawHeight = minimap.height * dpr - 2 * minimap.padding * dpr;
     
-    // The actual canvas buffer dimensions are minimap.width * dpr
-    // The drawable area is (minimap.width * dpr) - (2 * minimap.padding * dpr)
-    // We want to scale N units into this drawable area.
+    const canvasBufferWidth = this.dom.minimapCanvas.width; // Already DPR adjusted
+    const canvasBufferHeight = this.dom.minimapCanvas.height; // Already DPR adjusted
 
-    // Base scale should relate N to the logical width/height, and DPR is handled for canvas buffer
-    // The CSS sets the display size. The JS sets the buffer size.
-    // The scale calculated here is for drawing world units onto the canvas buffer.
-    
-    // Correct calculation: Scale N units to fit into the (CSS_dimension - 2*padding)
-    // The minimapCanvas.width/height are already scaled by DPR in init/resize.
-    // So, we use dom.minimapCanvas.width (which is config.minimap.width * dpr)
-    const canvasBufferWidth = this.dom.minimapCanvas.width;
-    const canvasBufferHeight = this.dom.minimapCanvas.height;
-
+    // Effective drawable area in buffer pixels
     const effectiveDrawableWidth = canvasBufferWidth - (2 * minimap.padding * dpr);
     const effectiveDrawableHeight = canvasBufferHeight - (2 * minimap.padding * dpr);
 
@@ -1131,9 +1101,8 @@ const KingshotPlanner = {
     this.dom.canvas.width  = window.innerWidth;
     this.dom.canvas.height = window.innerHeight;
     
-    if (this.dom.minimapCanvas && this.config.minimap) { // Added !this.config.minimap check 
+    if (this.dom.minimapCanvas && this.config.minimap) { 
         const dpr = window.devicePixelRatio || 1;
-        // Use config values for logical dimensions to set canvas buffer size
         this.dom.minimapCanvas.width = this.config.minimap.width * dpr;
         this.dom.minimapCanvas.height = this.config.minimap.height * dpr;
         this.calculateBaseMinimapScale(); 
@@ -1333,14 +1302,14 @@ const KingshotPlanner = {
     this.animatePanZoom(this.state.cam.scale, targetCamX, targetCamY, 200);
   },
 
-  drawMinimap(mainViewBounds) {
-    if (!this.dom.minimapCtx || this.state.baseMinimapScale <= 0 || !this.state.isMinimapVisible || !this.config.minimap) return; // Added checks
+  drawMinimap(viewportCorners) { // MODIFIED: Parameter name changed
+    if (!this.dom.minimapCtx || this.state.baseMinimapScale <= 0 || !this.state.isMinimapVisible || !this.config.minimap) return; 
 
     const mmCtx = this.dom.minimapCtx;
     const { minimap, N, biomeRegions, biomeColors, baseScale: mainBaseScale } = this.config;
     const { cam: mainCam, baseMinimapScale } = this.state;
     const dpr = window.devicePixelRatio || 1;
-    // Use the canvas buffer dimensions for width/height
+    
     const canvasWidth = this.dom.minimapCanvas.width; 
     const canvasHeight = this.dom.minimapCanvas.height;
     const mPadding = minimap.padding * dpr;
@@ -1362,7 +1331,6 @@ const KingshotPlanner = {
     mmCtx.fillStyle = minimap.bgColor;
     mmCtx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // This calculation now correctly uses the canvas buffer dimensions for minimapWorldWidth/HeightVisible
     const [minimapViewCenterX, minimapViewCenterY] = this.screenToWorld(this.dom.canvas.width / 2, this.dom.canvas.height / 2);
     const minimapWorldWidthVisible = (canvasWidth - 2 * mPadding) / mScale;        
     const minimapWorldHeightVisible = (canvasHeight - 2 * mPadding) / mScale;
@@ -1404,18 +1372,32 @@ const KingshotPlanner = {
         }
     });
 
-    if (mainViewBounds && !isNaN(mainViewBounds.minX) && !isNaN(mainViewBounds.minY) && !isNaN(mainViewBounds.maxX) && !isNaN(mainViewBounds.maxY)) {
-        const vx = mPadding + (mainViewBounds.minX - worldOffsetX) * mScale;
-        const vy = mPadding + (mainViewBounds.minY - worldOffsetY) * mScale;
-        const vw = (mainViewBounds.maxX - mainViewBounds.minX) * mScale;
-        const vh = (mainViewBounds.maxY - mainViewBounds.minY) * mScale;
+    // MODIFIED: Draw Viewport Diamond
+    if (viewportCorners) {
+        const points = [
+            viewportCorners.tl, 
+            viewportCorners.tr, 
+            viewportCorners.br, 
+            viewportCorners.bl  
+        ].map(p => ({
+            x: mPadding + (p.x - worldOffsetX) * mScale,
+            y: mPadding + (p.y - worldOffsetY) * mScale
+        }));
 
-        if (vw > 0 && vh > 0) { 
+        if (points.every(p => !isNaN(p.x) && !isNaN(p.y))) {
             mmCtx.fillStyle = minimap.viewportFillColor;
-            mmCtx.fillRect(vx, vy, vw, vh);
             mmCtx.strokeStyle = minimap.viewportBorderColor;
-            mmCtx.lineWidth = 1 * dpr; // Use dpr for line width for sharpness
-            mmCtx.strokeRect(vx, vy, vw, vh);
+            mmCtx.lineWidth = 1.5 * dpr; // Slightly thicker line for better visibility
+
+            mmCtx.beginPath();
+            mmCtx.moveTo(points[0].x, points[0].y);
+            mmCtx.lineTo(points[1].x, points[1].y);
+            mmCtx.lineTo(points[2].x, points[2].y);
+            mmCtx.lineTo(points[3].x, points[3].y);
+            mmCtx.closePath();
+
+            mmCtx.fill();
+            mmCtx.stroke();
         }
     }
   },
@@ -1579,17 +1561,27 @@ const KingshotPlanner = {
         const [tr_x, tr_y] = this.screenToWorld(dom.canvas.width, 0);
         const [bl_x, bl_y] = this.screenToWorld(0, dom.canvas.height);
         const [br_x, br_y] = this.screenToWorld(dom.canvas.width, dom.canvas.height);
+        
+        // This viewBounds AABB is still useful for culling on the main map
         const viewBounds = { 
           minX: Math.min(tl_x, tr_x, bl_x, br_x) - 2,
           maxX: Math.max(tl_x, tr_x, bl_x, br_x) + 2,
           minY: Math.min(tl_y, tr_y, bl_y, br_y) - 2,
           maxY: Math.max(tl_y, tr_y, bl_y, br_y) + 2,
         };
+        // For minimap viewport drawing, we'll pass the actual corners
+        const viewportCorners = {
+            tl: { x: tl_x, y: tl_y },
+            tr: { x: tr_x, y: tr_y },
+            bl: { x: bl_x, y: bl_y },
+            br: { x: br_x, y: br_y }
+        };
+
 
         if (isNaN(viewBounds.minX) || isNaN(viewBounds.maxX) || isNaN(viewBounds.minY) || isNaN(viewBounds.maxY)) {
             console.error("View bounds are NaN, skipping render cycle. Cam State:", state.cam, "Calculated Bounds:", viewBounds);
             ctx.restore();
-            if (this.state.isMinimapVisible) this.drawMinimap(null);  // Only draw if visible
+            if (this.state.isMinimapVisible) this.drawMinimap(null); 
             requestAnimationFrame(this.mainLoop.bind(this));
             return;
         }
@@ -1691,8 +1683,8 @@ const KingshotPlanner = {
         
         ctx.restore(); 
 
-        if (this.state.isMinimapVisible) { // Only draw minimap if it's supposed to be visible
-            this.drawMinimap(viewBounds);
+        if (this.state.isMinimapVisible) { 
+            this.drawMinimap(viewportCorners); // MODIFIED: Pass viewportCorners
         }
 
 
