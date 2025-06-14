@@ -458,8 +458,10 @@ const KingshotPlanner = {
     statsUpdateTime: 0, 
     currentTileDetailThreshold: 50, 
     
-    baseMinimapScale: 0.1, // Scale to fit entire world on minimap (calculated once)
-    // minimapActualScale is now dynamic, calculated in drawMinimap
+    baseMinimapScale: 0.1,
+    minimapActualScale: 0.1, // You already have this for the scale
+    minimapWorldOffsetX: 0,  // <--- ADD THIS
+    minimapWorldOffsetY: 0,  // <--- ADD THIS
     animationId: null 
   },
 
@@ -1278,15 +1280,21 @@ const KingshotPlanner = {
         return;
     }
 
-    let worldX = (clickX - padding) / minimapScale;
-    let worldY = (clickY - padding) / minimapScale;
+    // Calculate click position relative to the minimap's visible world area's top-left
+    let localClickedWorldX = (clickX - padding) / minimapScale;
+    let localClickedWorldY = (clickY - padding) / minimapScale;
 
-    worldX = Math.max(0, Math.min(N - 1, worldX));
-    worldY = Math.max(0, Math.min(N - 1, worldY));
-    
+    // Add the minimap's current world offset to get the absolute world coordinates
+    let worldX = localClickedWorldX + this.state.minimapWorldOffsetX;
+    let worldY = localClickedWorldY + this.state.minimapWorldOffsetY;
+
+    // Clamp to map boundaries and optionally round
+    worldX = Math.max(0, Math.min(N - 1, Math.round(worldX)));
+    worldY = Math.max(0, Math.min(N - 1, Math.round(worldY)));
+
     const [screenX, screenY] = this.worldToScreen(worldX, worldY);
-    const targetCamX = this.dom.canvas.width/2 - screenX * this.state.cam.scale;
-    const targetCamY = this.dom.canvas.height/2 - screenY * this.state.cam.scale;
+    const targetCamX = this.dom.canvas.width / 2 - screenX * this.state.cam.scale;
+    const targetCamY = this.dom.canvas.height / 2 - screenY * this.state.cam.scale;
     this.animatePanZoom(this.state.cam.scale, targetCamX, targetCamY, 200);
   },
 
@@ -1329,6 +1337,9 @@ const KingshotPlanner = {
       
       const worldOffsetX = minimapViewCenterX - (minimapWorldWidthVisible / 2);
       const worldOffsetY = minimapViewCenterY - (minimapWorldHeightVisible / 2);
+
+      this.state.minimapWorldOffsetX = worldOffsetX; // <--- ADD THIS LINE
+      this.state.minimapWorldOffsetY = worldOffsetY; // <--- ADD THIS LINE
 
       // --- Corrected Biome Drawing Section ---
       const biomeDrawOrder = ['badlands', 'plains', 'fertile']; // Define your draw order
