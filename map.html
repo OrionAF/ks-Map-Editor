@@ -475,7 +475,8 @@ const KingshotPlanner = {
     tileDetailSelect: null, gridlinesToggle: null, allianceRssToggle: null,
     allianceRssAlwaysVisibleToggle: null,
     settingsBtn: null, settingsPanel: null, 
-    minimapCanvas: null, minimapCtx: null 
+    minimapCanvas: null, minimapCtx: null,
+    minimapContainer: null
   },
 
   // —— INITIALIZATION ——
@@ -525,6 +526,7 @@ const KingshotPlanner = {
     this.dom.allianceRssAlwaysVisibleToggle = document.getElementById('allianceRssAlwaysVisibleToggle');
     this.dom.settingsBtn = document.getElementById('settingsBtn');
     this.dom.settingsPanel = document.getElementById('settingsPanel');
+    this.dom.minimapContainer = document.getElementById('minimapContainer');
     this.dom.minimapCanvas = document.getElementById('minimapCanvas');
     if (this.dom.minimapCanvas) {
         this.dom.minimapCanvas.width = this.config.minimap.width * (window.devicePixelRatio || 1);
@@ -1341,18 +1343,6 @@ const KingshotPlanner = {
               mmCtx.fillRect(x, y, w, h);
           }
       }
-
-    // Draw Biome Regions, offset by minimap's view
-    for (const biomeName in biomeRegions) {
-        const region = biomeRegions[biomeName];
-        mmCtx.fillStyle = biomeColors[biomeName];
-        // Calculate region's position relative to the minimap's camera/view
-        const x = mPadding + (region.x1 - worldOffsetX) * mScale;
-        const y = mPadding + (region.y1 - worldOffsetY) * mScale;
-        const w = (region.x2 - region.x1 + 1) * mScale;
-        const h = (region.y2 - region.y1 + 1) * mScale;
-        mmCtx.fillRect(x, y, w, h);
-    }
     
     // Draw Key Buildings, offset by minimap's view
     (this.state.baseMap.defaultBuildings || []).forEach(b => {
