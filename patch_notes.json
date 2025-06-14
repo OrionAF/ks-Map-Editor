@@ -1,4 +1,11 @@
 {
+  "0.2.7.6": [
+    "**Minimap Overhaul & Enhancements:**",
+    "- *Size Increase:* The minimap has been significantly enlarged (approximately doubled in size) for better visibility and detail.",
+    "- *Toggle Functionality:* The minimap can now be shown or hidden using a new integrated toggle button.",
+    "- *UI Integration:* The toggle button is styled as a sleek bar at the top of the minimap, effectively replacing the previous thick padding border for a cleaner look.",
+    "- *Cleaner Look:* Internal padding within the minimap canvas has been reduced, allowing drawn content to extend closer to its edges and the new toggle button."
+  ],
   "0.2.7.5": [
     "**Optimization:**",
     "- Made some improvements to the minimap."
