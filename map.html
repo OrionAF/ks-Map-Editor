@@ -272,13 +272,14 @@
     #minimapToggleBtn { 
         display: block;
         width: 100%;
-        padding: 3px 0; /* MODIFIED: Reduced vertical padding */
+        padding: 2px 0; /* MODIFIED: Further reduced vertical padding */
         background-color: #282828; 
-        color: #ddd;
+        color: #bbb; /* MODIFIED: Slightly lighter color for better readability on dark */
         border: 1px solid #444;
-        border-bottom: none; 
+        /* MODIFIED: Button itself will have a bottom border that meets the canvas */
+        /* border-bottom: none; */ /* Removed this to let it have its own bottom border */
         font-family: sans-serif;
-        font-size: 12px; /* MODIFIED: Slightly smaller font */
+        font-size: 11px; /* MODIFIED: Even smaller font */
         text-align: center;
         cursor: pointer;
         box-sizing: border-box;
@@ -289,8 +290,7 @@
         width: 400px; 
         height: 300px; 
         border: 1px solid #444; 
-        /* The canvas top border will meet the button's non-existent bottom border */
-        /* border-top: none; */ /* Keep this if you want the button to truly be the top edge */
+        border-top: none; /* MODIFIED: Canvas top border removed, button acts as it */
         background-color: rgba(0,0,0,0.5); 
         display: block; 
     }
@@ -411,7 +411,7 @@
 const KingshotPlanner = {
   // —— CONFIGURATION ——
   config: {
-    CURRENT_VERSION: '0.2.7.7', // Version bump for minimap appearance & viewport
+    CURRENT_VERSION: '0.2.7.7', // Version bump for minimap viewport indicator & toggle style
     N: 1200,
     tileW: 10, tileH: 10,
     strokeW: 0.3, 
@@ -441,10 +441,11 @@ const KingshotPlanner = {
     minimap: { 
         width: 400,      
         height: 300,     
-        padding: 1,      // MODIFIED: Drastically reduced padding
+        padding: 0.5,    // MODIFIED: Very minimal padding
         bgColor: 'rgba(40,40,40,0.8)',
-        viewportFillColor: 'rgba(0, 0, 0, 0.25)',       // MODIFIED: Darker fill
-        viewportBorderColor: 'rgba(20, 20, 20, 0.85)',  // MODIFIED: Darker, more opaque border
+        viewportFillColor: 'rgba(0, 0, 0, 0.25)',       
+        viewportBorderColor: 'rgba(20, 20, 20, 0.85)',  
+        viewportUpIndicatorColor: 'rgba(220, 50, 50, 0.9)', // NEW: Color for the "up" arrow
         buildingColor: 'rgba(200,200,200,0.7)', 
         kingCastleColor: 'rgba(255,215,0,0.8)',
         zoomFactorMin: 1.0, 
@@ -507,6 +508,7 @@ const KingshotPlanner = {
 
   // —— INITIALIZATION ——
   init() {
+    // ... (init remains the same as your v0.2.7.7) ...
     const self = this; 
 
     this.dom.canvas = document.getElementById('map');
@@ -594,6 +596,7 @@ const KingshotPlanner = {
   },
 
   initializeUI() {
+    // ... (initializeUI remains largely the same as your v0.2.7.7, just ensure minimap toggle logic is present) ...
     if(this.dom.infoBtn && this.dom.infoPanel) this.dom.infoBtn.addEventListener('click', ()=>this.dom.infoPanel.classList.toggle('open'));
     if(this.dom.statsBtn && this.dom.statsPanel) this.dom.statsBtn.addEventListener('click', ()=>this.dom.statsPanel.classList.toggle('open'));
     if(this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
@@ -742,14 +745,14 @@ const KingshotPlanner = {
   },
 
   calculateBaseMinimapScale() {
+    // ... (remains the same as v0.2.7.7) ...
     if (!this.dom.minimapCanvas || !this.config.minimap) return; 
     const { minimap, N } = this.config;
     const dpr = window.devicePixelRatio || 1;
     
-    const canvasBufferWidth = this.dom.minimapCanvas.width; // Already DPR adjusted
-    const canvasBufferHeight = this.dom.minimapCanvas.height; // Already DPR adjusted
+    const canvasBufferWidth = this.dom.minimapCanvas.width; 
+    const canvasBufferHeight = this.dom.minimapCanvas.height; 
 
-    // Effective drawable area in buffer pixels
     const effectiveDrawableWidth = canvasBufferWidth - (2 * minimap.padding * dpr);
     const effectiveDrawableHeight = canvasBufferHeight - (2 * minimap.padding * dpr);
 
@@ -763,6 +766,7 @@ const KingshotPlanner = {
   },
 
   preProcessBuildings() {
+    // ... (remains the same as v0.2.7.7) ...
     let buildings = [...(this.state.baseMap.defaultBuildings || []), ...(this.state.userBuildings || [])];
     if (this.state.baseMap.allianceRssBuildings) {
       const formattedRssBuildings = this.state.baseMap.allianceRssBuildings.map(rss => {
@@ -792,6 +796,7 @@ const KingshotPlanner = {
   },
 
   preCalculateChunks() {
+    // ... (remains the same as v0.2.7.7) ...
     const numLevels = 4;
     this.state.chunkLevels = []; 
     for (let level = 0; level < numLevels; level++) {
@@ -808,10 +813,12 @@ const KingshotPlanner = {
   },
 
   worldToScreen(x,y) {
+    // ... (remains the same as v0.2.7.7) ...
     return [(x - y)*(this.config.tileW/2), -(x + y)*(this.config.tileH/2)];
   },
 
   screenToWorld(sx,sy) {
+    // ... (remains the same as v0.2.7.7) ...
     const scale = (this.state.cam.scale === 0 || isNaN(this.state.cam.scale)) ? this.state.minFitScale : this.state.cam.scale;
     const tileW_half = this.config.tileW / 2;
     const tileH_half = this.config.tileH / 2;
@@ -835,10 +842,12 @@ const KingshotPlanner = {
   },
 
   getBuildingAt(x, y) {
+    // ... (remains the same as v0.2.7.7) ...
     return this.state.buildingMap.get(`${x},${y}`) || null;
   },
 
   getBiomeForTile(x, y) {
+    // ... (remains the same as v0.2.7.7) ...
     const { fertile, plains } = this.config.biomeRegions;
     if (x >= fertile.x1 && x <= fertile.x2 && y >= fertile.y1 && y <= fertile.y2) return 'fertile';
     if (x >= plains.x1 && x <= plains.x2 && y >= plains.y1 && y <= plains.y2) return 'plains';
@@ -846,6 +855,7 @@ const KingshotPlanner = {
   },
 
   getChunkLevelForZoom(pct) {
+    // ... (remains the same as v0.2.7.7) ...
     if (isNaN(pct)) pct = (this.state.cam.scale / this.config.baseScale) * 100; 
     const detailThreshold = this.state.currentTileDetailThreshold; 
     if (pct > detailThreshold) return -1;
@@ -856,6 +866,7 @@ const KingshotPlanner = {
   },
 
   showPatchNotes() {
+    // ... (remains the same as v0.2.7.7) ...
     if (!this.dom.patchNotesBody || !this.dom.modalOverlay || !this.dom.patchNotesModal) return;
     
     if (typeof marked !== 'undefined') { 
@@ -905,6 +916,7 @@ const KingshotPlanner = {
   },
 
   hidePatchNotes() {
+    // ... (remains the same as v0.2.7.7) ...
     if (!this.dom.modalOverlay || !this.dom.patchNotesModal) return;
     if (this.dom.hidePatchNotesCheckbox && this.dom.hidePatchNotesCheckbox.checked) {
         localStorage.setItem('lastSeenVersion', this.config.CURRENT_VERSION);
@@ -914,6 +926,7 @@ const KingshotPlanner = {
   },
 
   handleMouseDown(e) {
+    // ... (remains the same as v0.2.7.7) ...
     if (e.button===0) {
       this.state.dragging = true;
       this.state.lastX = e.clientX;
@@ -924,6 +937,7 @@ const KingshotPlanner = {
   },
 
   handleMouseMove(e) {
+    // ... (remains the same as v0.2.7.7) ...
     if (!this.state.dragging) return;
     this.state.cam.x += e.clientX - this.state.lastX;
     this.state.cam.y += e.clientY - this.state.lastY;
@@ -933,6 +947,7 @@ const KingshotPlanner = {
   },
 
   handleCanvasClick(e) {
+    // ... (remains the same as v0.2.7.7) ...
     const dist = Math.hypot(e.clientX - this.state.clickStartX, e.clientY - this.state.clickStartY);
     if (dist > 5) return;
     
@@ -947,6 +962,7 @@ const KingshotPlanner = {
   },
 
   handleWheel(e) {
+    // ... (remains the same as v0.2.7.7) ...
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.2 : 0.8;
     let targetScale = this.state.cam.scale * factor;
@@ -955,6 +971,7 @@ const KingshotPlanner = {
   },
 
   handleDblClick(e) {
+    // ... (remains the same as v0.2.7.7) ...
     e.preventDefault();
     const factor = e.button === 2 ? 0.5 : 2.0;
     let targetScale = this.state.cam.scale * factor;
@@ -963,6 +980,7 @@ const KingshotPlanner = {
   },
 
   handleZoomSlider() {
+    // ... (remains the same as v0.2.7.7) ...
     if(!this.dom.zoomSlider) return;
     const pct = Number(this.dom.zoomSlider.value);
     let targetScale = (pct / 100) * this.config.baseScale;
@@ -973,6 +991,7 @@ const KingshotPlanner = {
   },
 
   handleKeyDown(e) {
+    // ... (remains the same as v0.2.7.7) ...
     if (e.target && e.target.tagName==='INPUT') return;
     switch(e.key) {
       case '+': case '=': this.changeZoomBy(+1); break;
@@ -987,6 +1006,7 @@ const KingshotPlanner = {
   },
 
   handleTouchStart(e) {
+    // ... (remains the same as v0.2.7.7) ...
     e.preventDefault();
     if (e.touches.length === 1) {
         this.state.touchMode = 'pan';
@@ -1009,6 +1029,7 @@ const KingshotPlanner = {
   },
 
   handleTouchMove(e) {
+    // ... (remains the same as v0.2.7.7) ...
     e.preventDefault();
     if (this.state.animationId) {
         cancelAnimationFrame(this.state.animationId);
@@ -1051,6 +1072,7 @@ const KingshotPlanner = {
   },
 
   handleTouchEnd(e) {
+    // ... (remains the same as v0.2.7.7) ...
     if (this.state.touchMode === 'pan' && e.changedTouches.length === 1) {
       const t = e.changedTouches[0];
       const dist = Math.hypot(t.clientX - this.state.clickStartX, t.clientY - this.state.clickStartY);
@@ -1070,6 +1092,7 @@ const KingshotPlanner = {
   },
 
   doSearch() {
+    // ... (remains the same as v0.2.7.7) ...
     if(!this.dom.inpX || !this.dom.inpY) return;
     const x = +this.dom.inpX.value, y = +this.dom.inpY.value;
     if (x >= 0 && y >= 0 && x < this.config.N && y < this.config.N) {
@@ -1084,6 +1107,7 @@ const KingshotPlanner = {
   },
   
   centerOn(x,y) {
+    // ... (remains the same as v0.2.7.7) ...
     const [lx, ly] = this.worldToScreen(x,y);
     this.state.cam.x = this.dom.canvas.width*0.5 - lx*this.state.cam.scale;
     this.state.cam.y = this.dom.canvas.height*0.5 - ly*this.state.cam.scale;
@@ -1091,6 +1115,7 @@ const KingshotPlanner = {
   },
   
   zoomToFit() {
+    // ... (remains the same as v0.2.7.7) ...
     const targetScale = this.state.minFitScale;
     const targetCamX = this.dom.canvas.width / 2;
     const targetCamY = this.dom.canvas.height / 2 + ((this.config.N - 1) * this.config.tileH / 2) * targetScale;
@@ -1098,6 +1123,7 @@ const KingshotPlanner = {
   },
   
   resize() {
+    // ... (remains the same as v0.2.7.7) ...
     this.dom.canvas.width  = window.innerWidth;
     this.dom.canvas.height = window.innerHeight;
     
@@ -1139,6 +1165,7 @@ const KingshotPlanner = {
   },
 
   clampCamera() {
+    // ... (remains the same as v0.2.7.7) ...
     const s = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
     const canvasW = this.dom.canvas.width;
     const canvasH = this.dom.canvas.height;
@@ -1166,6 +1193,7 @@ const KingshotPlanner = {
   },
 
   changeZoomBy(delta) {
+    // ... (remains the same as v0.2.7.7) ...
     let currentPct = (this.state.cam.scale / this.config.baseScale) * 100;
     if(isNaN(currentPct)) currentPct = (this.state.minFitScale / this.config.baseScale) * 100;
 
@@ -1179,6 +1207,7 @@ const KingshotPlanner = {
   },
 
   animateZoom(targetScale, anchorX, anchorY, duration=150) {
+    // ... (remains the same as v0.2.7.7) ...
     if (this.state.animationId) {
         cancelAnimationFrame(this.state.animationId);
     }
@@ -1222,6 +1251,7 @@ const KingshotPlanner = {
   },
 
   animatePanZoom(targetScale, targetX, targetY, duration=300) {
+    // ... (remains the same as v0.2.7.7) ...
     if (this.state.animationId) {
         cancelAnimationFrame(this.state.animationId);
     }
@@ -1248,6 +1278,7 @@ const KingshotPlanner = {
   },
   
   updateFloatingZoomLabel() {
+    // ... (remains the same as v0.2.7.7) ...
     if(!this.dom.zoomSlider || !this.dom.floatingZoomLabel) return;
     const slider = this.dom.zoomSlider;
     const label = this.dom.floatingZoomLabel;
@@ -1272,6 +1303,7 @@ const KingshotPlanner = {
   },
 
   handleMinimapClick(e) {
+    // ... (remains the same as v0.2.7.7) ...
     if (!this.dom.minimapCanvas) return;
     const { minimap, N } = this.config;
     const dpr = window.devicePixelRatio || 1;
@@ -1302,7 +1334,7 @@ const KingshotPlanner = {
     this.animatePanZoom(this.state.cam.scale, targetCamX, targetCamY, 200);
   },
 
-  drawMinimap(viewportCorners) { // MODIFIED: Parameter name changed
+  drawMinimap(viewportCorners) { 
     if (!this.dom.minimapCtx || this.state.baseMinimapScale <= 0 || !this.state.isMinimapVisible || !this.config.minimap) return; 
 
     const mmCtx = this.dom.minimapCtx;
@@ -1312,7 +1344,7 @@ const KingshotPlanner = {
     
     const canvasWidth = this.dom.minimapCanvas.width; 
     const canvasHeight = this.dom.minimapCanvas.height;
-    const mPadding = minimap.padding * dpr;
+    const mPadding = minimap.padding * dpr; // Use DPR adjusted padding
 
     const mainZoomRatio = mainCam.scale / mainBaseScale; 
     let currentMinimapZoomFactor = minimap.zoomFactorMin;
@@ -1372,7 +1404,6 @@ const KingshotPlanner = {
         }
     });
 
-    // MODIFIED: Draw Viewport Diamond
     if (viewportCorners) {
         const points = [
             viewportCorners.tl, 
@@ -1387,22 +1418,39 @@ const KingshotPlanner = {
         if (points.every(p => !isNaN(p.x) && !isNaN(p.y))) {
             mmCtx.fillStyle = minimap.viewportFillColor;
             mmCtx.strokeStyle = minimap.viewportBorderColor;
-            mmCtx.lineWidth = 1.5 * dpr; // Slightly thicker line for better visibility
+            mmCtx.lineWidth = 1.5 * dpr; 
 
             mmCtx.beginPath();
-            mmCtx.moveTo(points[0].x, points[0].y);
-            mmCtx.lineTo(points[1].x, points[1].y);
-            mmCtx.lineTo(points[2].x, points[2].y);
-            mmCtx.lineTo(points[3].x, points[3].y);
+            mmCtx.moveTo(points[0].x, points[0].y); // tl
+            mmCtx.lineTo(points[1].x, points[1].y); // tr
+            mmCtx.lineTo(points[2].x, points[2].y); // br
+            mmCtx.lineTo(points[3].x, points[3].y); // bl
             mmCtx.closePath();
 
             mmCtx.fill();
             mmCtx.stroke();
+
+            // NEW: Draw "Up" Indicator (Triangle at the top-most screen vertex of the diamond)
+            // The top-most screen vertex of the diamond is points[0] (transformed tl)
+            const topVertex = points[0];
+            const indicatorSize = 4 * dpr; // Size of the indicator triangle
+            const indicatorHeight = 5 * dpr;
+
+            mmCtx.fillStyle = minimap.viewportUpIndicatorColor;
+            mmCtx.beginPath();
+            // Apex is at topVertex
+            mmCtx.moveTo(topVertex.x, topVertex.y);
+            // Base points are slightly below and to the sides of the apex, pointing "away" from it, effectively "up"
+            mmCtx.lineTo(topVertex.x - indicatorSize, topVertex.y + indicatorHeight);
+            mmCtx.lineTo(topVertex.x + indicatorSize, topVertex.y + indicatorHeight);
+            mmCtx.closePath();
+            mmCtx.fill();
         }
     }
   },
 
   drawTile(x, y, drawBorder = true) {
+    // ... (remains the same as v0.2.7.7) ...
     this.state.tileCount++;
     const [sx,sy] = this.worldToScreen(x,y);
     const { config } = this;
@@ -1441,6 +1489,7 @@ const KingshotPlanner = {
   },
 
   drawChunk(chunk, drawBorder = true) {
+    // ... (remains the same as v0.2.7.7) ...
     this.state.tileCount += chunk.size * chunk.size;
     const { x, y, size, biome } = chunk;
     const { config } = this;
@@ -1466,6 +1515,7 @@ const KingshotPlanner = {
   },
   
   drawBuildingFootprint(b, highlightStyle = null, drawBorder = true) {
+    // ... (remains the same as v0.2.7.7) ...
     const { config, state } = this;
     const ctx = this.dom.ctx;
     const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
@@ -1521,6 +1571,7 @@ const KingshotPlanner = {
   },
 
   mainLoop(now) {
+    // ... (remains the same as v0.2.7.7, ensure viewportCorners is passed to drawMinimap) ...
     const { dom, state, config } = this;
     const ctx = dom.ctx; 
     
@@ -1562,14 +1613,12 @@ const KingshotPlanner = {
         const [bl_x, bl_y] = this.screenToWorld(0, dom.canvas.height);
         const [br_x, br_y] = this.screenToWorld(dom.canvas.width, dom.canvas.height);
         
-        // This viewBounds AABB is still useful for culling on the main map
         const viewBounds = { 
           minX: Math.min(tl_x, tr_x, bl_x, br_x) - 2,
           maxX: Math.max(tl_x, tr_x, bl_x, br_x) + 2,
           minY: Math.min(tl_y, tr_y, bl_y, br_y) - 2,
           maxY: Math.max(tl_y, tr_y, bl_y, br_y) + 2,
         };
-        // For minimap viewport drawing, we'll pass the actual corners
         const viewportCorners = {
             tl: { x: tl_x, y: tl_y },
             tr: { x: tr_x, y: tr_y },
@@ -1684,7 +1733,7 @@ const KingshotPlanner = {
         ctx.restore(); 
 
         if (this.state.isMinimapVisible) { 
-            this.drawMinimap(viewportCorners); // MODIFIED: Pass viewportCorners
+            this.drawMinimap(viewportCorners); 
         }
 
 
