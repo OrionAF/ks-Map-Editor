@@ -1,4 +1,8 @@
 {
+  "0.2.8.0": [
+    "Updated viewport camera icon",
+    "Other minor tweaks"
+  ],
   "0.2.7.7": [
     "**Minimap Visual Refinements:**",
     "- *Viewport Shape:* The minimap viewport indicator is now drawn as a diamond, accurately reflecting the main map's isometric camera view.",

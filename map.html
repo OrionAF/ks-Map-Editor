@@ -272,8 +272,8 @@
     #minimapToggleBtn { 
         display: block;
         width: 100%;
-        padding: 3px 0; /* MODIFIED: Increased top/bottom padding slightly for text */
-        line-height: 1.2; /* NEW: Ensure text has enough vertical space */
+        padding: 4px 0; /* MODIFIED: Increased top/bottom padding for text */
+        line-height: 1.2; 
         background-color: #282828; 
         color: #bbb; 
         border: 1px solid #444;
@@ -410,7 +410,7 @@
 const KingshotPlanner = {
   // —— CONFIGURATION ——
   config: {
-    CURRENT_VERSION: '0.2.7.9', // Version bump for minimap viewport indicator pos & toggle style
+    CURRENT_VERSION: '0.2.8.0', // Version bump for minimap camera icon & toggle button padding
     N: 1200,
     tileW: 10, tileH: 10,
     strokeW: 0.3, 
@@ -444,7 +444,7 @@ const KingshotPlanner = {
         bgColor: 'rgba(40,40,40,0.8)',
         viewportFillColor: 'rgba(0, 0, 0, 0.25)',       
         viewportBorderColor: 'rgba(20, 20, 20, 0.85)',  
-        viewportUpIndicatorColor: 'rgba(220, 50, 50, 0.9)', 
+        viewportCameraIconColor: 'rgba(30,30,30,0.95)', // NEW: Color for camera icon
         buildingColor: 'rgba(200,200,200,0.7)', 
         kingCastleColor: 'rgba(255,215,0,0.8)',
         zoomFactorMin: 1.0, 
@@ -1372,10 +1372,10 @@ const KingshotPlanner = {
     });
 
     if (viewportCorners) {
-        const P0 = { x: mPadding + (viewportCorners.tl.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.tl.y - worldOffsetY) * mScale };
-        const P1 = { x: mPadding + (viewportCorners.tr.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.tr.y - worldOffsetY) * mScale };
-        const P2 = { x: mPadding + (viewportCorners.br.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.br.y - worldOffsetY) * mScale };
-        const P3 = { x: mPadding + (viewportCorners.bl.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.bl.y - worldOffsetY) * mScale };
+        const P0 = { x: mPadding + (viewportCorners.tl.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.tl.y - worldOffsetY) * mScale }; // Top-Left
+        const P1 = { x: mPadding + (viewportCorners.tr.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.tr.y - worldOffsetY) * mScale }; // Top-Right
+        const P2 = { x: mPadding + (viewportCorners.br.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.br.y - worldOffsetY) * mScale }; // Bottom-Right
+        const P3 = { x: mPadding + (viewportCorners.bl.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.bl.y - worldOffsetY) * mScale }; // Bottom-Left
 
         if ([P0,P1,P2,P3].every(p => !isNaN(p.x) && !isNaN(p.y))) {
             mmCtx.fillStyle = minimap.viewportFillColor;
@@ -1391,52 +1391,57 @@ const KingshotPlanner = {
             mmCtx.fill();
             mmCtx.stroke();
 
-            // MODIFIED: Draw "Up" Indicator on the middle of the P1-P2 edge (right screen edge), pointing "inwards"
-            const midEdgeX = (P1.x + P2.x) / 2;
-            const midEdgeY = (P1.y + P2.y) / 2;
+            // --- Camera Icon Indicator ---
+            // Placement point: Middle of P0-P1 edge (TOP screen edge of viewport)
+            const placePt = { x: (P0.x + P1.x) / 2, y: (P0.y + P1.y) / 2 };
 
-            // Vector from P1 to P2 (along the edge)
-            const edgeVecX = P2.x - P1.x;
-            const edgeVecY = P2.y - P1.y;
-            // Normal vector to the edge, pointing inwards (towards P0 for this configuration)
-            // A general inward normal can be tricky. Let's aim towards P0 from midEdge.
-            let inwardVecX = P0.x - midEdgeX;
-            let inwardVecY = P0.y - midEdgeY;
-            const inwardMag = Math.sqrt(inwardVecX * inwardVecX + inwardVecY * inwardVecY);
-            if (inwardMag > 0) {
-                inwardVecX /= inwardMag;
-                inwardVecY /= inwardMag;
-            } else { // Should not happen if P0 is distinct from midEdge
-                inwardVecX = -1; inwardVecY = -1; // Fallback
+            // Orientation: From midpoint of P0-P1 towards midpoint of P3-P2 (bottom edge)
+            const midBottomPt = { x: (P3.x + P2.x) / 2, y: (P3.y + P2.y) / 2 };
+            let orientVecX = midBottomPt.x - placePt.x;
+            let orientVecY = midBottomPt.y - placePt.y;
+            
+            const orientMag = Math.sqrt(orientVecX * orientVecX + orientVecY * orientVecY);
+
+            if (orientMag > 0.001) { // Ensure non-zero magnitude for normalization
+                orientVecX /= orientMag;
+                orientVecY /= orientMag;
+
+                mmCtx.save();
+                mmCtx.fillStyle = minimap.viewportCameraIconColor || 'rgba(30,30,30,0.95)';
+
+                // Icon dimensions
+                const camBodyW = 10 * dpr;
+                const camBodyH = 7 * dpr;
+                const camLensL = 4 * dpr;
+                const camLensW = 3 * dpr; 
+                const camReelR = 2 * dpr;
+                const camReelBodyOffsetX = camBodyW * 0.25;
+
+                // Position and rotate canvas for drawing the icon
+                mmCtx.translate(placePt.x, placePt.y);
+                mmCtx.rotate(Math.atan2(orientVecY, orientVecX));
+                
+                // Offset slightly so the "back" of the camera body sits on the edge,
+                // and the body extends "inwards" along the orientVec.
+                mmCtx.translate(camBodyW * 0.15, 0); 
+
+                // Draw Camera Body (local x from 0 to camBodyW, local y centered)
+                mmCtx.fillRect(0, -camBodyH / 2, camBodyW, camBodyH);
+
+                // Draw Lens (extends from camBodyW in +x local direction)
+                mmCtx.fillRect(camBodyW, -camLensW / 2, camLensL, camLensW);
+                
+                // Draw Reels (on top of the body part)
+                mmCtx.beginPath();
+                mmCtx.arc(camReelBodyOffsetX, -camBodyH / 2 - camReelR * 0.6, camReelR, 0, 2 * Math.PI);
+                mmCtx.fill();
+
+                mmCtx.beginPath();
+                mmCtx.arc(camBodyW - camReelBodyOffsetX, -camBodyH / 2 - camReelR * 0.6, camReelR, 0, 2 * Math.PI);
+                mmCtx.fill();
+                
+                mmCtx.restore();
             }
-            
-            const indicatorHeight = 6 * dpr; // Length of the arrow
-            const indicatorWidth = 4 * dpr;  // Half-width of the arrow base
-
-            // Tip of the arrow (slightly offset from the edge, along the inward vector)
-            const tipX = midEdgeX + inwardVecX * (indicatorHeight * 0.3); // Start tip a bit from edge
-            const tipY = midEdgeY + inwardVecY * (indicatorHeight * 0.3);
-            
-            // Base of the arrow (behind the tip, along the inward vector)
-            const baseCenterX = tipX - inwardVecX * indicatorHeight;
-            const baseCenterY = tipY - inwardVecY * indicatorHeight;
-
-            // Perpendicular to inwardVec for arrow base spread
-            const perpVecX = -inwardVecY;
-            const perpVecY = inwardVecX;
-
-            const base1X = baseCenterX + perpVecX * indicatorWidth;
-            const base1Y = baseCenterY + perpVecY * indicatorWidth;
-            const base2X = baseCenterX - perpVecX * indicatorWidth;
-            const base2Y = baseCenterY - perpVecY * indicatorWidth;
-
-            mmCtx.fillStyle = minimap.viewportUpIndicatorColor;
-            mmCtx.beginPath();
-            mmCtx.moveTo(tipX, tipY);
-            mmCtx.lineTo(base1X, base1Y);
-            mmCtx.lineTo(base2X, base2Y);
-            mmCtx.closePath();
-            mmCtx.fill();
         }
     }
   },
