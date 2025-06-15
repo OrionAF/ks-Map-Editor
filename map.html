@@ -269,22 +269,22 @@
         transition: margin-top 0.3s ease-out; 
         width: 400px; 
     }
-    #minimapToggleBtn { 
-        display: block;
-        width: 100%;
-        padding: 4px 0; /* MODIFIED: Increased top/bottom padding for text */
-        line-height: 1.2; 
-        background-color: #282828; 
-        color: #bbb; 
-        border: 1px solid #444;
-        font-family: sans-serif;
-        font-size: 11px; 
-        text-align: center;
-        cursor: pointer;
-        box-sizing: border-box;
-        user-select: none;
-        -webkit-user-select: none;
-    }
+#minimapToggleBtn { 
+    display: block;
+    width: 100%;
+    padding: 6px 0; /* Increased vertical padding */
+    line-height: normal; /* Browser default line height */
+    background-color: #282828; 
+    color: #bbb; 
+    border: 1px solid #444;
+    font-family: sans-serif;
+    font-size: 11px; 
+    text-align: center;
+    cursor: pointer;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+}
     #minimapCanvas {
         width: 400px; 
         height: 300px; 
@@ -440,7 +440,7 @@ const KingshotPlanner = {
     minimap: { 
         width: 400,      
         height: 300,     
-        padding: 0.5,    
+        padding: 0,    
         bgColor: 'rgba(40,40,40,0.8)',
         viewportFillColor: 'rgba(0, 0, 0, 0.25)',       
         viewportBorderColor: 'rgba(20, 20, 20, 0.85)',  
@@ -1311,7 +1311,8 @@ const KingshotPlanner = {
     
     const canvasWidth = this.dom.minimapCanvas.width; 
     const canvasHeight = this.dom.minimapCanvas.height;
-    const mPadding = minimap.padding * dpr; 
+    // mPadding will be 0 if config.minimap.padding is 0
+    const mPadding = (minimap.padding || 0) * dpr; 
 
     const mainZoomRatio = mainCam.scale / mainBaseScale; 
     let currentMinimapZoomFactor = minimap.zoomFactorMin;
@@ -1331,6 +1332,7 @@ const KingshotPlanner = {
     mmCtx.fillRect(0, 0, canvasWidth, canvasHeight);
 
     const [minimapViewCenterX, minimapViewCenterY] = this.screenToWorld(this.dom.canvas.width / 2, this.dom.canvas.height / 2);
+    // Effective drawable width/height now use the full canvas buffer if mPadding is 0
     const minimapWorldWidthVisible = (canvasWidth - 2 * mPadding) / mScale;        
     const minimapWorldHeightVisible = (canvasHeight - 2 * mPadding) / mScale;
       
@@ -1391,54 +1393,52 @@ const KingshotPlanner = {
             mmCtx.fill();
             mmCtx.stroke();
 
-            // --- Camera Icon Indicator ---
-            // Placement point: Middle of P0-P1 edge (TOP screen edge of viewport)
-            const placePt = { x: (P0.x + P1.x) / 2, y: (P0.y + P1.y) / 2 };
-
-            // Orientation: From midpoint of P0-P1 towards midpoint of P3-P2 (bottom edge)
+            // --- Camera Icon Indicator (Redesigned & Repositioned) ---
+            const placePt = { x: (P0.x + P1.x) / 2, y: (P0.y + P1.y) / 2 }; // Midpoint of P0-P1 (TOP edge)
             const midBottomPt = { x: (P3.x + P2.x) / 2, y: (P3.y + P2.y) / 2 };
             let orientVecX = midBottomPt.x - placePt.x;
             let orientVecY = midBottomPt.y - placePt.y;
             
             const orientMag = Math.sqrt(orientVecX * orientVecX + orientVecY * orientVecY);
 
-            if (orientMag > 0.001) { // Ensure non-zero magnitude for normalization
-                orientVecX /= orientMag;
+            if (orientMag > 0.001) {
+                orientVecX /= orientMag; // Normalized direction vector (camera's "forward")
                 orientVecY /= orientMag;
 
                 mmCtx.save();
                 mmCtx.fillStyle = minimap.viewportCameraIconColor || 'rgba(30,30,30,0.95)';
 
-                // Icon dimensions
-                const camBodyW = 10 * dpr;
-                const camBodyH = 7 * dpr;
-                const camLensL = 4 * dpr;
-                const camLensW = 3 * dpr; 
-                const camReelR = 2 * dpr;
-                const camReelBodyOffsetX = camBodyW * 0.25;
+                // Icon dimensions (scaled by dpr)
+                const bodyW = 10 * dpr;
+                const bodyH = 7 * dpr;
+                const lensR = 3 * dpr;
+                const topButtonW = 4 * dpr;
+                const topButtonH = 2 * dpr;
+                const iconGap = 3 * dpr; // Gap between icon and viewport edge
 
-                // Position and rotate canvas for drawing the icon
-                mmCtx.translate(placePt.x, placePt.y);
+                // Calculate the position for the center of the camera body
+                // We want the lens tip to be 'iconGap' away from 'placePt', pointing towards 'placePt'.
+                // The camera is drawn with its lens protruding along its local +x.
+                // So, shift the drawing origin from placePt backwards along orientVec.
+                const shiftDistance = iconGap + lensR; // Distance from placePt to where camera body's front edge (lens base) should be
+                
+                const cameraOriginX = placePt.x - orientVecX * shiftDistance;
+                const cameraOriginY = placePt.y - orientVecY * shiftDistance;
+
+                mmCtx.translate(cameraOriginX, cameraOriginY);
                 mmCtx.rotate(Math.atan2(orientVecY, orientVecX));
                 
-                // Offset slightly so the "back" of the camera body sits on the edge,
-                // and the body extends "inwards" along the orientVec.
-                mmCtx.translate(camBodyW * 0.15, 0); 
+                // Draw camera relative to its new, rotated origin
+                // Body (front of body is at local x=0, extends to -bodyW)
+                mmCtx.fillRect(-bodyW, -bodyH/2, bodyW, bodyH);
 
-                // Draw Camera Body (local x from 0 to camBodyW, local y centered)
-                mmCtx.fillRect(0, -camBodyH / 2, camBodyW, camBodyH);
-
-                // Draw Lens (extends from camBodyW in +x local direction)
-                mmCtx.fillRect(camBodyW, -camLensW / 2, camLensL, camLensW);
-                
-                // Draw Reels (on top of the body part)
+                // Lens (centered on front face: local x=0)
                 mmCtx.beginPath();
-                mmCtx.arc(camReelBodyOffsetX, -camBodyH / 2 - camReelR * 0.6, camReelR, 0, 2 * Math.PI);
+                mmCtx.arc(0, 0, lensR, 0, 2 * Math.PI);
                 mmCtx.fill();
 
-                mmCtx.beginPath();
-                mmCtx.arc(camBodyW - camReelBodyOffsetX, -camBodyH / 2 - camReelR * 0.6, camReelR, 0, 2 * Math.PI);
-                mmCtx.fill();
+                // Top Button (centered on top of body, body middle is at local x = -bodyW/2)
+                mmCtx.fillRect(-bodyW/2 - topButtonW/2, -bodyH/2 - topButtonH, topButtonW, topButtonH);
                 
                 mmCtx.restore();
             }
