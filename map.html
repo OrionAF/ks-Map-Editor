@@ -303,100 +303,74 @@
         display: none;
     }
 
-/* --- RESPONSIVE STYLES FOR MOBILE (768px or less) --- */
+/* --- Common Mobile Styles (Portrait & Landscape) --- */
 @media (max-width: 768px) {
-  /* 1. Make the main control bar at the bottom taller and more spacious */
+  /* Hide the minimap and its settings button on all mobile views */
+  #minimapContainer, #minimapToggleBtn, #minimapCanvas {
+    display: none;
+  }
+}
+
+/* --- Portrait Mobile Styles (e.g., phone held upright) --- */
+@media (max-width: 768px) and (orientation: portrait) {
+  /* Keep the zoom bar on the left, but make it taller */
+  #zoomControlsContainer {
+    gap: 15px;
+  }
+  #zoomSlider {
+    height: 70vh; /* Span most of the screen height */
+  }
+
+  /* Move search and center displays to the bottom */
+  #searchControls {
+    bottom: 10px; /* New bottom position */
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  #centerTile {
+    display: none; /* Hide center tile in portrait to save space */
+  }
+  #versionDisplay {
+    bottom: 5px; right: 5px; font-size: 10px;
+  }
+}
+
+/* --- Landscape Mobile Styles (e.g., phone held sideways) --- */
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Turn the left bar into a bottom control bar */
   #zoomControlsContainer {
     left: 0; right: 0; top: auto; bottom: 0;
     transform: none;
     width: 100%;
-    padding: 12px 8px; /* Increased vertical padding */
+    height: 60px; /* Give it a fixed height */
+    padding: 0 10px;
     box-sizing: border-box;
     flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
+    justify-content: space-between; /* Space out items */
     background: rgba(0,0,0,0.7);
-    gap: 10px; /* Increased gap between items */
   }
 
-  /* 2. Enlarge all buttons and text inside the bottom bar */
-  #zoomControlsContainer button {
-    width: auto; /* Allow buttons to size to their content */
-    padding: 8px 12px; /* Make buttons taller and wider */
-    font-size: 16px;  /* Increase font size */
+  /* Make the slider horizontal and flexible */
+  #sliderWrapper {
+    flex-grow: 1; /* Allow the slider to fill empty space */
+    margin: 0 10px;
   }
-  #zoomControlsContainer #presetButtons {
-    flex-direction: row; /* Ensure preset buttons are in a row */
-    gap: 8px;
-  }
-  #zoomLevel {
-    font-size: 15px; /* Make zoom level text larger */
-    order: 10; /* Put it at the end */
-  }
-
-  /* Make the zoom slider bigger and easier to drag */
   #zoomSlider {
     -webkit-appearance: none;
     appearance: none;
     writing-mode: horizontal-tb;
-    height: 25px; /* Make the track taller */
-    width: 120px;
+    height: 25px;
+    width: 100%;
     max-height: none;
   }
-  #floatingZoomLabel { display: none !important; }
-
-  /* 3. Bring back and resize the "Go To" and "Center" displays */
-  #searchControls, #centerTile {
-    position: static; /* Let them be part of the flex layout */
-    transform: none;
-    margin: 0;
-  }
-
-  /* Redesign the "Go To" box for mobile */
-  #searchControls {
-    order: 1; /* Put it first */
-    padding: 0;
-    background: none;
-  }
-  #searchControls h4 { display: none; } /* Hide the "GO TO" title on mobile */
-  #searchControls input {
-    width: 70px; /* Make input fields wider */
-    padding: 8px;    /* Increase padding */
-    font-size: 16px; /* Increase font size */
-  }
-  #searchControls button {
-    padding: 8px 12px;
-    font-size: 16px;
-  }
-
-  /* Enlarge the "Center" text */
-  #centerTile {
-    order: 9;
-    padding: 6px 10px;
-    font-size: 15px;
-  }
-
-  /* 4. Enlarge top-of-screen controls */
-  #settingsContainer, #minimapContainer {
-    width: auto; right: 10px; left: 10px;
-    text-align: center;
-  }
-  #settingsBtn, #minimapToggleBtn {
-    font-size: 16px;  /* Make font bigger */
-    padding: 10px;    /* Make buttons taller */
-  }
-  #minimapContainer { margin-top: 60px; } /* Push minimap down below the bigger settings button */
-  #minimapCanvas {
-      width: calc(100% - 2px); /* Subtract 2px to account for the border */
-      height: 150px;
-  }
   
-  /* 5. Adjust version display position */
+  /* Rearrange buttons and text for the horizontal bar */
+  #presetButtons { flex-direction: row; }
+  #zoomLevel { font-size: 14px; }
+  #searchControls, #centerTile { display: none; } /* Hide text fields in landscape */
+
   #versionDisplay {
-    font-size: 10px;
-    bottom: 80px; /* Move up to avoid the new taller control bar */
-    right: 5px;
+    bottom: 65px; /* Position above the new bottom bar */
   }
 }
 
@@ -473,7 +447,7 @@
     <div id="zoomLevel">Zoom: 100%</div>
 </div>
 
-<!-- Bottom-center controls are now separate -->
+<!-- Bottom-center controls are now separate for maximum flexibility -->
 <div id="searchControls">
     <h4>Go To</h4>
     <div>
@@ -484,7 +458,7 @@
 </div>
 <div id="centerTile">Center: X0 Y0</div>
 
-<div id="versionDisplay"></div> <!-- This one stays outside -->
+<div id="versionDisplay"></div>
 
 
   <!-- Minimap Container (Top Right) -->
