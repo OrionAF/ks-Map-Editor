@@ -6,25 +6,25 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     body {
-      margin:0; background:#111; overflow:hidden;
-      -webkit-user-select:none; user-select:none;
+        margin:0; background:#111; overflow:hidden;
+        -webkit-user-select:none; user-select:none;
     }
     canvas { display:block; cursor:grab; }
     canvas:active { cursor:grabbing; }
 
     /* --- MODIFIED: Search Controls (Now Bottom-Center) --- */
     #searchControls {
-      position: absolute;
-      bottom: 45px; /* Position it above #centerTile (which is at 10px) */
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10; /* Match z-index of #centerTile */
-      background: rgba(0,0,0,0.6);
-      padding: 6px 10px;
-      border-radius: 4px;
-      width: auto; /* Let the width fit the content */
-      box-sizing: border-box;
-      white-space: nowrap; /* Prevent inputs from wrapping on smaller screens */
+        position: fixed;
+        bottom: 45px; /* Position it above #centerTile (which is at 10px) */
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10; /* Match z-index of #centerTile */
+        background: rgba(0,0,0,0.6);
+        padding: 6px 10px;
+        border-radius: 4px;
+        width: auto; /* Let the width fit the content */
+        box-sizing: border-box;
+        white-space: nowrap; /* Prevent inputs from wrapping on smaller screens */
     }
     #searchControls h4 {
         margin: 0 0 4px;
@@ -38,8 +38,8 @@
     }
     #searchControls input { width:60px; }
     #searchControls button {
-      margin:2px 0 2px 4px; /* Adjusted margin */
-      -webkit-user-select:none; user-select:none;
+        margin:2px 0 2px 4px; /* Adjusted margin */
+        -webkit-user-select:none; user-select:none;
     }
 
     /* --- MODIFIED: Settings Panel (Top Right) --- */
@@ -49,25 +49,25 @@
         text-align: right;
     }
     #settingsBtn {
-      margin-bottom: 5px; /* Space between button and panel */
-      padding: 6px 10px;
+        margin-bottom: 5px; /* Space between button and panel */
+        padding: 6px 10px;
     }
     #settingsPanel { /* Formerly #searchBox */
-      color:#fff; font-family:sans-serif;
-      background:rgba(0,0,0,0.6); padding:8px; border-radius:4px;
-      max-height: 0; /* Collapsed by default */
-      padding: 0; /* No padding when collapsed */
-      overflow: hidden;
-      transition: max-height 0.3s ease-out, padding 0.3s ease-out; /* Modified transition */
-      text-align: left; /* Content within panel is left-aligned */
+        color:#fff; font-family:sans-serif;
+        background:rgba(0,0,0,0.6); padding:8px; border-radius:4px;
+        max-height: 0; /* Collapsed by default */
+        padding: 0; /* No padding when collapsed */
+        overflow: hidden;
+        transition: max-height 0.3s ease-out, padding 0.3s ease-out; /* Modified transition */
+        text-align: left; /* Content within panel is left-aligned */
     }
     #settingsPanel.open {
-      max-height: 500px; /* Adjust as needed to fit all content */
-      padding: 8px; /* Add padding back when open */
+        max-height: 500px; /* Adjust as needed to fit all content */
+        padding: 8px; /* Add padding back when open */
     }
     #settingsPanel input[type="checkbox"], 
     #settingsPanel select { 
-      vertical-align: middle; 
+        vertical-align: middle; 
     }
     #settingsPanel > div { margin-top: 4px; text-align: left; }
     #settingsPanel > hr {
@@ -85,17 +85,17 @@
     
     /* Center Tile Display - MOVED to bottom-center */
     #centerTile {
-      position: absolute;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.5);
-      padding: 4px 8px;
-      border-radius: 4px;
-      color:#fff; font-family:sans-serif;
-      font-size:14px;
-      -webkit-user-select:none; user-select:none;
-      z-index: 10;
+        position: fixed;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.5);
+        padding: 4px 8px;
+        border-radius: 4px;
+        color:#fff; font-family:sans-serif;
+        font-size:14px;
+        -webkit-user-select:none; user-select:none;
+        z-index: 10;
     }
 
     /* Coords Toggle Label Style */
@@ -107,16 +107,16 @@
 
     /* Info & Stats panels (remain mostly the same, but now inside #settingsPanel) */
     #infoBtn, #statsBtn {
-      margin-top:6px; -webkit-user-select:none; user-select:none;
+        margin-top:6px; -webkit-user-select:none; user-select:none;
     }
     #infoPanel, #statsPanel {
-      max-height:0; overflow:hidden;
-      transition:max-height 0.3s ease;
-      margin-top:6px;
-      background:rgba(58,55,55,0.85);
-      padding:0 6px; border-radius:4px;
-      font-size:13px; color:#ddd;
-      text-align: left;
+        max-height:0; overflow:hidden;
+        transition:max-height 0.3s ease;
+        margin-top:6px;
+        background:rgba(58,55,55,0.85);
+        padding:0 6px; border-radius:4px;
+        font-size:13px; color:#ddd;
+        text-align: left;
     }
     #infoPanel.open { max-height:160px; } 
     #statsPanel.open { max-height:120px; }
@@ -128,41 +128,41 @@
 
     /* --- STYLES for Vertical Zoom Controls (LEFT) --- */
     #zoomControlsContainer {
-      position: absolute;
-      left: 15px;
-      top: 50%;
-      transform: translateY(-50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      padding: 10px; /* Reduced padding slightly */
-      border-radius: 4px;
-      z-index: 10;
-      color: #fff;
-      font-family: sans-serif;
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 10px; /* Reduced padding slightly */
+        border-radius: 4px;
+        z-index: 10;
+        color: #fff;
+        font-family: sans-serif;
     }
     
     #zoomControlsContainer #presetButtons {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      order: 4; /* Search will be order 0 */
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        order: 4; /* Search will be order 0 */
     }
 
     #zoomControlsContainer button {
-      -webkit-user-select:none; user-select:none;
-      margin: 0;
-      width: 60px;
+        -webkit-user-select:none; user-select:none;
+        margin: 0;
+        width: 60px;
     }
 
     #settingsPanel select { /* Ensure select within settings panel is styled */
-      background: #333;
-      color: #fff;
-      border: 1px solid #555;
-      border-radius: 2px;
-      padding: 2px;
-      width: 100%; 
+        background: #333;
+        color: #fff;
+        border: 1px solid #555;
+        border-radius: 2px;
+        padding: 2px;
+        width: 100%; 
     }
 
     #zoomControlsContainer #zoomInc { order: 1; } /* Adjusted order */
@@ -172,13 +172,13 @@
 
 
     #zoomSlider {
-      -webkit-appearance: slider-vertical;
-      appearance: slider-vertical;
-      writing-mode: bt-lr; 
-      height: 55vh; /* Adjusted height slightly */
-      max-height: 400px; /* Adjusted max-height */
-      width: auto;
-      margin: 0;
+        -webkit-appearance: slider-vertical;
+        appearance: slider-vertical;
+        writing-mode: bt-lr; 
+        height: 55vh; /* Adjusted height slightly */
+        max-height: 400px; /* Adjusted max-height */
+        width: auto;
+        margin: 0;
     }
 
     #floatingZoomLabel {
@@ -274,22 +274,22 @@
         transition: margin-top 0.3s ease-out; /* <<< CORRECTION APPLIED HERE */
         width: 450px; 
     }
-#minimapToggleBtn { 
-    display: block;
-    width: 100%;
-    padding: 0; /* Increased vertical padding */
-    line-height: 1.5; /* Browser default line height */
-    background-color: #282828; 
-    color: #bbb; 
-    border: 1px solid #444;
-    font-family: sans-serif;
-    font-size: 13px; 
-    text-align: center;
-    cursor: pointer;
-    box-sizing: border-box;
-    user-select: none;
-    -webkit-user-select: none;
-}
+    #minimapToggleBtn { 
+        display: block;
+        width: 100%;
+        padding: 0; /* Increased vertical padding */
+        line-height: 1.5; /* Browser default line height */
+        background-color: #282828; 
+        color: #bbb; 
+        border: 1px solid #444;
+        font-family: sans-serif;
+        font-size: 13px; 
+        text-align: center;
+        cursor: pointer;
+        box-sizing: border-box;
+        user-select: none;
+        -webkit-user-select: none;
+    }
     #minimapCanvas {
         width: 448px; 
         height: 300px; 
@@ -301,6 +301,64 @@
     #minimapCanvas.hidden {
         display: none;
     }
+
+/* --- RESPONSIVE STYLES FOR MOBILE (768px or less) --- */
+@media (max-width: 768px) {
+    /* Create a bottom bar for all controls */
+    #zoomControlsContainer, #searchControls, #centerTile {
+        position: fixed; /* Use fixed positioning for all controls on mobile */
+        transform: none; /* Reset transforms */
+        top: auto; /* Ensure they are not stuck at the top */
+    }
+
+    /* Style the main zoom controls for the bottom bar */
+    #zoomControlsContainer {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        flex-direction: row;
+        justify-content: center;
+        background: rgba(0,0,0,0.7);
+        gap: 8px;
+    }
+
+    /* Make the zoom slider horizontal */
+    #zoomSlider {
+        -webkit-appearance: none;
+        appearance: none;
+        writing-mode: horizontal-tb;
+        height: 15px;
+        width: 100px;
+        max-height: none;
+    }
+    
+    #floatingZoomLabel { display: none !important; }
+    #presetButtons { flex-direction: row; }
+    
+    /* Hide the search and center tile text on mobile to save space */
+    #searchControls, #centerTile {
+        display: none;
+    }
+
+    /* Adjust other elements for the new layout */
+    #versionDisplay {
+        font-size: 10px;
+        bottom: 60px; /* Move it up to avoid the new bottom bar */
+        right: 5px;
+    }
+    #minimapContainer, #settingsContainer {
+        width: auto;
+        left: 10px;
+        right: 10px;
+    }
+    #minimapCanvas {
+        width: 100%;
+        height: 150px;
+    }
+}
 
   </style>
 </head>
@@ -358,8 +416,8 @@
     </div>
   </div>
 
-  <!-- Vertically oriented zoom controls (LEFT) -->
-  <div id="zoomControlsContainer">
+<!-- Vertically oriented zoom controls (LEFT) -->
+<div id="zoomControlsContainer">
     <button id="zoomInc">+</button>
     <div id="sliderWrapper">
         <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
@@ -373,18 +431,21 @@
         <button data-zoom="100">100%</button>
     </div>
     <div id="zoomLevel">Zoom: 100%</div>
-  </div>
-  <!-- Search Controls (Center) -->
-    <div id="searchControls">
-        <h4>Go To</h4>
-        <div>
-            X: <input id="inpX" type="number" min="0" max="1199" value="0">
-            Y: <input id="inpY" type="number" min="0" max="1199" value="0">
-            <button id="btnGo">Go</button>
-        </div>
+</div>
+
+<!-- Bottom-center controls are now separate -->
+<div id="searchControls">
+    <h4>Go To</h4>
+    <div>
+        X: <input id="inpX" type="number" min="0" max="1199" value="0">
+        Y: <input id="inpY" type="number" min="0" max="1199" value="0">
+        <button id="btnGo">Go</button>
     </div>
-  <div id="centerTile">Center: X0 Y0</div>
-  <div id="versionDisplay"></div>
+</div>
+<div id="centerTile">Center: X0 Y0</div>
+
+<div id="versionDisplay"></div> <!-- This one stays outside -->
+
 
   <!-- Minimap Container (Top Right) -->
   <div id="minimapContainer">
