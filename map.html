@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Kingshot map editor & planner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     body {
@@ -272,7 +273,7 @@
         right: 10px;
         z-index: 900; 
         transition: margin-top 0.3s ease-out; /* <<< CORRECTION APPLIED HERE */
-        width: 450px; 
+        width: 452px; 
     }
     #minimapToggleBtn { 
         display: block;
@@ -291,7 +292,7 @@
         -webkit-user-select: none;
     }
     #minimapCanvas {
-        width: 448px; 
+        width: 450px; 
         height: 300px; 
         border: 1px solid #444; 
         border-top: none; 
@@ -386,7 +387,10 @@
     padding: 10px;    /* Make buttons taller */
   }
   #minimapContainer { margin-top: 60px; } /* Push minimap down below the bigger settings button */
-  #minimapCanvas { width: 100%; height: 150px; }
+  #minimapCanvas {
+      width: calc(100% - 2px); /* Subtract 2px to account for the border */
+      height: 150px;
+  }
   
   /* 5. Adjust version display position */
   #versionDisplay {
