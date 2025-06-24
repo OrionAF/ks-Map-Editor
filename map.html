@@ -12,15 +12,19 @@
     canvas { display:block; cursor:grab; }
     canvas:active { cursor:grabbing; }
 
-    /* --- NEW: Search Controls (Left side) --- */
+    /* --- MODIFIED: Search Controls (Now Bottom-Center) --- */
     #searchControls {
-      /* order: 0; /* Place it at the top of zoomControlsContainer if it's moved inside */
+      position: absolute;
+      bottom: 45px; /* Position it above #centerTile (which is at 10px) */
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10; /* Match z-index of #centerTile */
       background: rgba(0,0,0,0.6);
-      padding: 6px;
+      padding: 6px 10px;
       border-radius: 4px;
-      margin-bottom: 10px; /* Space between search and zoom slider */
-      width: 200px; /* Match width of settings panel for consistency */
+      width: auto; /* Let the width fit the content */
       box-sizing: border-box;
+      white-space: nowrap; /* Prevent inputs from wrapping on smaller screens */
     }
     #searchControls h4 {
         margin: 0 0 4px;
@@ -52,12 +56,14 @@
       color:#fff; font-family:sans-serif;
       background:rgba(0,0,0,0.6); padding:8px; border-radius:4px;
       max-height: 0; /* Collapsed by default */
+      padding: 0; /* No padding when collapsed */
       overflow: hidden;
-      transition: max-height 0.3s ease-out;
+      transition: max-height 0.3s ease-out, padding 0.3s ease-out; /* Modified transition */
       text-align: left; /* Content within panel is left-aligned */
     }
     #settingsPanel.open {
       max-height: 500px; /* Adjust as needed to fit all content */
+      padding: 8px; /* Add padding back when open */
     }
     #settingsPanel input[type="checkbox"], 
     #settingsPanel select { 
@@ -159,11 +165,10 @@
       width: 100%; 
     }
 
-    #zoomControlsContainer #zoomInc { order: 2; } /* Adjusted order */
-    #zoomControlsContainer #sliderWrapper { order: 3; position: relative; } /* Adjusted order */
-    #zoomControlsContainer #zoomDec { order: 4; } /* Adjusted order */
-    #zoomControlsContainer #zoomLevel { order: 5; font-size: 14px; margin-top: 5px; } /* Adjusted order */
-    #searchControls { order: 1; } /* Search controls at the top of this left panel */
+    #zoomControlsContainer #zoomInc { order: 1; } /* Adjusted order */
+    #zoomControlsContainer #sliderWrapper { order: 2; position: relative; } /* Adjusted order */
+    #zoomControlsContainer #zoomDec { order: 3; } /* Adjusted order */
+    #zoomControlsContainer #zoomLevel { order: 4; font-size: 14px; margin-top: 5px; } /* Adjusted order */
 
 
     #zoomSlider {
@@ -266,19 +271,19 @@
         margin-top: 40px; 
         right: 10px;
         z-index: 900; 
-        transition: margin-top 0.3s ease-out; 
-        width: 400px; 
+        transition: margin-top 0.3s ease-out; /* <<< CORRECTION APPLIED HERE */
+        width: 450px; 
     }
 #minimapToggleBtn { 
     display: block;
     width: 100%;
-    padding: 20px 0; /* Increased vertical padding */
+    padding: 0; /* Increased vertical padding */
     line-height: 1.5; /* Browser default line height */
     background-color: #282828; 
     color: #bbb; 
     border: 1px solid #444;
     font-family: sans-serif;
-    font-size: 11px; 
+    font-size: 13px; 
     text-align: center;
     cursor: pointer;
     box-sizing: border-box;
@@ -286,7 +291,7 @@
     -webkit-user-select: none;
 }
     #minimapCanvas {
-        width: 400px; 
+        width: 448px; 
         height: 300px; 
         border: 1px solid #444; 
         border-top: none; 
@@ -355,15 +360,6 @@
 
   <!-- Vertically oriented zoom controls (LEFT) -->
   <div id="zoomControlsContainer">
-    <!-- Search Controls (Moved to Left) -->
-    <div id="searchControls">
-        <h4>Go To</h4>
-        <div>
-            X: <input id="inpX" type="number" min="0" max="1199" value="0">
-            Y: <input id="inpY" type="number" min="0" max="1199" value="0">
-            <button id="btnGo">Go</button>
-        </div>
-    </div>
     <button id="zoomInc">+</button>
     <div id="sliderWrapper">
         <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
@@ -378,7 +374,15 @@
     </div>
     <div id="zoomLevel">Zoom: 100%</div>
   </div>
-  
+  <!-- Search Controls (Center) -->
+    <div id="searchControls">
+        <h4>Go To</h4>
+        <div>
+            X: <input id="inpX" type="number" min="0" max="1199" value="0">
+            Y: <input id="inpY" type="number" min="0" max="1199" value="0">
+            <button id="btnGo">Go</button>
+        </div>
+    </div>
   <div id="centerTile">Center: X0 Y0</div>
   <div id="versionDisplay"></div>
 
@@ -438,18 +442,18 @@ const KingshotPlanner = {
       iron:  { displayName: 'Iron',  fillColor: 'rgba(192,192,192,1)', borderColor: 'rgba(153,153,153,1)' },
     },
     minimap: { 
-        width: 400,      
-        height: 300,     
-        padding: 0,    
+        width: 450, // Width of the minimap canvas  Note: This is actually the height of the minimap, as the map is isometric.
+        height: 300, // Height of the minimap canvas.  NOTE: This is actually the width of the minimap, as the map is isometric.
+        padding: 0, // Padding around the minimap content
         bgColor: 'rgba(40,40,40,0.8)',
         viewportFillColor: 'rgba(0, 0, 0, 0.25)',       
         viewportBorderColor: 'rgba(20, 20, 20, 0.85)',  
-        viewportCameraIconColor: 'rgba(30,30,30,0.95)', // NEW: Color for camera icon
+        viewportCameraIconColor: 'rgba(30,30,30,0.95)', // Color for camera icon
         buildingColor: 'rgba(200,200,200,0.7)', 
         kingCastleColor: 'rgba(255,215,0,0.8)',
-        zoomFactorMin: 1.0, 
-        zoomFactorMax: 8.0, 
-        mainMapZoomThresholdForMinimapZoom: 0.2
+        zoomFactorMin: 1, // Minimum zoom level for minimap
+        zoomFactorMax: 12.0, // Maximum zoom level for minimap
+        mainMapZoomThresholdForMinimapZoom: 0.04, // Minimum zoom level for minimap to adjust
     }
   },
 
@@ -593,7 +597,7 @@ const KingshotPlanner = {
     });
   },
 
-  initializeUI() { // ... same as 0.2.7.8 ...
+  initializeUI() {
     if(this.dom.infoBtn && this.dom.infoPanel) this.dom.infoBtn.addEventListener('click', ()=>this.dom.infoPanel.classList.toggle('open'));
     if(this.dom.statsBtn && this.dom.statsPanel) this.dom.statsBtn.addEventListener('click', ()=>this.dom.statsPanel.classList.toggle('open'));
     if(this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
@@ -652,55 +656,40 @@ const KingshotPlanner = {
         }
     });
 
-    let originalMinimapMarginTopValue = '40px'; 
-    if (this.dom.minimapContainer) {
-        try { 
-            originalMinimapMarginTopValue = getComputedStyle(this.dom.minimapContainer).marginTop;
-        } catch(e) {
-            console.warn("Could not get computed style for minimapContainer.marginTop, using default.", e);
-        }
-    }
-
+    // --- [ADD THIS CORRECTED BLOCK] ---
     if(this.dom.settingsBtn && this.dom.settingsPanel && this.dom.minimapContainer) {
         const panel = this.dom.settingsPanel;
         const minimap = this.dom.minimapContainer;
         const settingsBtn = this.dom.settingsBtn;
-        const gap = 10; 
-
-        const updateMinimapPosition = () => {
-            const settingsButtonHeight = settingsBtn.offsetHeight;
-            let settingsButtonMarginBottom = 0;
-            try {
-                 settingsButtonMarginBottom = parseInt(getComputedStyle(settingsBtn).marginBottom, 10) || 0;
-            } catch(e) {
-                console.warn("Could not get computed style for settingsBtn.marginBottom.", e);
-            }
-
-            if (panel.classList.contains('open')) {
-                const panelHeight = panel.offsetHeight;
-                minimap.style.marginTop = `${settingsButtonHeight + settingsButtonMarginBottom + panelHeight + gap}px`;
-            } else {
-                minimap.style.marginTop = originalMinimapMarginTopValue;
-            }
-        };
-
-        panel.addEventListener('transitionend', (event) => {
-            if (event.target === panel && event.propertyName === 'max-height') {
-                updateMinimapPosition();
-            }
-        });
-
+        const originalMinimapMarginTop = getComputedStyle(minimap).marginTop;
+        const gap = 10;
+        
+        // Also modify the CSS for #settingsPanel.open to include `padding: 8px;`
+        // and add `padding` to the transition property on #settingsPanel for the smoothest effect.
+        
         this.dom.settingsBtn.addEventListener('click', () => {
-            panel.classList.toggle('open');
-            if (!panel.classList.contains('open')) { 
-                 minimap.style.marginTop = originalMinimapMarginTopValue; 
-            } else { 
-                if (panel.offsetHeight > 0) {
-                    updateMinimapPosition();
-                }
+            const isOpening = !panel.classList.contains('open');
+            
+            if (isOpening) {
+                // Calculate the final height. scrollHeight gives the height of the content.
+                // We add 16 to account for the 8px top and bottom padding that will be added.
+                const panelContentHeight = panel.scrollHeight + 16;
+                const settingsButtonHeight = settingsBtn.offsetHeight;
+                const settingsButtonMarginBottom = parseInt(getComputedStyle(settingsBtn).marginBottom, 10) || 0;
+                
+                const newMarginTop = settingsButtonHeight + settingsButtonMarginBottom + panelContentHeight + gap;
+                
+                // Trigger both animations by setting the target styles
+                minimap.style.marginTop = `${newMarginTop}px`;
+                panel.classList.add('open');
+            } else {
+                // Trigger both animations to return to the original state
+                minimap.style.marginTop = originalMinimapMarginTop;
+                panel.classList.remove('open');
             }
         });
     }
+    // --- [END] CORRECTION ---
 
     if (this.dom.minimapToggleBtn && this.dom.minimapCanvas) {
         this.dom.minimapCanvas.classList.toggle('hidden', !this.state.isMinimapVisible);
