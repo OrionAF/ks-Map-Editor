@@ -361,19 +361,7 @@ canvas#map:active {
 	cursor: pointer;
 }
 
-/* --- OTHER UI ELEMENTS --- */
-#statsPanel {
-	position: absolute;
-	top: 10px;
-	left: 10px;
-	z-index: 100;
-	background: rgba(0, 0, 0, 0.6);
-	padding: 6px 10px;
-	border-radius: 4px;
-	font-size: 13px;
-}
-
-/* MODAL STYLES (Unchanged) */
+/* --- MODAL STYLES --- */
 .modal-overlay {
 	display: none;
 	position: fixed;
@@ -434,6 +422,42 @@ canvas#map:active {
 .modal-body li {
 	margin-bottom: 8px;
 }
+
+/* NEW: Styles for collapsible changelog */
+.modal-body details {
+    border-bottom: 1px solid #4a4a4a;
+    margin-bottom: 5px;
+}
+.modal-body details:last-of-type {
+    border-bottom: none;
+}
+.modal-body summary {
+    cursor: pointer;
+    list-style: none; /* Remove default marker */
+    padding: 10px 0;
+    font-weight: bold;
+    font-size: 1.1em;
+    position: relative;
+}
+.modal-body summary::-webkit-details-marker {
+    display: none; /* Hide for Safari */
+}
+.modal-body summary:before {
+    content: '▶';
+    position: absolute;
+    left: -15px;
+    font-size: 0.8em;
+    transition: transform 0.2s;
+    transform: rotate(0deg);
+}
+.modal-body details[open] > summary:before {
+    transform: rotate(90deg);
+}
+.modal-body details > :not(summary) {
+    padding-bottom: 10px;
+    padding-left: 5px;
+}
+
 
 .modal-footer {
 	padding: 10px 15px;
@@ -627,7 +651,7 @@ canvas#map:active {
     const KingshotPlanner = {
       // --- TWEAKABLE SETTINGS ---
       config: {
-        CURRENT_VERSION: '0.3.3.0',
+        CURRENT_VERSION: '6.1.1.0',
         N: 1200,
         tileW: 10,
         tileH: 10,
@@ -1048,18 +1072,40 @@ canvas#map:active {
             }
         },
 
-      showPatchNotes() { 
-        if (this.dom.modalOverlay && this.dom.patchNotesModal) { 
-            if (typeof marked !== 'undefined') { 
-                marked.setOptions({ gfm: true, breaks: true, sanitize: false }); 
-            } let text = this.state.patchNotes || ''; 
-            const idx = text.indexOf('## ['); 
-            if (idx !== -1) { 
-                text = text.substring(idx); 
-            } this.dom.patchNotesBody.innerHTML = marked.parse(text || 'No changelog available.'); 
-            this.dom.modalOverlay.style.display = 'block'; 
-            this.dom.patchNotesModal.style.display = 'block'; 
-        } 
+      showPatchNotes() {
+        if (!this.dom.modalOverlay || !this.dom.patchNotesModal) return;
+
+        // Render the raw markdown
+        if (typeof marked !== 'undefined') { marked.setOptions({ gfm: true, breaks: true, sanitize: false }); } 
+        let text = this.state.patchNotes || '';
+        const idx = text.indexOf('## ['); 
+        if (idx !== -1) { text = text.substring(idx); } 
+        this.dom.patchNotesBody.innerHTML = marked.parse(text || 'No changelog available.');
+        
+        // Post-process the rendered HTML to create collapsible sections
+        const headers = this.dom.patchNotesBody.querySelectorAll('h2');
+        headers.forEach((header, index) => {
+            const details = document.createElement('details');
+            if (index === 0) {
+                details.open = true; // Open the first (latest) version by default
+            }
+
+            const summary = document.createElement('summary');
+            summary.innerHTML = header.innerHTML;
+            details.appendChild(summary);
+
+            let sibling = header.nextElementSibling;
+            while(sibling && sibling.tagName !== 'H2') {
+                const nextSibling = sibling.nextElementSibling;
+                details.appendChild(sibling); // Move the sibling into the details element
+                sibling = nextSibling;
+            }
+            
+            header.parentNode.replaceChild(details, header);
+        });
+
+        this.dom.modalOverlay.style.display = 'block'; 
+        this.dom.patchNotesModal.style.display = 'block'; 
       },
 
       hidePatchNotes() { 

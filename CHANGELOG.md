@@ -2,7 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.3.3.0] - Major
+## [6.1.1.0] - Patch
+
+### Added
+- **Collapsible Changelog:** The "What's New?!" window now features collapsible sections for each version, making it much easier to browse past updates.
+
+### Changed
+- The latest version's notes are now expanded by default for immediate visibility.
+- All older versions are now collapsed by default, significantly reducing clutter and scrolling.
+- Changed the versioning of previous and future updates.  It was becoming a mess.  
+
+## [6.1.0.0] - Minor
 
 ### Added
 - **Dedicated Pinned Bookmarks Panel:** Added a new 'Pinned Landmarks' (📌) button and panel to the toolbar for direct, one-click access to favorite locations, improving on the previous nested menu.
@@ -22,7 +32,7 @@ All notable changes to this project will be documented in this file.
 - **Smoother Minimap Interaction:** Removed the pan animation after dragging on the minimap, which prevents a "snap-back" effect and makes navigation feel more direct.
 - **Building Render Bug:** Fixed a rendering bug in low-detail (chunked) view where some buildings were not being drawn correctly.
 
-## [0.3.2.0] - Major
+## [6.0.0.0] - Major
 
 ### Added
 - **Complete Mobile UI Overhaul!** The application now features a dedicated, modern user interface for mobile devices in portrait mode.
@@ -38,19 +48,19 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - All features, including settings and multi-pin bookmarks, are now fully accessible on mobile devices.
 
-## [0.3.1.2] - Patch
+## [5.2.1.0] - Patch
 
 ### Changed
 - Re-made the mobile layout.  This is just a test.
 
-## [0.3.1.1] - Minor
+## [5.2.0.0] - Minor
 
 ### Changed
 - **Bookmarks can now be multi-pinned!** Instead of a single pinned favorite, you can now pin an unlimited number of landmarks.
 - Pinned bookmarks are now displayed as a persistent list in the top-right corner for immediate access. Each item has its own 'Go' and 'Unpin' buttons.
 - The expandable bookmark menu is now solely for adding new pins from a list of available (unpinned) landmarks.
 
-## [0.3.1.0] - Major
+## [5.1.0.0] - Minor
 
 ### Added
 - **New Advanced Bookmarks System!**
@@ -71,7 +81,7 @@ All notable changes to this project will be documented in this file.
 - The previous bookmark dropdown from within the `Settings` panel.
 - The `Stats` button (📊), as the performance stats are now always visible.
 
-## [0.3.0.0] - Major
+## [5.0.0.0] - Major
 
 ### Added
 - **New Feature: Bookmarks!** 
@@ -83,13 +93,13 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 - The layout of the left-side zoom controls has been adjusted to accommodate the new buttons.
 - The "Presets" dropdown now resets to a placeholder after a selection is made, allowing you to select a value, zoom in/out, and select the same value again.
 
-## [0.2.9.2] - Patch
+## [4.1.1.0] - Patch
 
 ### Fixed
 - **Tile selecting:** Fixed the single tile selecting feature which broke in the last major update.  Before this update, it only worked for building tiles.  This has now been fixed.
 
 
-## [0.2.9.1] - Minor
+## [4.1.0.0] - Minor
 
 ### Changed
 - Refactored the patch notes system to load and render directly from this `CHANGELOG.md` file.
@@ -98,7 +108,7 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 ### Removed
 - The `patch_notes.json` file is no longer used by the application and has been deprecated.
 
-## [0.2.9.0] - Major
+## [4.0.0.0] - Major
 
 ### Changed
 - The minimap has been completely rebuilt to render as a true isometric representation of the main map, instead of a simple 2D grid.
@@ -116,13 +126,13 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 ### Fixed
 - **Predictable Zooming:** Corrected the behavior of the `+` / `–` zoom buttons. They now increment/decrement the zoom by exactly 1% instead of a variable amount, providing more precise control.
 
-## [0.2.8.0] - Patch
+## [3.3.2.0] - Patch
 
 ### Changed
 - Updated viewport camera icon.
 - Other minor tweaks.
 
-## [0.2.7.7] - Patch
+## [3.3.1.0] - Patch
 
 ### Changed
 - The minimap viewport indicator is now drawn as a diamond, accurately reflecting the main map's isometric camera view.
@@ -130,7 +140,7 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 - The minimap toggle button has been made slimmer with reduced padding and a slightly smaller font for a less obtrusive look.
 - Minimap canvas internal padding has been significantly reduced, minimizing the visible 'border' effect from the background color.
 
-## [0.2.7.6] - Minor
+## [3.3.0.0] - Minor
 
 ### Added
 - The minimap can now be shown or hidden using a new integrated toggle button.
@@ -139,12 +149,12 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 - The minimap has been significantly enlarged for better visibility and detail.
 - The toggle button is styled as a sleek bar at the top of the minimap, effectively replacing the previous thick padding border for a cleaner look.
 
-## [0.2.7.5] - Patch
+## [3.2.1.0] - Patch
 
 ### Changed
 - Made some improvements to the minimap.
 
-## [0.2.7.4] - Minor
+## [3.2.0.0] - Minor
 
 ### Added
 - Implemented **Markdown** support for displaying patch notes using the `marked.js` library.
@@ -152,7 +162,7 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 ### Changed
 - Notes can now include *italics*, **bold text**, lists, and other Markdown features for improved readability.
 
-## [0.2.7.3] - Minor
+## [3.1.0.0] - Minor
 
 ### Changed
 - The minimap now dynamically zooms relative to the main map's zoom level.
@@ -164,7 +174,7 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 - Resolved an issue where the Settings panel would overlap the minimap when opened.
 - Corrected main map drawing functions to resolve a black screen issue.
 
-## [0.2.7.0] - Major
+## [3.0.0.0] - Major
 
 ### Added
 - A new minimap is now available in the top-right corner, providing an overview of the entire game world.
@@ -179,22 +189,22 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 ### Fixed
 - Corrected a minor HTML class name typo in the patch notes modal footer.
 
-## [0.2.6.3] - Patch
+## [2.0.3.0] - Patch
 
 ### Changed
 - Made some minor performance improvements.
 
-## [0.2.6.2] - Patch
+## [2.0.2.0] - Patch
 
 ### Changed
 - Made a few tweaks to adjust zooming feel and responsiveness.
 
-## [0.2.6.1] - Patch
+## [2.0.1.0] - Patch
 
 ### Fixed
 - Attempted to fix an issue with the statistics panel not updating correctly.
 
-## [0.2.6.0] - Major
+## [2.0.0.0] - Major
 
 ### Added
 - Added a 'ping' effect: selections now flash briefly to make them easier to locate on the map.
@@ -206,7 +216,7 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 ### Fixed
 - Fixed a minor performance issue where buildings were being drawn twice.
 
-## [0.2.5.12] - Minor
+## [1.5.0.0] - Minor
 
 ### Added
 - Added a new 'Always Show RSS' toggle for Alliance RSS buildings. When enabled, this will keep Alliance RSS buildings visible on the map at all zoom levels.
@@ -214,7 +224,7 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 ### Fixed
 - Fixed a rendering bug that was causing buildings to be drawn twice in high-detail view.
 
-## [0.2.5.11] - Patch
+## [1.4.2.0] - Patch
 
 ### Changed
 - Refactored the building rendering logic to be more efficient.
@@ -222,20 +232,20 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 ### Fixed
 - Fixed a critical bug where Alliance RSS buildings were not filling their entire 2x2 area, leaving parts of the tile uncolored.
 
-## [0.2.5.10] - Patch
+## [1.4.1.0] - Patch
 
 ### Fixed
 - Fixed a bug where Alliance RSS buildings were rendered as 1x1 tiles instead of the correct 2x2 size.
 - Fixed an issue where the names of Alliance RSS buildings (e.g., 'Wood', 'Food') were not being displayed on the map.
 
-## [0.2.5.9] - Minor
+## [1.4.0.0] - Minor
 
 ### Added
 - A new toggleable layer for 'Alliance RSS' buildings.
 - Alliance resource nodes (Wood, Food, Stone, Iron) will now render on the map with unique colors.
 - A new 'Show Alliance RSS' checkbox has been added to control their visibility.
 
-## [0.2.5.8] - Minor
+## [1.3.0.0] - Minor
 
 ### Added
 - New 'Tile Detail' setting now controls only when tiles merge together at low zoom levels.
@@ -244,7 +254,7 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 ### Changed
 - Replaced the confusing 'Quality' dropdown with two separate, clearer settings.
 
-## [0.2.5.7] - Minor
+## [1.2.0.0] - Minor
 
 ### Added
 - Added a 'Quality' dropdown menu in the top-right panel.
@@ -253,29 +263,29 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 - Users can now choose their preferred performance vs. visual quality setting.
 - The selected quality setting is saved and remembered for your next visit.
 
-## [0.2.5.5] - Patch
+## [1.1.3.0] - Patch
 
 ### Changed
 - Made improvements to the zoom camera behavior.
 
-## [0.2.5.4] - Minor
+## [1.1.2.0] - Patch
 
 ### Changed
 - Changed the color palette of existing buildings.
 - Implemented Sanctuaries on the map.
 
-## [0.2.5.3] - Patch
+## [1.1.1.0] - Patch
 
 ### Fixed
 - Fixed the patch notes not showing and updating correctly.
 
-## [0.2.5.2] - Minor
+## [1.1.0.0] - Minor
 
 ### Changed
 - Improved the vertical zoom slider for better precision and a more consistent layout on different screen sizes.
 - Optimized application startup by moving patch notes to an external file.
 
-## [0.2.5.1] - Major
+## [1.0.0.0] - Major
 
 ### Added
 - Added a vertical zoom slider on the left.
@@ -288,7 +298,7 @@ A new dropdown menu has been added to the Settings panel, allowing you to instan
 ### Fixed
 - Fixed building name text overflowing its container.
 
-## [0.2.5.0] - Initial Release
+## [0.0.0.1] - Initial Release
 
 ### Added
 - Initial public release version with core features.
