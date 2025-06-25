@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.9.2] - Patch
+
+### Fixed
+- **Tile selecting:** Fixed the single tile selecting feature which broke in the last major update.  Before this update, it only worked for building tiles.  This has now been fixed.
+
+
 ## [0.2.9.1] - Minor
 
 ### Changed

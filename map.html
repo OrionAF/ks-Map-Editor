@@ -1166,10 +1166,11 @@
         if (this.state.animationId) { cancelAnimationFrame(this.state.animationId); this.state.animationId = null; }
         if (this.state.touchMode === 'pan' && e.touches.length === 1) {
           const t = e.touches[0];
-          // Invert drag direction to match mouse "content drag"
+          // Invert drag direction to match mouse "content grab"
           this.state.cam.x -= t.clientX - this.state.lastX;
           this.state.cam.y -= t.clientY - this.state.lastY;
-          this.state.lastX = t.clientX; this.state.lastY = t.clientY;
+          this.state.lastX = t.clientX;
+          this.state.lastY = t.clientY;
           this.clampCamera();
         } else if (this.state.touchMode === 'pinch' && e.touches.length === 2) {
           const [a, b] = e.touches; const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
@@ -1369,7 +1370,9 @@
         let optimalFontSize = Math.min(config.tileH * 0.8 * 0.5, (config.tileW * 0.8 / (text.length || 1)) * 1.8) * 0.7;
         if ((optimalFontSize * currentCamScale) < 5) return;
         ctx.fillStyle = config.textColor; ctx.font = `${optimalFontSize}px sans-serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, sx, sy);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, sx, sy);
       },
 
       drawChunk(chunk, drawBorder = true, overrideCtx = null) {
@@ -1427,7 +1430,9 @@
           const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
           const centerY = (p_top.y + p_bottom.y) / 2 + yOffset;
           ctx.fillStyle = config.textColor; ctx.font = `bold ${optimalFontSize}px sans-serif`;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(b.displayName, centerX, centerY);
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(b.displayName, centerX, centerY);
           if (b.displayCoordinates) {
             const coordFontSize = optimalFontSize * 0.7; ctx.font = `${coordFontSize}px sans-serif`;
             ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.9);
@@ -1531,9 +1536,23 @@
           if (state.selection) {
             let highlightColor = config.selectionColor;
             if (state.selection.pingStart && now - state.selection.pingStart < config.pingDuration) {
-              if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) { highlightColor = config.pingColor; }
+              if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) {
+                highlightColor = config.pingColor;
+              }
             }
-            this.drawBuildingFootprint(state.selection, highlightColor, true);
+            if (state.selection.w) {
+              // It's a building with width, use the footprint function
+              this.drawBuildingFootprint(state.selection, highlightColor, true);
+            } else {
+              // It's a single tile, draw the diamond manually
+              const [sx, sy] = this.worldToScreen(state.selection.x, state.selection.y);
+              ctx.beginPath();
+              ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy);
+              ctx.closePath();
+              ctx.strokeStyle = highlightColor;
+              ctx.lineWidth = config.strokeW * 1.5;
+              ctx.stroke();
+            }
           }
           ctx.restore();
           if (this.state.isMinimapVisible) { this.drawIsometricMinimap(viewportCorners); }
