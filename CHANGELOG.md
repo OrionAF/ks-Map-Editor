@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.3.0] - Major
+
+### Added
+- **Dedicated Pinned Bookmarks Panel:** Added a new 'Pinned Landmarks' (📌) button and panel to the toolbar for direct, one-click access to favorite locations, improving on the previous nested menu.
+
+### Changed
+- **Complete UI/UX Overhaul:** Consolidated all controls into a new, modern bottom toolbar for a cleaner, more intuitive experience on both desktop and mobile.
+  - Features like Navigation, Bookmarks, and Settings now open in sleek pop-up panels anchored to the toolbar.
+  - The central zoom slider now dynamically expands to fill available toolbar space.
+- **Improved Navigation:** The main 'Navigation' (🧭) panel is now streamlined, with separate tabs for 'Go To' and for browsing/pinning available 'Landmarks'.
+- **Updated Icons:** Refreshed toolbar icons for a clearer, more modern look.
+
+### Fixed
+- **Smarter Minimap State:** The minimap now correctly defaults to being visible on desktop screens and hidden on mobile, providing a better out-of-the-box experience for all users.
+- **Correct Panel Positioning:** The 'Zoom Presets' panel now opens correctly adjacent to its button on the toolbar, instead of from the center of the screen.
+- **Proper Landmark Sorting:** The 'Available Landmarks' list is now correctly sorted with "King's Castle" appearing first, followed by Fortresses and Sanctuaries.
+- **Functional Controls Modal:** The 'Controls' button in the Settings panel now opens a proper, informative modal window instead of a basic system alert.
+- **Smoother Minimap Interaction:** Removed the pan animation after dragging on the minimap, which prevents a "snap-back" effect and makes navigation feel more direct.
+- **Building Render Bug:** Fixed a rendering bug in low-detail (chunked) view where some buildings were not being drawn correctly.
+
 ## [0.3.2.0] - Major
 
 ### Added

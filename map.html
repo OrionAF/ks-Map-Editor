@@ -5,531 +5,629 @@
   <title>Kingshot map editor & planner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <style>
-    /* --- BASE STYLES --- */
-    body {
-      margin: 0;
-      background: #111;
-      overflow: hidden;
-      -webkit-user-select: none;
-      user-select: none;
-    }
+<style>
 
-    canvas {
-      display: block;
-      cursor: grab;
-    }
+/* --- BASE & LAYOUT --- */
+:root {
+	--toolbar-height: 55px;
+	--toolbar-bg: rgba(25, 28, 32, 0.75);
+	--panel-bg: rgba(35, 38, 43, 0.9);
+	--text-color: #e0e0e0;
+	--highlight-color: #2a9fd6;
+	--border-color: #444;
+}
 
-    canvas:active {
-      cursor: grabbing;
-    }
+body {
+	margin: 0;
+	background: #111;
+	overflow: hidden;
+	user-select: none;
+	-webkit-user-select: none;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	color: var(--text-color);
+}
 
-    /* --- DESKTOP LAYOUT CONTAINERS --- */
-    #statsPanel {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 1000;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 6px 10px;
-      border-radius: 4px;
-      color: #fff;
-      font-family: sans-serif;
-      font-size: 13px;
-    }
+canvas#map {
+	display: block;
+	cursor: grab;
+}
 
-    #topRightContainer {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 900;
-      width: 352px;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
+canvas#map:active {
+	cursor: grabbing;
+}
 
-    #settingsContainer {
-      position: absolute;
-      bottom: 10px;
-      right: 10px;
-      z-index: 1000;
-      display: flex;
-      flex-direction: column-reverse;
-      align-items: flex-end;
-    }
+#versionDisplay {
+	position: absolute;
+	bottom: calc(var(--toolbar-height) + 5px);
+	left: 10px;
+	color: rgba(255, 255, 255, 0.4);
+	font-size: 11px;
+	user-select: none;
+	z-index: 5;
+}
 
-    #zoomControlsContainer {
-      position: absolute;
-      left: 1px;
-      top: 50%;
-      transform: translateY(-50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      z-index: 10;
-      color: #fff;
-      font-family: sans-serif;
-      width: 100px;
-    }
+#centerTile {
+	position: absolute;
+	bottom: calc(var(--toolbar-height) + 5px);
+	left: 50%;
+	transform: translateX(-50%);
+	background: rgba(0, 0, 0, 0.5);
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 13px;
+	user-select: none;
+	z-index: 5;
+}
 
-    #searchControls {
-      position: fixed;
-      bottom: 45px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 6px 10px;
-      border-radius: 4px;
-      width: auto;
-      box-sizing: border-box;
-      white-space: nowrap;
-    }
+#minimapContainer {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	z-index: 900;
+	width: 352px;
+	background-color: var(--panel-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	display: none;
+	/* Controlled by JS */
+}
 
-    #centerTile {
-      position: fixed;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.5);
-      padding: 4px 8px;
-      border-radius: 4px;
-      color: #fff;
-      font-family: sans-serif;
-      font-size: 14px;
-      -webkit-user-select: none;
-      user-select: none;
-      z-index: 10;
-    }
+#minimapContainer.visible {
+	display: block;
+}
 
-    #minimapContainer { width: 100%; }
+#minimapCanvas {
+	width: 350px;
+	height: 300px;
+	display: block;
+	border-radius: 0 0 6px 6px;
+}
 
-    #versionDisplay {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
-      color: rgba(255, 255, 255, 0.5);
-      font-family: sans-serif;
-      font-size: 12px;
-      user-select: none;
-      z-index: 10;
-    }
+/* --- NEW BOTTOM TOOLBAR --- */
+#bottomToolbar {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: var(--toolbar-height);
+	background: var(--toolbar-bg);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	border-top: 1px solid var(--border-color);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0 10px;
+	box-sizing: border-box;
+	z-index: 1000;
+}
 
-    /* --- DESKTOP COMPONENT STYLES --- */
-    #settingsBtn { padding: 6px 10px; width: 120px; }
-    #settingsPanel {
-      color: #fff; font-family: sans-serif; background: rgba(0, 0, 0, 0.6); border-radius: 4px;
-      max-height: 0; padding: 0; overflow: hidden;
-      transition: max-height 0.3s ease-out, padding 0.3s ease-out;
-      text-align: left; width: 210px; margin-bottom: 5px;
-    }
-    #settingsPanel.open { max-height: 500px; padding: 8px; }
-    #settingsPanel input[type="checkbox"], #settingsPanel select { vertical-align: middle; }
-    #settingsPanel>div { margin-top: 4px; text-align: left; }
-    #settingsPanel>hr { border: none; border-top: 1px solid #444; margin: 8px 0; }
-    #settingsPanel h4 { margin: 6px 0 2px; font-size: 13px; color: #aaa; text-transform: uppercase; text-align: left; }
-    #infoBtn { margin-top: 6px; -webkit-user-select: none; user-select: none; }
-    #infoPanel {
-      max-height: 0; overflow: hidden; transition: max-height 0.3s ease; margin-top: 6px;
-      background: rgba(58, 55, 55, 0.85); padding: 0 6px; border-radius: 4px;
-      font-size: 13px; color: #ddd; text-align: left;
-    }
-    #infoPanel.open { max-height: 160px; }
-    #statsPanel div { margin: 4px 0; color: #fff; }
-    #infoPanel h4 { margin: 6px 0 4px; color: #fff; text-transform: none; }
-    #infoPanel ul { padding-left: 16px; margin: 0; }
-    #infoPanel li { margin-bottom: 4px; }
-    #zoomControlsContainer button { -webkit-user-select: none; user-select: none; margin: 0; width: 72px; }
-    #zoomPresetSelect { order: 6; width: 72px; -webkit-user-select: none; user-select: none; }
-    #zoomControlsContainer #zoomInc10 { order: 1; }
-    #zoomControlsContainer #zoomInc { order: 2; }
-    #zoomControlsContainer #sliderWrapper { order: 3; position: relative; }
-    #zoomControlsContainer #zoomDec { order: 4; }
-    #zoomControlsContainer #zoomDec10 { order: 5; }
-    #zoomControlsContainer #zoomLevel { order: 7; font-size: 14px; margin-top: 5px; }
-    #zoomSlider {
-      -webkit-appearance: slider-vertical; appearance: slider-vertical;
-      writing-mode: bt-lr; height: 55vh; max-height: 600px; width: auto; margin: 0;
-    }
-    #floatingZoomLabel {
-      position: absolute; display: none; left: 25px; background-color: #0b508f; color: white;
-      padding: 3px 6px; border-radius: 4px; font-size: 13px; pointer-events: none; transform: translateY(-50%);
-    }
-    #searchControls h4 { margin: 0 0 4px; font-size: 13px; color: #aaa; text-transform: uppercase; text-align: left; }
-    #searchControls>div { text-align: left; }
-    #searchControls input { width: 60px; }
-    #searchControls button { margin: 2px 0 2px 4px; -webkit-user-select: none; user-select: none; }
-    label.coords-label { font-size: 13px; vertical-align: middle; user-select: none; }
-    #minimapToggleBtn {
-      display: block; width: 100%; padding: 0; line-height: 1.5; background-color: #282828; color: #bbb;
-      border: 1px solid #444; font-family: sans-serif; font-size: 13px; text-align: center; cursor: pointer;
-      box-sizing: border-box; user-select: none; -webkit-user-select: none;
-    }
-    #minimapCanvas {
-      width: 350px; height: 300px; border: 1px solid #444; border-top: none; background-color: rgba(0, 0, 0, 0.5);
-      display: block; transition: max-height 0.3s ease-out, opacity 0.3s ease-out; max-height: 300px; opacity: 1;
-    }
-    #minimapCanvas.hidden { max-height: 0; opacity: 0; border-width: 0; display: block; }
-    
-    /* --- DESKTOP BOOKMARKS STYLES --- */
-    #pinnedBookmarksContainer { display: flex; flex-direction: column; gap: 3px; }
-    .pinned-bookmark-item {
-      display: flex; justify-content: space-between; align-items: center; padding: 5px 8px;
-      background-color: #333; border: 1px solid #555; border-radius: 3px; font-family: sans-serif;
-      font-size: 13px; color: #eee;
-    }
-    .pinned-bookmark-item>span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; padding-right: 10px; }
-    .pinned-bookmark-item .controls button {
-      padding: 2px 6px; font-size: 12px; line-height: 1; background: #444; border: 1px solid #666;
-      color: #eee; margin-left: 5px; cursor: pointer;
-    }
-    .pinned-bookmark-item .controls .unpin-btn { color: #fdd; background: #5a3838; border-color: #855; }
-    #addBookmarksContainer {
-      width: 100%; background-color: #282828; border: 1px solid #444; border-radius: 4px;
-      font-family: sans-serif; font-size: 13px; color: #eee;
-    }
-    #addBookmarksHeader { display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; cursor: pointer; }
-    #addBookmarksToggleBtn { transition: transform 0.2s ease-in-out; padding: 2px 6px; font-size: 14px; line-height: 1; }
-    #addBookmarksToggleBtn.open { transform: rotate(180deg); }
-    #addBookmarksList {
-      max-height: 0; overflow: hidden; overflow-y: auto;
-      transition: max-height 0.3s ease-out; border-top: 1px solid #444;
-    }
-    #addBookmarksList.open { max-height: 250px; }
-    .add-bookmark-item {
-      display: flex; justify-content: space-between; align-items: center; padding: 6px 8px;
-      border-bottom: 1px solid #3a3a3a;
-    }
-    .add-bookmark-item:last-child { border-bottom: none; }
-    .add-bookmark-item button { padding: 2px 5px; font-size: 12px; margin-left: 5px; cursor: pointer; }
+.toolbar-group {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
 
-    /* --- GLOBAL MODAL STYLES --- */
-    #modalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 999; }
-    #patchNotesModal {
-      display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 90%; max-width: 500px; background: #2c2c2c; color: #eee; border-radius: 8px;
-      z-index: 1002; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-    }
-    .patch-notes-header { padding: 15px; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }
-    .patch-notes-header h3 { margin: 0; }
-    .patch-notes-header .close-btn { background: none; border: none; color: #ccc; font-size: 24px; cursor: pointer; }
-    .patch-notes-body { padding: 15px; max-height: 60vh; overflow-y: auto; }
-    .patch-notes-body ul { padding-left: 20px; margin: 0; }
-    .patch-notes-body li { margin-bottom: 8px; }
-    .patch-notes-footer { padding: 10px 15px; border-top: 1px solid #444; background: #333; border-radius: 0 0 8px 8px; }
-    .patch-notes-footer label { user-select: none; font-size: 14px; }
-    .mobile-only { display: none !important; }
+.toolbar-group.center {
+	flex-grow: 1;
+	justify-content: center;
+	min-width: 200px;
+	padding: 0 10px;
+}
 
-    /* --- RESPONSIVE STYLES --- */
-    @media (max-width: 768px) and (orientation: landscape) {
-      /* Hide most desktop UI in landscape mobile */
-      #topRightContainer, #settingsContainer, #searchControls, #centerTile, #statsPanel { display: none; }
-      /* Horizontal zoom controls at bottom */
-      #zoomControlsContainer {
-        left: 0; right: 0; top: auto; bottom: 0; transform: none; width: 100%; height: 60px;
-        padding: 0 10px; box-sizing: border-box; flex-direction: row; justify-content: space-between;
-        background: rgba(0, 0, 0, 0.7);
-      }
-      #sliderWrapper { flex-grow: 1; margin: 0 10px; }
-      #zoomSlider { -webkit-appearance: none; appearance: none; writing-mode: horizontal-tb; height: 25px; width: 100%; max-height: none; }
-      #zoomPresetSelect { flex-direction: row; }
-      #zoomLevel { font-size: 14px; }
-      #versionDisplay { bottom: 65px; left: 10px; right: auto; }
-    }
-    
-    @media (max-width: 768px) and (orientation: portrait) {
-      /* 1. Hide ALL desktop UI elements */
-      #zoomControlsContainer, #searchControls, #topRightContainer,
-      #settingsContainer, #statsPanel, #versionDisplay, #centerTile {
-        display: none;
-      }
-      .mobile-only { display: block !important; }
+#bottomToolbar button {
+	background: none;
+	border: none;
+	color: var(--text-color);
+	font-size: 24px;
+	padding: 8px;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: background-color 0.2s;
+	line-height: 1;
+}
 
-      /* 2. Style the new Mobile Toolbar */
-      #mobileToolbar {
-        display: flex !important;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background: rgba(10, 10, 10, 0.9);
-        border-top: 1px solid #444;
-        justify-content: space-around;
-        align-items: center;
-        padding: 10px 0;
-        z-index: 1000;
-        box-sizing: border-box;
-      }
-      #mobileToolbar button {
-        background: transparent;
-        border: none;
-        color: #eee;
-        font-size: 24px;
-        padding: 8px 12px;
-        border-radius: 8px;
-        line-height: 1;
-      }
-      #mobileToolbar button:active { background: #444; }
+#bottomToolbar button:hover {
+	background-color: rgba(255, 255, 255, 0.1);
+}
 
-      /* 3. Style the Mobile Modal Overlay and Panels */
-      #mobileModalOverlay {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.7); z-index: 1999;
-        display: none; /* controlled by JS */
-      }
-      #mobileModalOverlay.open { display: block; }
-      
-      .mobile-panel {
-        display: none; /* controlled by JS */
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 90%;
-        max-width: 400px;
-        max-height: 80vh;
-        background: #222;
-        border: 1px solid #555;
-        border-radius: 8px;
-        z-index: 2000;
-        color: #eee;
-        font-family: sans-serif;
-        display: none;
-        flex-direction: column;
-      }
-      .mobile-panel.open { display: flex; }
+#bottomToolbar button.active {
+	background-color: var(--highlight-color);
+	color: white;
+}
 
-      .mobile-panel-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 15px;
-        border-bottom: 1px solid #444;
-        background: #333;
-        border-radius: 8px 8px 0 0;
-      }
-      .mobile-panel-header h3 { margin: 0; font-size: 18px; }
-      .mobile-panel-header .close-btn {
-        background: none; border: none; color: #ccc; font-size: 28px; cursor: pointer; line-height: 1; padding: 0;
-      }
-      
-      .mobile-panel-body {
-        padding: 15px;
-        overflow-y: auto;
-      }
+#bottomToolbar #zoomLevel {
+	font-size: 14px;
+	min-width: 90px;
+	text-align: center;
+	user-select: none;
+}
 
-      /* 4. Specific panel content styling */
-      /* Settings panel just needs to be re-styled, not re-created */
-      #settingsPanel {
-        display: none; flex-direction: column;
-        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        width: 90%; max-width: 400px; max-height: 80vh; z-index: 2000;
-        padding: 0; margin: 0;
-      }
-      #settingsPanel.open { display: flex; max-height: 80vh; }
-      #settingsPanel .mobile-panel-body { padding: 15px; overflow-y: auto; }
+#zoomSlider {
+	flex-grow: 1;
+	-webkit-appearance: none;
+	appearance: none;
+	width: 100%;
+	height: 5px;
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 5px;
+	outline: none;
+	margin: 0 10px;
+}
 
-      /* Search Panel */
-      #mobileSearchPanel input[type="number"] {
-        width: 80px; font-size: 16px; padding: 5px;
-      }
-      #mobileSearchPanel #mobileBtnGo {
-        width: 100%; padding: 10px; font-size: 16px; margin-top: 15px;
-      }
-      
-      /* Bookmarks Panel */
-      #mobileBookmarksPanel .section-header {
-        margin: 15px 0 8px 0;
-        font-size: 16px;
-        font-weight: bold;
-        color: #aaa;
-        border-bottom: 1px solid #444;
-        padding-bottom: 5px;
-      }
-      #mobileBookmarksPanel .section-header:first-child { margin-top: 0; }
-      #mobileBookmarksPanel .pinned-bookmark-item, 
-      #mobileBookmarksPanel .add-bookmark-item {
-        font-size: 15px;
-        padding: 10px 5px;
-      }
-    }
-  </style>
+#zoomSlider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 18px;
+	height: 18px;
+	background: #f1f1f1;
+	border-radius: 50%;
+	cursor: pointer;
+}
+
+#zoomSlider::-moz-range-thumb {
+	width: 18px;
+	height: 18px;
+	background: #f1f1f1;
+	border-radius: 50%;
+	cursor: pointer;
+	border: none;
+}
+
+/* --- TOOLBAR PANELS --- */
+.toolbar-panel {
+	position: absolute;
+	bottom: calc(var(--toolbar-height) + 10px);
+	background: var(--panel-bg);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+	padding: 15px;
+	z-index: 999;
+	display: none;
+	/* Toggled by JS */
+	opacity: 0;
+	transform: translateY(10px);
+	transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+	width: 320px;
+	box-sizing: border-box;
+}
+
+.toolbar-panel.open {
+	display: block;
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.toolbar-panel h4 {
+	margin: 0 0 10px 0;
+	font-size: 13px;
+	color: #aaa;
+	text-transform: uppercase;
+	font-weight: 600;
+	border-bottom: 1px solid var(--border-color);
+	padding-bottom: 8px;
+}
+
+.panel-section {
+	margin-bottom: 15px;
+}
+
+.panel-section:last-child {
+	margin-bottom: 0;
+}
+
+.bookmarks-list {
+	max-height: 250px;
+	overflow-y: auto;
+	margin-right: -5px;
+	padding-right: 5px;
+}
+
+.bookmark-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 5px;
+	font-size: 14px;
+	border-bottom: 1px solid #3a3a3a;
+}
+
+.bookmark-item:last-child {
+	border-bottom: none;
+}
+
+.bookmark-item>span {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	flex-grow: 1;
+	padding-right: 10px;
+}
+
+.bookmark-item .controls button {
+	padding: 2px 6px;
+	font-size: 12px;
+	margin-left: 5px;
+	cursor: pointer;
+}
+
+.bookmark-item .unpin-btn {
+	color: #fdd;
+	background: #5a3838;
+}
+
+#pinnedBookmarksPanel {
+	left: 10px;
+}
+
+#navPanel {
+	left: 65px;
+}
+
+/* Navigation Panel (Go To & Available Landmarks) */
+#navPanel .tab-buttons {
+	display: flex;
+	margin-bottom: 15px;
+	border-radius: 6px;
+	overflow: hidden;
+	border: 1px solid var(--border-color);
+}
+
+#navPanel .tab-button {
+	flex: 1;
+	padding: 8px;
+	background: rgba(0, 0, 0, 0.2);
+	border: none;
+	color: var(--text-color);
+	cursor: pointer;
+	font-size: 14px;
+}
+
+#navPanel .tab-button.active {
+	background: var(--highlight-color);
+}
+
+#navPanel .tab-content {
+	display: none;
+}
+
+#navPanel .tab-content.active {
+	display: block;
+}
+
+#navPanel #goToContent div {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+
+#navPanel input[type="number"] {
+	width: 60px;
+	padding: 5px;
+}
+
+#navPanel button {
+	padding: 6px 12px;
+}
+
+/* Settings Panel */
+#settingsPanel {
+	right: 10px;
+}
+
+#settingsPanel label {
+	font-size: 14px;
+	user-select: none;
+	vertical-align: middle;
+}
+
+#settingsPanel>.panel-section>div {
+	margin-bottom: 8px;
+}
+
+#settingsPanel .info-buttons {
+	display: flex;
+	gap: 10px;
+	margin-top: 10px;
+}
+
+#settingsPanel .info-buttons button {
+	flex: 1;
+	cursor: pointer;
+}
+
+/* Zoom Presets Panel */
+#zoomPresetsPanel {
+	right: 65px;
+	width: 120px;
+	padding: 5px;
+}
+
+#zoomPresetsPanel .preset-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+#zoomPresetsPanel button {
+	width: 100%;
+	text-align: center;
+	padding: 8px;
+	font-size: 14px;
+	cursor: pointer;
+}
+
+/* --- OTHER UI ELEMENTS --- */
+#statsPanel {
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	z-index: 100;
+	background: rgba(0, 0, 0, 0.6);
+	padding: 6px 10px;
+	border-radius: 4px;
+	font-size: 13px;
+}
+
+/* MODAL STYLES (Unchanged) */
+.modal-overlay {
+	display: none;
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.7);
+	z-index: 1001;
+}
+
+.modal {
+	display: none;
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 90%;
+	max-width: 500px;
+	background: #2c2c2c;
+	color: #eee;
+	border-radius: 8px;
+	z-index: 1002;
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+	padding: 15px;
+	border-bottom: 1px solid #444;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.modal-header h3 {
+	margin: 0;
+}
+
+.modal-header .close-btn {
+	background: none;
+	border: none;
+	color: #ccc;
+	font-size: 24px;
+	cursor: pointer;
+}
+
+.modal-body {
+	padding: 15px;
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.modal-body ul {
+	padding-left: 20px;
+	margin: 0;
+}
+
+.modal-body li {
+	margin-bottom: 8px;
+}
+
+.modal-footer {
+	padding: 10px 15px;
+	border-top: 1px solid #444;
+	background: #333;
+	border-radius: 0 0 8px 8px;
+}
+
+.modal-footer label {
+	user-select: none;
+	font-size: 14px;
+}
+
+/* --- RESPONSIVE STYLES --- */
+@media (max-width: 768px) {
+	.toolbar-group.center {
+		padding: 0 5px;
+	}
+
+	.toolbar-panel {
+		width: calc(100vw - 20px);
+		max-width: 400px;
+	}
+
+	#pinnedBookmarksPanel,
+	#navPanel,
+	#settingsPanel,
+	#zoomPresetsPanel {
+		left: 10px;
+		right: 10px;
+		width: auto;
+	}
+}
+
+@media (max-width: 480px) {
+	:root {
+		--toolbar-height: 50px;
+	}
+
+	#bottomToolbar {
+		padding: 0 5px;
+	}
+
+	.toolbar-group {
+		gap: 0;
+	}
+
+	.toolbar-group.center {
+		min-width: 0;
+		flex: 1;
+	}
+
+	#bottomToolbar button {
+		font-size: 20px;
+		padding: 6px;
+	}
+
+	#zoomLevel {
+		display: none;
+	}
+
+	#statsPanel,
+	#centerTile,
+	#versionDisplay {
+		display: none;
+	}
+}
+
+</style>
 </head>
 <body>
-  <!-- DESKTOP UI (will be hidden on mobile portrait) -->
+  <!-- TOP UI ELEMENTS -->
   <div id="statsPanel">
     <div id="statsFPS">FPS: –</div>
     <div id="statsTiles">Tiles: –</div>
   </div>
-  <div id="topRightContainer">
-    <div id="minimapContainer">
-      <button id="minimapToggleBtn" title="Toggle Minimap">Hide Minimap</button>
+
+  <div id="minimapContainer">
       <canvas id="minimapCanvas"></canvas>
-    </div>
-    <div id="pinnedBookmarksContainer"></div>
-    <div id="addBookmarksContainer">
-      <div id="addBookmarksHeader">
-        <span>Add Bookmark</span>
-        <button id="addBookmarksToggleBtn" title="Show / Hide available landmarks">▼</button>
-      </div>
-      <div id="addBookmarksList"></div>
-    </div>
-  </div>
-  <div id="settingsContainer">
-    <button id="settingsBtn">⚙️ Settings</button>
-    <div id="settingsPanel">
-      <h4>Display</h4>
-      <div>
-        <input type="checkbox" id="gridlinesToggle">
-        <label for="gridlinesToggle" class="coords-label">Show Gridlines</label>
-      </div>
-      <div>
-        <input type="checkbox" id="coordsToggle">
-        <label for="coordsToggle" class="coords-label">Show Coords >80%</label>
-      </div>
-      <div>
-        <input type="checkbox" id="allianceRssToggle">
-        <label for="allianceRssToggle" class="coords-label">Show Alliance RSS</label>
-      </div>
-      <div>
-        <input type="checkbox" id="allianceRssAlwaysVisibleToggle">
-        <label for="allianceRssAlwaysVisibleToggle" class="coords-label">Always Show RSS</label>
-      </div>
-      <hr>
-      <h4>Performance</h4>
-      <div>
-        <label for="tileDetailSelect" class="coords-label">Merge tiles at zoom level:</label>
-        <select id="tileDetailSelect">
-          <option value="19">20% (Ultra)</option>
-          <option value="39">40% (Super)</option>
-          <option value="49">50% (High)</option>
-          <option value="59">60% (Medium)</option>
-          <option value="69">70% (Low)</option>
-          <option value="79">80% (Very Low)</option>
-        </select>
-      </div>
-      <hr>
-      <div>
-        <button id="infoBtn" title="Show controls">ℹ️</button>
-      </div>
-      <div id="infoPanel">
-        <h4>Controls</h4>
-        <ul>
-          <li><strong>Pan</strong>: drag / one-finger touch</li>
-          <li><strong>Zoom</strong>: wheel, slider, +/–, q/e, dblclick</li>
-          <li><strong>Pinch</strong>: two-finger touch</li>
-          <li><strong>Keyboard</strong>: arrows to pan</li>
-        </ul>
-        <button id="patchNotesBtn">Patch Notes</button>
-      </div>
-    </div>
-    <button id="settingsBtn">⚙️ Settings</button>
-  </div>
-
-  <!-- LEFT & BOTTOM UI -->
-  <div id="zoomControlsContainer">
-    <button id="zoomInc10">+10%</button>
-    <button id="zoomInc">+1%</button>
-    <div id="sliderWrapper">
-      <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
-      <div id="floatingZoomLabel"></div>
-    </div>
-    <button id="zoomDec">-1%</button>
-    <button id="zoomDec10">-10%</button>
-    <select id="zoomPresetSelect">
-      <option value="" disabled selected>Presets</option>
-      <option value="Fit">Fit</option>
-      <option value="5">5%</option>
-      <option value="10">10%</option>
-      <option value="15">15%</option>
-      <option value="20">20%</option>
-      <option value="40">40%</option>
-      <option value="60">60%</option>
-      <option value="80">80%</option>
-      <option value="100">100%</option>
-    </select>
-    <div id="zoomLevel">Zoom: 100%</div>
-  </div>
-  <div id="searchControls">
-    <h4>Go To</h4>
-    <div>
-      X: <input id="inpX" type="number" min="0" max="1199" value="0">
-      Y: <input id="inpY" type="number" min="0" max="1199" value="0">
-      <button id="btnGo">Go</button>
-    </div>
-  </div>
-  <div id="centerTile">Center: X0 Y0</div>
-  <div id="versionDisplay"></div>
-
-  <!-- MOBILE UI (hidden by default, shown via media query) -->
-  <div id="mobileToolbar" class="mobile-only">
-    <button id="mobileZoomOutBtn" title="Zoom Out">-</button>
-    <button id="mobileZoomInBtn" title="Zoom In">+</button>
-    <button id="mobileFitBtn" title="Fit to Screen">⛶</button>
-    <button id="mobileSearchBtn" title="Go to Coordinate">🔍</button>
-    <button id="mobileBookmarksBtn" title="Bookmarks">🔖</button>
-    <button id="mobileSettingsBtn" title="Settings">⚙️</button>
   </div>
   
-  <div id="mobileModalOverlay" class="mobile-only"></div>
-
-  <div id="mobileSearchPanel" class="mobile-panel mobile-only">
-    <div class="mobile-panel-header">
-      <h3>Go To Coordinate</h3>
-      <button class="close-btn">×</button>
-    </div>
-    <div class="mobile-panel-body">
-      X: <input id="mobileInpX" type="number" min="0" max="1199" value="0">
-      Y: <input id="mobileInpY" type="number" min="0" max="1199" value="0">
-      <button id="mobileBtnGo">Go</button>
-    </div>
-  </div>
-
-  <div id="mobileBookmarksPanel" class="mobile-panel mobile-only">
-    <div class="mobile-panel-header">
-      <h3>Bookmarks</h3>
-      <button class="close-btn">×</button>
-    </div>
-    <div class="mobile-panel-body">
-      <div class="section-header">Pinned</div>
-      <div id="mobilePinnedBookmarksContainer"></div>
-      <div class="section-header">Add New</div>
-      <div id="mobileAddBookmarksList"></div>
-    </div>
-  </div>
-
-  <!-- Re-purposing #settingsPanel for mobile -->
-  <div id="mobileSettingsPanelHeader" class="mobile-panel-header mobile-only">
-      <h3>Settings</h3>
-      <button class="close-btn">×</button>
-  </div>
-
-
-  <!-- GLOBAL MODALS (Patch Notes, etc) -->
-  <div id="patchNotesModal">
-    <div class="patch-notes-header">
-      <h3>What's New?!</h3>
-      <button id="closePatchNotesBtn" class="close-btn">×</button>
-    </div>
-    <div class="patch-notes-body" id="patchNotesBody">
-    </div>
-    <div class="patch-notes-footer">
-      <input type="checkbox" id="hidePatchNotesCheckbox">
-      <label for="hidePatchNotesCheckbox">Do not show this again until the next update.</label>
-    </div>
-  </div>
-
+  <div id="centerTile">Center: X0 Y0</div>
+  <div id="versionDisplay"></div>
+  
   <!-- MAIN CANVAS -->
   <canvas id="map"></canvas>
 
+  <!-- NEW BOTTOM TOOLBAR & PANELS -->
+  <div id="bottomToolbar">
+    <div class="toolbar-group left">
+      <button id="pinnedBookmarksToggleBtn" title="Pinned Landmarks">📌</button>
+      <button id="navPanelToggleBtn" title="Navigation">🧭</button>
+    </div>
+    
+    <div class="toolbar-group center">
+      <button id="zoomDecBtn" title="Zoom Out">-</button>
+      <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
+      <button id="zoomIncBtn" title="Zoom In">+</button>
+      <div id="zoomLevel">Zoom: 100%</div>
+    </div>
+    
+    <div class="toolbar-group right">
+      <button id="zoomPresetsToggleBtn" title="Zoom Presets">🎯</button>
+      <button id="minimapToggleBtn" title="Toggle Minimap">🗺️</button>
+      <button id="settingsToggleBtn" title="Settings">⚙️</button>
+    </div>
+  </div>
+
+  <div id="pinnedBookmarksPanel" class="toolbar-panel">
+      <h4>Pinned Landmarks</h4>
+      <div id="pinnedBookmarksList" class="bookmarks-list"><!-- Populated by JS --></div>
+  </div>
+
+  <!-- Navigation Panel -->
+  <div id="navPanel" class="toolbar-panel">
+      <div class="tab-buttons">
+          <button class="tab-button active" data-tab="goToContent">Go To</button>
+          <button class="tab-button" data-tab="landmarksContent">Landmarks</button>
+      </div>
+      <div id="goToContent" class="tab-content active">
+          <h4>Go To Coordinates</h4>
+          <div>
+            X: <input id="inpX" type="number" min="0" max="1199" value="0">
+            Y: <input id="inpY" type="number" min="0" max="1199" value="0">
+            <button id="btnGo">Go</button>
+        </div>
+      </div>
+      <div id="landmarksContent" class="tab-content">
+          <h4>Available Landmarks</h4>
+          <div id="addBookmarksList" class="bookmarks-list"><!-- Populated by JS --></div>
+      </div>
+  </div>
+
+  <!-- Settings Panel -->
+  <div id="settingsPanel" class="toolbar-panel">
+    <div class="panel-section">
+      <h4>Display</h4>
+      <div><input type="checkbox" id="gridlinesToggle"><label for="gridlinesToggle"> Show Gridlines</label></div>
+      <div><input type="checkbox" id="coordsToggle"><label for="coordsToggle"> Show Coords >80%</label></div>
+      <div><input type="checkbox" id="allianceRssToggle"><label for="allianceRssToggle"> Show Alliance RSS</label></div>
+      <div><input type="checkbox" id="allianceRssAlwaysVisibleToggle"><label for="allianceRssAlwaysVisibleToggle"> Always Show RSS</label></div>
+    </div>
+    <div class="panel-section">
+      <h4>Performance</h4>
+      <label for="tileDetailSelect">Merge tiles at zoom:</label>
+      <select id="tileDetailSelect">
+        <option value="19">20% (Ultra)</option>
+        <option value="39">40% (Super)</option>
+        <option value="49">50% (High)</option>
+        <option value="59">60% (Medium)</option>
+        <option value="69">70% (Low)</option>
+        <option value="79">80% (Very Low)</option>
+      </select>
+    </div>
+    <div class="panel-section info-buttons">
+        <button id="infoBtn">Controls</button>
+        <button id="patchNotesBtn">Patch Notes</button>
+    </div>
+  </div>
+
+  <!-- Zoom Presets Panel -->
+  <div id="zoomPresetsPanel" class="toolbar-panel">
+      <div id="zoomPresetsList" class="preset-list">
+        <!-- Dynamically populated -->
+      </div>
+  </div>
+
+  <!-- MODALS (unchanged structure, but triggered from new buttons) -->
+  <div id="modalOverlay" class="modal-overlay"></div>
+  <div id="patchNotesModal" class="modal">
+    <div class="modal-header"><h3>What's New?!</h3><button id="closePatchNotesBtn" class="close-btn">×</button></div>
+    <div class="modal-body" id="patchNotesBody"></div>
+    <div class="modal-footer"><input type="checkbox" id="hidePatchNotesCheckbox"><label for="hidePatchNotesCheckbox"> Do not show this again.</label></div>
+  </div>
+  <div id="controlsModal" class="modal">
+      <div class="modal-header"><h3>Controls</h3><button id="closeControlsBtn" class="close-btn">×</button></div>
+      <div class="modal-body">
+          <ul>
+            <li><strong>Pan</strong>: Drag with mouse / One-finger drag on touch</li>
+            <li><strong>Zoom</strong>: Mouse wheel, +/- buttons, or the slider</li>
+            <li><strong>Pinch-to-Zoom</strong>: Use two fingers on touch devices</li>
+            <li><strong>Quick Zoom</strong>: Double-click to zoom in</li>
+            <li><strong>Keyboard Pan</strong>: Use Arrow Keys</li>
+            <li><strong>Select</strong>: Click or tap on any tile</li>
+          </ul>
+      </div>
+  </div>
+
   <script>
+    // Unchanged config and state objects...
     const KingshotPlanner = {
       // --- TWEAKABLE SETTINGS ---
       config: {
-        CURRENT_VERSION: '0.3.2.0',
+        CURRENT_VERSION: '0.3.3.0',
         N: 1200,
         tileW: 10,
         tileH: 10,
@@ -569,11 +667,9 @@
           sanctuaryColor: 'rgba(65,105,225,1)',
           zoomFactorMin: 1.0, 
           zoomFactorMax: 12.0,
-          mainMapZoomThresholdForMinimapZoom: 0.08
+          mainMapZoomThresholdForMinimapZoom: 0.03
         }
       },
-
-      // --- APPLICATION STATE ---
       state: {
         baseMap: { unoccupiableTiles: [], defaultBuildings: [] },
         patchNotes: '',
@@ -601,183 +697,203 @@
         pinchCenter: null,
         startCamX: 0,
         startCamY: 0,
-        hideLabelTimeout: null,
         statsUpdateTime: 0,
         currentTileDetailThreshold: 50,
-        isMinimapVisible: true,
         isMinimapDragging: false,
         minimapClickStartPos: { x: 0, y: 0 },
         minimapCam: { x: 0, y: 0, scale: 0.1 },
         animationId: null,
-        pinnedBookmarks: []
+        pinnedBookmarks: [],
+        openPanel: null,
       },
-
-      // --- DOM REFERENCES (with new mobile elements) ---
-      dom: {
-        canvas: null, ctx: null,
-        // Desktop UI
-        inpX: null, inpY: null, btnGo: null, zoomLevelEl: null, zoomDecBtn: null, zoomIncBtn: null, zoomDec10Btn: null, zoomInc10Btn: null, zoomSlider: null, zoomPresetSelect: null, centerTileEl: null, infoBtn: null, infoPanel: null, statsPanel: null, statsFPSEl: null, statsTilesEl: null, coordsToggle: null, floatingZoomLabel: null, versionDisplay: null, tileDetailSelect: null, gridlinesToggle: null, allianceRssToggle: null, allianceRssAlwaysVisibleToggle: null, settingsBtn: null, settingsPanel: null, minimapCanvas: null, minimapCtx: null, minimapContainer: null, minimapToggleBtn: null, pinnedBookmarksContainer: null, addBookmarksContainer: null, addBookmarksHeader: null, addBookmarksToggleBtn: null, addBookmarksList: null,
-        // Global Modals
-        patchNotesBtn: null, modalOverlay: null, patchNotesModal: null, patchNotesBody: null, closePatchNotesBtn: null, hidePatchNotesCheckbox: null,
-        // Mobile UI
-        mobileToolbar: null, mobileZoomInBtn: null, mobileZoomOutBtn: null, mobileFitBtn: null, mobileSearchBtn: null, mobileBookmarksBtn: null, mobileSettingsBtn: null, mobileModalOverlay: null, mobileSearchPanel: null, mobileBookmarksPanel: null, mobileInpX: null, mobileInpY: null, mobileBtnGo: null, mobilePinnedBookmarksContainer: null, mobileAddBookmarksList: null
-      },
+      dom: {}, // Will be populated in init()
 
       // --- CORE INITIALIZATION ---
       init() {
-        const self = this;
-        this.dom.canvas = document.getElementById('map');
-        if (!this.dom.canvas) { console.error("Fatal: Canvas element 'map' not found."); return; }
+        // --- DOM REFERENCES (Updated for new UI) ---
+        this.dom = {
+          canvas: document.getElementById('map'),
+          ctx: null,
+          inpX: document.getElementById('inpX'),
+          inpY: document.getElementById('inpY'),
+          btnGo: document.getElementById('btnGo'),
+          zoomLevelEl: document.getElementById('zoomLevel'),
+          zoomDecBtn: document.getElementById('zoomDecBtn'),
+          zoomIncBtn: document.getElementById('zoomIncBtn'),
+          zoomSlider: document.getElementById('zoomSlider'),
+          zoomPresetsToggleBtn: document.getElementById('zoomPresetsToggleBtn'),
+          zoomPresetsPanel: document.getElementById('zoomPresetsPanel'),
+          zoomPresetsList: document.getElementById('zoomPresetsList'),
+          centerTileEl: document.getElementById('centerTile'),
+          statsPanel: document.getElementById('statsPanel'),
+          statsFPSEl: document.getElementById('statsFPS'),
+          statsTilesEl: document.getElementById('statsTiles'),
+          coordsToggle: document.getElementById('coordsToggle'),
+          versionDisplay: document.getElementById('versionDisplay'),
+          modalOverlay: document.getElementById('modalOverlay'),
+          patchNotesBtn: document.getElementById('patchNotesBtn'),
+          patchNotesModal: document.getElementById('patchNotesModal'),
+          patchNotesBody: document.getElementById('patchNotesBody'),
+          closePatchNotesBtn: document.getElementById('closePatchNotesBtn'),
+          hidePatchNotesCheckbox: document.getElementById('hidePatchNotesCheckbox'),
+          infoBtn: document.getElementById('infoBtn'),
+          controlsModal: document.getElementById('controlsModal'),
+          closeControlsBtn: document.getElementById('closeControlsBtn'),
+          tileDetailSelect: document.getElementById('tileDetailSelect'),
+          gridlinesToggle: document.getElementById('gridlinesToggle'),
+          allianceRssToggle: document.getElementById('allianceRssToggle'),
+          allianceRssAlwaysVisibleToggle: document.getElementById('allianceRssAlwaysVisibleToggle'),
+          settingsToggleBtn: document.getElementById('settingsToggleBtn'),
+          settingsPanel: document.getElementById('settingsPanel'),
+          minimapContainer: document.getElementById('minimapContainer'),
+          minimapToggleBtn: document.getElementById('minimapToggleBtn'),
+          minimapCanvas: document.getElementById('minimapCanvas'),
+          pinnedBookmarksToggleBtn: document.getElementById('pinnedBookmarksToggleBtn'),
+          pinnedBookmarksPanel: document.getElementById('pinnedBookmarksPanel'),
+          pinnedBookmarksList: document.getElementById('pinnedBookmarksList'),
+          navPanelToggleBtn: document.getElementById('navPanelToggleBtn'),
+          navPanel: document.getElementById('navPanel'),
+          addBookmarksList: document.getElementById('addBookmarksList'),
+        };
+
         this.dom.ctx = this.dom.canvas.getContext('2d');
-        if (!this.dom.ctx) { console.error("Fatal: Could not get 2D rendering context for canvas."); return; }
-        this.dom.inpX = document.getElementById('inpX');
-        this.dom.inpY = document.getElementById('inpY');
-        this.dom.btnGo = document.getElementById('btnGo');
-        this.dom.zoomLevelEl = document.getElementById('zoomLevel');
-        this.dom.zoomDecBtn = document.getElementById('zoomDec');
-        this.dom.zoomIncBtn = document.getElementById('zoomInc');
-        this.dom.zoomDec10Btn = document.getElementById('zoomDec10');
-        this.dom.zoomInc10Btn = document.getElementById('zoomInc10');
-        this.dom.zoomSlider = document.getElementById('zoomSlider');
-        this.dom.zoomPresetSelect = document.getElementById('zoomPresetSelect');
-        this.dom.centerTileEl = document.getElementById('centerTile');
-        this.dom.infoBtn = document.getElementById('infoBtn');
-        this.dom.infoPanel = document.getElementById('infoPanel');
-        this.dom.statsPanel = document.getElementById('statsPanel');
-        this.dom.statsFPSEl = document.getElementById('statsFPS');
-        this.dom.statsTilesEl = document.getElementById('statsTiles');
-        this.dom.coordsToggle = document.getElementById('coordsToggle');
-        this.dom.floatingZoomLabel = document.getElementById('floatingZoomLabel');
-        this.dom.versionDisplay = document.getElementById('versionDisplay');
-        this.dom.patchNotesBtn = document.getElementById('patchNotesBtn');
-        this.dom.modalOverlay = document.getElementById('modalOverlay');
-        this.dom.patchNotesModal = document.getElementById('patchNotesModal');
-        this.dom.patchNotesBody = document.getElementById('patchNotesBody');
-        this.dom.closePatchNotesBtn = document.getElementById('closePatchNotesBtn');
-        this.dom.hidePatchNotesCheckbox = document.getElementById('hidePatchNotesCheckbox');
-        this.dom.tileDetailSelect = document.getElementById('tileDetailSelect');
-        this.dom.gridlinesToggle = document.getElementById('gridlinesToggle');
-        this.dom.allianceRssToggle = document.getElementById('allianceRssToggle');
-        this.dom.allianceRssAlwaysVisibleToggle = document.getElementById('allianceRssAlwaysVisibleToggle');
-        this.dom.settingsBtn = document.getElementById('settingsBtn');
-        this.dom.settingsPanel = document.getElementById('settingsPanel');
-        this.dom.minimapContainer = document.getElementById('minimapContainer');
-        this.dom.minimapToggleBtn = document.getElementById('minimapToggleBtn');
-        this.dom.minimapCanvas = document.getElementById('minimapCanvas');
-        this.dom.pinnedBookmarksContainer = document.getElementById('pinnedBookmarksContainer');
-        this.dom.addBookmarksContainer = document.getElementById('addBookmarksContainer');
-        this.dom.addBookmarksHeader = document.getElementById('addBookmarksHeader');
-        this.dom.addBookmarksToggleBtn = document.getElementById('addBookmarksToggleBtn');
-        this.dom.addBookmarksList = document.getElementById('addBookmarksList');
-        // Populate DOM references
-        for (const key in this.dom) {
-            if (key !== 'canvas' && key !== 'ctx' && key !== 'minimapCtx') {
-                this.dom[key] = document.getElementById(key);
-            }
-        }
-        
-        // Special handling for elements that are re-created or don't exist in one layout
+
         if (this.dom.minimapCanvas) {
-            this.dom.minimapCanvas.width = this.config.minimap.width * (window.devicePixelRatio || 1);
-            this.dom.minimapCanvas.height = this.config.minimap.height * (window.devicePixelRatio || 1);
-            this.dom.minimapCtx = this.dom.minimapCanvas.getContext('2d');
+          const dpr = window.devicePixelRatio || 1;
+          this.dom.minimapCanvas.width = this.config.minimap.width * dpr;
+          this.dom.minimapCanvas.height = this.config.minimap.height * dpr;
+          this.dom.minimapCtx = this.dom.minimapCanvas.getContext('2d');
         }
 
-        // Fix settings panel for mobile - it needs a header prepended
-        if (this.dom.settingsPanel) {
-            const mobileHeader = document.getElementById('mobileSettingsPanelHeader');
-            if(mobileHeader) this.dom.settingsPanel.prepend(mobileHeader);
-        }
-
-        // Fetch data and start
         this.state.lastFrame = performance.now();
         Promise.all([
-            fetch('baseMap.json').then(r => r.ok ? r.json() : Promise.resolve({ unoccupiableTiles: [], defaultBuildings: [] })),
-            fetch('CHANGELOG.md').then(r => r.ok ? r.text() : Promise.resolve(''))
-          ])
-          .then(([baseMapData, changelogText]) => {
-            Object.assign(this.state.baseMap, baseMapData);
-            this.state.patchNotes = changelogText;
-            this.preProcessBuildings();
-            this.preCalculateChunks();
-            this.initializeUI();
-            this.resize();
-            requestAnimationFrame(this.mainLoop.bind(this));
-          })
-          .catch(e => {
-            console.error("Error during application initialization:", e);
-            alert('Error loading essential application data or initializing. Check console for details.');
-          });
+          fetch('baseMap.json').then(r => r.ok ? r.json() : { unoccupiableTiles: [], defaultBuildings: [] }),
+          fetch('CHANGELOG.md').then(r => r.ok ? r.text() : '')
+        ])
+        .then(([baseMapData, changelogText]) => {
+          Object.assign(this.state.baseMap, baseMapData);
+          this.state.patchNotes = changelogText;
+          this.preProcessBuildings();
+          this.preCalculateChunks();
+          this.initializeUI();
+          this.resize();
+          requestAnimationFrame(this.mainLoop.bind(this));
+        })
+        .catch(e => console.error("Error during initialization:", e));
       },
 
       initializeUI() {
+        // --- PANEL TOGGLING LOGIC ---
+        const panelMap = {
+            'settings': { btn: this.dom.settingsToggleBtn, panel: this.dom.settingsPanel },
+            'nav': { btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel },
+            'zoomPresets': { btn: this.dom.zoomPresetsToggleBtn, panel: this.dom.zoomPresetsPanel },
+            'pinnedBookmarks': { btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel }
+        };
+        
+        const togglePanel = (panelName) => {
+            if (this.state.openPanel === panelName) { // Close currently open panel
+                panelMap[panelName].panel.classList.remove('open');
+                panelMap[panelName].btn.classList.remove('active');
+                this.state.openPanel = null;
+            } else { // Open a new panel
+                // Close any other open panel first
+                if (this.state.openPanel && panelMap[this.state.openPanel]) {
+                    panelMap[this.state.openPanel].panel.classList.remove('open');
+                    panelMap[this.state.openPanel].btn.classList.remove('active');
+                }
+                // Open the new one
+                panelMap[panelName].panel.classList.add('open');
+                panelMap[panelName].btn.classList.add('active');
+                this.state.openPanel = panelName;
+            }
+        };
+
+        // Close panels when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!this.state.openPanel) return;
+            const current = panelMap[this.state.openPanel];
+            if (!current.panel.contains(e.target) && !current.btn.contains(e.target)) { togglePanel(this.state.openPanel); }
+        });
+
+        // Attach toggle events
+        Object.keys(panelMap).forEach(key => 
+            panelMap[key].btn.addEventListener('click', (e) => { 
+                e.stopPropagation(); 
+                togglePanel(key); 
+          }));
+
+        // Nav Panel Tab logic
+        this.dom.navPanel.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const tabId = e.target.dataset.tab;
+                this.dom.navPanel.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                this.dom.navPanel.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                e.target.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+        
+        // Modals
+        if (this.dom.infoBtn) this.dom.infoBtn.addEventListener('click', this.showControlsModal.bind(this));
+        if (this.dom.patchNotesBtn) this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
+        [this.dom.closeControlsBtn, this.dom.closePatchNotesBtn, this.dom.modalOverlay].forEach(el => {
+            if (el) el.addEventListener('click', () => { this.hidePatchNotes(); this.hideControlsModal(); });
+        });
         const lastSeenVersion = localStorage.getItem('lastSeenVersion');
         if (lastSeenVersion !== this.config.CURRENT_VERSION) { this.showPatchNotes(); }
-
-        // --- Desktop Listeners ---
-        if (this.dom.infoBtn) this.dom.infoBtn.addEventListener('click', () => this.dom.infoPanel.classList.toggle('open'));
-        if (this.dom.settingsBtn) this.dom.settingsBtn.addEventListener('click', () => this.dom.settingsPanel.classList.toggle('open'));
-        if (this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
-        if (this.dom.btnGo) this.dom.btnGo.addEventListener('click', this.doSearch.bind(this));
-        if (this.dom.inpX && this.dom.inpY) [this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') this.doSearch(); }));
-        if (this.dom.zoomDecBtn) this.dom.zoomDecBtn.addEventListener('click', () => this.changeZoomBy(-1));
-        if (this.dom.zoomIncBtn) this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(1));
-        if (this.dom.zoomDec10Btn) this.dom.zoomDec10Btn.addEventListener('click', () => this.changeZoomBy(-10));
-        if (this.dom.zoomInc10Btn) this.dom.zoomInc10Btn.addEventListener('click', () => this.changeZoomBy(10));
-        if (this.dom.zoomSlider) {
-          this.dom.zoomSlider.addEventListener('input', this.handleZoomSlider.bind(this));
-          this.dom.zoomSlider.addEventListener('mousedown', () => { clearTimeout(this.state.hideLabelTimeout); this.updateFloatingZoomLabel(); });
-        }
-        if (this.dom.minimapToggleBtn) this.dom.minimapToggleBtn.addEventListener('click', () => {
-          this.state.isMinimapVisible = !this.state.isMinimapVisible;
-          this.dom.minimapCanvas.classList.toggle('hidden', !this.state.isMinimapVisible);
-          this.dom.minimapToggleBtn.textContent = this.state.isMinimapVisible ? 'Hide Minimap' : 'Show Minimap';
-        });
-        if (this.dom.addBookmarksHeader) this.dom.addBookmarksHeader.addEventListener('click', this.toggleAddBookmarksList.bind(this));
-
-        // --- Mobile Listeners ---
-        if (this.dom.mobileZoomInBtn) this.dom.mobileZoomInBtn.addEventListener('click', () => this.changeZoomBy(10));
-        if (this.dom.mobileZoomOutBtn) this.dom.mobileZoomOutBtn.addEventListener('click', () => this.changeZoomBy(-10));
-        if (this.dom.mobileFitBtn) this.dom.mobileFitBtn.addEventListener('click', this.zoomToFit.bind(this));
-        if (this.dom.mobileBtnGo) this.dom.mobileBtnGo.addEventListener('click', () => this.doSearch(true));
         
-        // Panel Toggles
-        if (this.dom.mobileSearchBtn) this.dom.mobileSearchBtn.addEventListener('click', () => this.openMobilePanel(this.dom.mobileSearchPanel));
-        if (this.dom.mobileBookmarksBtn) this.dom.mobileBookmarksBtn.addEventListener('click', () => this.openMobilePanel(this.dom.mobileBookmarksPanel));
-        if (this.dom.mobileSettingsBtn) this.dom.mobileSettingsBtn.addEventListener('click', () => this.openMobilePanel(this.dom.settingsPanel));
-        
-        // Add listeners to all close buttons on mobile panels
-        document.querySelectorAll('.mobile-panel .close-btn').forEach(btn => btn.addEventListener('click', this.closeAllMobilePanels.bind(this)));
-        if(this.dom.mobileModalOverlay) this.dom.mobileModalOverlay.addEventListener('click', this.closeAllMobilePanels.bind(this));
-
-        // --- Universal Listeners & Setup ---
-        // Patch Notes
-        if (this.dom.patchNotesBtn) this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
-        if (this.dom.closePatchNotesBtn) this.dom.closePatchNotesBtn.addEventListener('click', this.hidePatchNotes.bind(this));
-        if (this.dom.modalOverlay) this.dom.modalOverlay.addEventListener('click', this.hidePatchNotes.bind(this));
-        
-        // Toggles
-        if (this.dom.tileDetailSelect) {
-          this.dom.tileDetailSelect.value = localStorage.getItem('mapTileDetail') || '49';
-          this.dom.tileDetailSelect.dispatchEvent(new Event('change')); // Trigger initial state
-          this.dom.tileDetailSelect.addEventListener('change', (e) => {
-            localStorage.setItem('mapTileDetail', e.target.value);
-            this.state.currentTileDetailThreshold = parseInt(e.target.value, 10);
-          });
-        }
-        ['gridlinesToggle', 'coordsToggle', 'allianceRssToggle', 'allianceRssAlwaysVisibleToggle'].forEach(id => {
-            if(this.dom[id]) {
-                const storageKey = 'map' + id.replace('Toggle', '').charAt(0).toUpperCase() + id.slice(1).replace('Toggle', '');
-                this.dom[id].checked = localStorage.getItem(storageKey) !== 'false';
-                this.dom[id].addEventListener('change', (e) => localStorage.setItem(storageKey, e.target.checked));
+        // LocalStorage Settings
+        const settingsToPersist = {
+            'mapTileDetail': { el: this.dom.tileDetailSelect, default: '49', prop: 'value' },
+            'mapAlwaysShowRss': { el: this.dom.allianceRssAlwaysVisibleToggle, default: 'false', prop: 'checked' },
+            'mapShowGridlines': { el: this.dom.gridlinesToggle, default: 'true', prop: 'checked' },
+            'mapShowAllianceRss': { el: this.dom.allianceRssToggle, default: 'true', prop: 'checked' },
+            'mapShowCoords': { el: this.dom.coordsToggle, default: 'true', prop: 'checked' },
+        };
+        Object.entries(settingsToPersist).forEach(([key, conf]) => {
+            if (conf.el) {
+                const saved = localStorage.getItem(key) ?? conf.default;
+                conf.el[conf.prop] = conf.prop === 'checked' ? (saved === 'true') : saved;
+                conf.el.addEventListener('change', () => {
+                    localStorage.setItem(key, String(conf.el[conf.prop]));
+                    if(key === 'mapTileDetail') this.state.currentTileDetailThreshold = parseInt(conf.el.value, 10);
+                });
+                if(key === 'mapTileDetail') this.state.currentTileDetailThreshold = parseInt(conf.el.value, 10);
             }
         });
         
-        // Bookmarks
+        // Bookmarks & Version Display
         this.loadPinnedBookmarks();
         this.renderAllBookmarkUI();
+        if (this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
+        
+        // Go To
+        if (this.dom.btnGo) this.dom.btnGo.addEventListener('click', this.doSearch.bind(this));
+        if (this.dom.inpX && this.dom.inpY) [this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') this.doSearch(); }));
+        
+        // Zoom Controls
+        if (this.dom.zoomDecBtn) this.dom.zoomDecBtn.addEventListener('click', () => this.changeZoomBy(-5));
+        if (this.dom.zoomIncBtn) this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(+5));
+        if (this.dom.zoomSlider) this.dom.zoomSlider.addEventListener('input', this.handleZoomSlider.bind(this));
 
-        // Canvas / Window
+        // Zoom Presets
+        this.renderZoomPresets();
+
+        // Minimap
+        if (this.dom.minimapToggleBtn && this.dom.minimapContainer) {
+          this.dom.minimapToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.dom.minimapContainer.classList.toggle('visible');
+            this.dom.minimapToggleBtn.classList.toggle('active', this.dom.minimapContainer.classList.contains('visible'));
+          });
+          // Set minimap initial state based on screen size
+          const isDesktop = window.innerWidth > 768;
+          this.dom.minimapContainer.classList.toggle('visible', isDesktop);
+          this.dom.minimapToggleBtn.classList.toggle('active', isDesktop);
+        }
+        
+        // Global Event Listeners
         window.addEventListener('resize', this.resize.bind(this));
         window.addEventListener('mousemove', this.handleMouseMove.bind(this));
         window.addEventListener('mouseup', () => { this.state.dragging = false; });
@@ -797,127 +913,178 @@
           window.addEventListener('mouseup', this.handleMinimapMouseUp.bind(this));
         }
       },
-      
-      // --- MOBILE UI HANDLERS ---
-      openMobilePanel(panel) {
-        if (!panel) return;
-        this.closeAllMobilePanels();
-        panel.classList.add('open');
-        if (this.dom.mobileModalOverlay) this.dom.mobileModalOverlay.classList.add('open');
+
+      renderZoomPresets() {
+        if (!this.dom.zoomPresetsList) return;
+        this.dom.zoomPresetsList.innerHTML = '';
+        ['Fit', '5%', '10%', '20%', '40%', '60%', '80%', '100%'].forEach(p => {
+            const btn = document.createElement('button'); btn.textContent = p;
+            btn.onclick = () => {
+                if (p === 'Fit') { this.zoomToFit(); } 
+                else {
+                    const zoomVal = parseInt(p, 10);
+                    const targetScale = (zoomVal / 100) * this.config.baseScale;
+                    this.animateZoom(targetScale, this.dom.canvas.width / 2, this.dom.canvas.height / 2, 200);
+                }
+                if (this.state.openPanel) {
+                    const current = { btn: this.dom.zoomPresetsToggleBtn, panel: this.dom.zoomPresetsPanel };
+                    current.panel.classList.remove('open'); 
+                    current.btn.classList.remove('active');
+                    this.state.openPanel = null;
+                }
+            };
+            this.dom.zoomPresetsList.appendChild(btn);
+        });
       },
 
-      closeAllMobilePanels() {
-        document.querySelectorAll('.mobile-panel.open').forEach(p => p.classList.remove('open'));
-        if (this.dom.mobileModalOverlay) this.dom.mobileModalOverlay.classList.remove('open');
-      },
-
-      // --- BOOKMARK LOGIC ---
-      loadPinnedBookmarks() {
-        const savedPins = localStorage.getItem('pinnedBookmarks');
-        if (savedPins) {
-          try {
-            const parsedPins = JSON.parse(savedPins);
-            if(Array.isArray(parsedPins)) {
-              this.state.pinnedBookmarks = parsedPins;
-            }
-          } catch(e) {
-            console.error("Could not parse pinned bookmarks from localStorage", e);
-            this.state.pinnedBookmarks = [];
-          }
-        }
+      // --- BOOKMARK LOGIC (Updated to target new elements) ---
+      loadPinnedBookmarks() { 
+        if (localStorage.getItem('pinnedBookmarks')) { 
+            try { 
+                this.state.pinnedBookmarks = JSON.parse(localStorage.getItem('pinnedBookmarks')) || []; 
+            } 
+            catch(e) { 
+                this.state.pinnedBookmarks = []; 
+            } 
+        } 
       },
 
       savePinnedBookmarks() {
         localStorage.setItem('pinnedBookmarks', JSON.stringify(this.state.pinnedBookmarks));
       },
-      
+
       pinBookmark(bookmark) {
-        const isAlreadyPinned = this.state.pinnedBookmarks.some(p => p.x === bookmark.x && p.y === bookmark.y);
-        if (!isAlreadyPinned) {
-          this.state.pinnedBookmarks.push({ x: bookmark.x, y: bookmark.y, displayName: bookmark.displayName });
-          this.savePinnedBookmarks();
+        if (!this.state.pinnedBookmarks.some(p => p.x === bookmark.x && p.y === bookmark.y)) {
+          this.state.pinnedBookmarks.push({ 
+            x: bookmark.x, 
+            y: bookmark.y, 
+            displayName: bookmark.displayName 
+          });
+          this.savePinnedBookmarks(); 
           this.renderAllBookmarkUI();
         }
       },
 
       unpinBookmark(x, y) {
         this.state.pinnedBookmarks = this.state.pinnedBookmarks.filter(p => !(p.x === x && p.y === y));
-        this.savePinnedBookmarks();
+        this.savePinnedBookmarks(); 
         this.renderAllBookmarkUI();
       },
 
       renderAllBookmarkUI() {
-        this.renderPinnedBookmarks();
+        this.renderPinnedBookmarks(); 
         this.renderAddBookmarksList();
       },
-      
+
+      createBookmarkItem(b, isPinned) {
+          const item = document.createElement('div');
+          item.className = 'bookmark-item';
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = b.displayName;
+          
+          const controlsDiv = document.createElement('div');
+          controlsDiv.className = 'controls';
+          const goBtn = document.createElement('button');
+          goBtn.textContent = 'Go';
+          goBtn.onclick = () => this.goToBookmark(b.x, b.y);
+
+          if (isPinned) {
+              const unpinBtn = document.createElement('button');
+              unpinBtn.textContent = 'Unpin';
+              unpinBtn.className = 'unpin-btn';
+              unpinBtn.onclick = () => this.unpinBookmark(b.x, b.y);
+              controlsDiv.append(goBtn, unpinBtn);
+          } else {
+              const pinBtn = document.createElement('button');
+              pinBtn.textContent = 'Pin';
+              pinBtn.onclick = () => this.pinBookmark(b);
+              controlsDiv.append(goBtn, pinBtn);
+          }
+          item.append(nameSpan, controlsDiv);
+          return item;
+      },
       renderPinnedBookmarks() {
-        const containers = [this.dom.pinnedBookmarksContainer, this.dom.mobilePinnedBookmarksContainer].filter(Boolean);
-        containers.forEach(container => {
-            container.innerHTML = '';
-            this.state.pinnedBookmarks.forEach(p => {
-              const item = document.createElement('div');
-              item.className = 'pinned-bookmark-item';
-              item.innerHTML = `
-                <span>${p.displayName}</span>
-                <div class="controls">
-                  <button class="go-btn">Go</button>
-                  <button class="unpin-btn" title="Unpin ${p.displayName}">×</button>
-                </div>`;
-              item.querySelector('.go-btn').onclick = () => {
-                  this.goToBookmark(p.x, p.y);
-                  this.closeAllMobilePanels();
-              };
-              item.querySelector('.unpin-btn').onclick = () => this.unpinBookmark(p.x, p.y);
-              container.appendChild(item);
-            });
-        });
+        if (!this.dom.pinnedBookmarksList) return;
+        this.dom.pinnedBookmarksList.innerHTML = '';
+        this.state.pinnedBookmarks.forEach(p => this.dom.pinnedBookmarksList.appendChild(this.createBookmarkItem(p, true)));
       },
 
       renderAddBookmarksList() {
-        const containers = [this.dom.addBookmarksList, this.dom.mobileAddBookmarksList].filter(Boolean);
-        // ... (logic for getting and sorting unpinnedLandmarks is the same)
-        const allLandmarks = this.state.baseMap.defaultBuildings.filter(b => 
-            b.displayName && (b.displayName.includes("King's Castle") || b.displayName.includes("Fortress") || b.displayName.includes("Sanctuary"))
-        );
-        const unpinnedLandmarks = allLandmarks.filter(landmark => 
-            !this.state.pinnedBookmarks.some(p => p.x === landmark.x && p.y === landmark.y)
-        );
-        unpinnedLandmarks.sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { numeric: true }));
+        if (!this.dom.addBookmarksList || !this.state.baseMap.defaultBuildings) return;
+          this.dom.addBookmarksList.innerHTML = '';
+          const allLandmarks = this.state.baseMap.defaultBuildings.filter(b => b.displayName && (b.displayName.includes("King's Castle") || b.displayName.includes("Fortress") || b.displayName.includes("Sanctuary")));
+          const unpinned = allLandmarks.filter(landmark => !this.state.pinnedBookmarks.some(p => p.x === landmark.x && p.y === landmark.y));
+            
+          const getSortOrder = (name) => {
+            if (name.includes("King's Castle")) return 0;
+            if (name.includes("Fortress")) return 1;
+            if (name.includes("Sanctuary")) return 2;
+            return 3;
+          };
+          unpinned.sort((a, b) => {
+            const orderA = getSortOrder(a.displayName);
+            const orderB = getSortOrder(b.displayName);
+            if (orderA !== orderB) return orderA - orderB;
+            return a.displayName.localeCompare(b.displayName, undefined, { numeric: true });
+          });
+          unpinned.forEach(b => this.dom.addBookmarksList.appendChild(this.createBookmarkItem(b, false)));
+      },
+        goToBookmark(x, y) {
+            if (this.state.openPanel) {
+                const panelMap = { 'nav': this.dom.navPanel, 'pinnedBookmarks': this.dom.pinnedBookmarksPanel };
+                const btnMap = { 'nav': this.dom.navPanelToggleBtn, 'pinnedBookmarks': this.dom.pinnedBookmarksToggleBtn };
+                if (panelMap[this.state.openPanel]) {
+                    panelMap[this.state.openPanel].classList.remove('open');
+                    btnMap[this.state.openPanel].classList.remove('active');
+                    this.state.openPanel = null;
+                }
+            }
+            if (x >= 0 && y >= 0) {
+                this.state.selection = this.getBuildingAt(x, y) || { x, y };
+                if (this.state.selection) this.state.selection.pingStart = performance.now();
+                const targetScale = this.config.baseScale;
+                const [screenX, screenY] = this.worldToScreen(x, y);
+                this.animatePanZoom(targetScale, this.dom.canvas.width / 2 - screenX * targetScale, this.dom.canvas.height / 2 - screenY * targetScale);
+            }
+        },
 
-        containers.forEach(container => {
-            container.innerHTML = '';
-            unpinnedLandmarks.forEach(b => {
-                const item = document.createElement('div');
-                item.className = 'add-bookmark-item';
-                item.innerHTML = `<span>${b.displayName}</span><button>Pin 📌</button>`;
-                item.querySelector('button').onclick = (e) => {
-                    e.stopPropagation();
-                    this.pinBookmark(b);
-                };
-                container.appendChild(item);
-            });
-        });
+      showPatchNotes() { 
+        if (this.dom.modalOverlay && this.dom.patchNotesModal) { 
+            if (typeof marked !== 'undefined') { 
+                marked.setOptions({ gfm: true, breaks: true, sanitize: false }); 
+            } let text = this.state.patchNotes || ''; 
+            const idx = text.indexOf('## ['); 
+            if (idx !== -1) { 
+                text = text.substring(idx); 
+            } this.dom.patchNotesBody.innerHTML = marked.parse(text || 'No changelog available.'); 
+            this.dom.modalOverlay.style.display = 'block'; 
+            this.dom.patchNotesModal.style.display = 'block'; 
+        } 
       },
 
-      toggleAddBookmarksList() {
-        if (this.dom.addBookmarksList) this.dom.addBookmarksList.classList.toggle('open');
-        if (this.dom.addBookmarksToggleBtn) this.dom.addBookmarksToggleBtn.classList.toggle('open');
+      hidePatchNotes() { 
+        if (this.dom.modalOverlay && this.dom.patchNotesModal) { 
+            if (this.dom.hidePatchNotesCheckbox && this.dom.hidePatchNotesCheckbox.checked) { 
+                localStorage.setItem('lastSeenVersion', this.config.CURRENT_VERSION); 
+            } 
+            this.dom.modalOverlay.style.display = 'none'; 
+            this.dom.patchNotesModal.style.display = 'none'; 
+        } 
       },
 
-      goToBookmark(x, y) {
-        if (x >= 0 && y >= 0) {
-            this.state.selection = this.getBuildingAt(x, y) || { x, y };
-            if (this.state.selection) this.state.selection.pingStart = performance.now();
-            const targetScale = (100 / 100) * this.config.baseScale;
-            const [screenX, screenY] = this.worldToScreen(x, y);
-            const targetCamX = this.dom.canvas.width / 2 - screenX * targetScale;
-            const targetCamY = this.dom.canvas.height / 2 - screenY * targetScale;
-            this.animatePanZoom(targetScale, targetCamX, targetCamY);
-        }
+      showControlsModal() { 
+        if (this.dom.modalOverlay && this.dom.controlsModal) { 
+            this.dom.modalOverlay.style.display = 'block'; 
+            this.dom.controlsModal.style.display = 'block'; 
+        } 
       },
 
-      // --- ALL OTHER METHODS (UNCHANGED FROM PREVIOUS VERSION) ---
+      hideControlsModal() { 
+        if (this.dom.modalOverlay && this.dom.controlsModal) { 
+            this.dom.modalOverlay.style.display = 'none'; 
+            this.dom.controlsModal.style.display = 'none'; 
+        } 
+      },
 
       preProcessBuildings() {
         let buildings = [...(this.state.baseMap.defaultBuildings || []), ...(this.state.userBuildings || [])];
@@ -952,22 +1119,30 @@
         }
       },
 
-      worldToScreen(x, y) { return [(x - y) * (this.config.tileW / 2), -(x + y) * (this.config.tileH / 2)]; },
+      worldToScreen(x, y) { 
+        return [(x - y) * (this.config.tileW / 2), -(x + y) * (this.config.tileH / 2)]; 
+      },
+
       screenToWorld(sx, sy) {
         const scale = (this.state.cam.scale === 0 || isNaN(this.state.cam.scale)) ? this.state.minFitScale : this.state.cam.scale;
         const tileW_half = this.config.tileW / 2; const tileH_half = this.config.tileH / 2;
-        if (tileW_half === 0 || tileH_half === 0 || scale === 0) { return [0, 0]; }
+        if (tileW_half === 0 || tileH_half === 0) { return [0, 0]; }
         const lx = (sx - this.state.cam.x) / scale; const ly = (sy - this.state.cam.y) / scale;
         const u = lx / tileW_half; const v = -ly / tileH_half;
         return [Math.round((u + v) / 2), Math.round((v - u) / 2)];
       },
-      getBuildingAt(x, y) { return this.state.buildingMap.get(`${x},${y}`) || null; },
+
+      getBuildingAt(x, y) { 
+        return this.state.buildingMap.get(`${x},${y}`) || null; 
+      },
+
       getBiomeForTile(x, y) {
         const { fertile, plains } = this.config.biomeRegions;
         if (x >= fertile.x1 && x <= fertile.x2 && y >= fertile.y1 && y <= fertile.y2) return 'fertile';
         if (x >= plains.x1 && x <= plains.x2 && y >= plains.y1 && y <= plains.y2) return 'plains';
         return 'badlands';
       },
+
       getChunkLevelForZoom(pct) {
         if (isNaN(pct)) pct = (this.state.cam.scale / this.config.baseScale) * 100;
         const detailThreshold = this.state.currentTileDetailThreshold;
@@ -980,13 +1155,11 @@
         const s = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
         const canvasW = this.dom.canvas.width; const canvasH = this.dom.canvas.height;
         const N = this.config.N; const tileW = this.config.tileW; const tileH = this.config.tileH;
-        
         const mapScreenW = (N - 1) * tileW * s;
         if (mapScreenW > canvasW) {
             const minCamX = canvasW - mapScreenW / 2; const maxCamX = mapScreenW / 2;
             this.state.cam.x = Math.max(minCamX, Math.min(maxCamX, this.state.cam.x));
         } else { this.state.cam.x = canvasW / 2; }
-
         const mapScreenH = (N - 1) * tileH * s;
         if (mapScreenH > canvasH) {
             const topOfMapY = mapScreenH; const bottomOfMapY = canvasH;
@@ -994,11 +1167,10 @@
         } else {
             this.state.cam.y = canvasH / 2 + mapScreenH / 2;
         }
-        
         if (isNaN(this.state.cam.x)) this.state.cam.x = canvasW / 2;
         if (isNaN(this.state.cam.y)) this.state.cam.y = canvasH / 2;
       },
-      
+
       changeZoomBy(delta) {
         let currentPct = Math.round((this.state.cam.scale / this.config.baseScale) * 100);
         if (isNaN(currentPct)) { currentPct = Math.round((this.state.minFitScale / this.config.baseScale) * 100); }
@@ -1059,126 +1231,124 @@
         const targetCamY = this.dom.canvas.height / 2 + ((this.config.N - 1) * this.config.tileH / 2) * targetScale;
         this.animatePanZoom(targetScale, targetCamX, targetCamY, 200);
       },
-      showPatchNotes() {
-        if (!this.dom.patchNotesBody || !this.dom.modalOverlay || !this.dom.patchNotesModal) return;
-        if (typeof marked !== 'undefined') { marked.setOptions({ gfm: true, breaks: true, sanitize: false }); } 
-        else { console.warn("marked.js library not loaded. Markdown processing will be basic."); }
-        let changelogText = this.state.patchNotes || '';
-        if (!changelogText.trim()) { this.dom.patchNotesBody.innerHTML = `<p>No changelog is available at this time.</p>`; } 
-        else {
-            const firstVersionIndex = changelogText.indexOf('## [');
-            if (firstVersionIndex !== -1) { changelogText = changelogText.substring(firstVersionIndex); }
-            this.dom.patchNotesBody.innerHTML = marked.parse(changelogText);
-        }
-        this.dom.modalOverlay.style.display = 'block';
-        this.dom.patchNotesModal.style.display = 'block';
+
+      handleMinimapMouseDown(e) { 
+        this.state.isMinimapDragging = true; 
+        this.state.minimapClickStartPos = { x: e.clientX, y: e.clientY }; 
+        this.state.startCamX = this.state.cam.x; 
+        this.state.startCamY = this.state.cam.y; 
       },
-      hidePatchNotes() {
-        if (!this.dom.modalOverlay || !this.dom.patchNotesModal) return;
-        if (this.dom.hidePatchNotesCheckbox && this.dom.hidePatchNotesCheckbox.checked) { localStorage.setItem('lastSeenVersion', this.config.CURRENT_VERSION); }
-        this.dom.modalOverlay.style.display = 'none';
-        this.dom.patchNotesModal.style.display = 'none';
-      },
-      
-      handleMinimapMouseDown(e) {
-        this.state.isMinimapDragging = true;
-        this.state.minimapClickStartPos = { x: e.clientX, y: e.clientY };
-        this.state.startCamX = this.state.cam.x; this.state.startCamY = this.state.cam.y;
-      },
+
       handleMinimapMouseMove(e) {
-        if (!this.state.isMinimapDragging) return;
-        if (this.state.animationId) { cancelAnimationFrame(this.state.animationId); this.state.animationId = null; }
-        const rect = this.dom.minimapCanvas.getBoundingClientRect();
-        const minimapCam = this.state.minimapCam;
-        const clickScreenX = (e.clientX - rect.left); 
-        const clickScreenY = (e.clientY - rect.top);
-        const lx = (clickScreenX - minimapCam.x) / minimapCam.scale;
-        const ly = (clickScreenY - minimapCam.y) / minimapCam.scale;
+        if (!this.state.isMinimapDragging) return; if (this.state.animationId) { cancelAnimationFrame(this.state.animationId); this.state.animationId = null; }
+        const rect = this.dom.minimapCanvas.getBoundingClientRect(); const minimapCam = this.state.minimapCam;
+        const clickScreenX = (e.clientX - rect.left); const clickScreenY = (e.clientY - rect.top);
+        const lx = (clickScreenX - minimapCam.x) / minimapCam.scale; const ly = (clickScreenY - minimapCam.y) / minimapCam.scale;
         const tileW_half = this.config.tileW / 2; const tileH_half = this.config.tileH / 2;
-        const u = lx / tileW_half; const v = -ly / tileH_half;
-        const world_x = (u + v) / 2; const world_y = (v - u) / 2;
+        const u = lx / tileW_half; const v = -ly / tileH_half; const world_x = (u + v) / 2; const world_y = (v - u) / 2;
         const [targetScreenX, targetScreenY] = this.worldToScreen(world_x, world_y);
-        this.state.cam.x = this.dom.canvas.width / 2 - targetScreenX * this.state.cam.scale;
-        this.state.cam.y = this.dom.canvas.height / 2 - targetScreenY * this.state.cam.scale;
+        this.state.cam.x = this.dom.canvas.width / 2 - targetScreenX * this.state.cam.scale; this.state.cam.y = this.dom.canvas.height / 2 - targetScreenY * this.state.cam.scale;
         this.clampCamera();
       },
+
       handleMinimapMouseUp(e) {
         if (!this.state.isMinimapDragging) return;
         this.state.isMinimapDragging = false;
+        
+        // Check if the action was a click (not a long drag)
         const dist = Math.hypot(e.clientX - this.state.minimapClickStartPos.x, e.clientY - this.state.minimapClickStartPos.y);
         if (dist < 5) {
-          const rect = this.dom.minimapCanvas.getBoundingClientRect();
+          // It's a click, so we calculate the final position and jump there.
+          // This avoids the jitter caused by animating a move that already happened.
+          const rect = this.dom.minimapCanvas.getBoundingClientRect(); 
           const minimapCam = this.state.minimapCam;
-          const clickScreenX = (e.clientX - rect.left); const clickScreenY = (e.clientY - rect.top);
-          const lx = (clickScreenX - minimapCam.x) / minimapCam.scale;
+          const clickScreenX = (e.clientX - rect.left); 
+          const clickScreenY = (e.clientY - rect.top);
+          
+          const lx = (clickScreenX - minimapCam.x) / minimapCam.scale; 
           const ly = (clickScreenY - minimapCam.y) / minimapCam.scale;
-          const tileW_half = this.config.tileW / 2; const tileH_half = this.config.tileH / 2;
-          const u = lx / tileW_half; const v = -ly / tileH_half;
-          const world_x = (u + v) / 2; const world_y = (v - u) / 2;
+          
+          const tileW_half = this.config.tileW / 2; 
+          const tileH_half = this.config.tileH / 2;
+          const u = lx / tileW_half; 
+          const v = -ly / tileH_half; 
+          const world_x = (u + v) / 2; 
+          const world_y = (v - u) / 2;
+          
           const [targetScreenX, targetScreenY] = this.worldToScreen(world_x, world_y);
-          const targetCamX = this.dom.canvas.width / 2 - targetScreenX * this.state.cam.scale;
-          const targetCamY = this.dom.canvas.height / 2 - targetScreenY * this.state.cam.scale;
-          this.animatePanZoom(this.state.cam.scale, targetCamX, targetCamY, 200);
+          
+          // Set camera position directly instead of animating
+          this.state.cam.x = this.dom.canvas.width / 2 - targetScreenX * this.state.cam.scale; 
+          this.state.cam.y = this.dom.canvas.height / 2 - targetScreenY * this.state.cam.scale;
+          this.clampCamera();
         }
       },
-      handleMouseDown(e) {
-        if (e.button === 0) {
-          this.state.dragging = true; this.state.lastX = e.clientX; this.state.lastY = e.clientY;
-          this.state.clickStartX = e.clientX; this.state.clickStartY = e.clientY;
-        }
+
+      handleMouseDown(e) { 
+        if (e.button === 0) { this.state.dragging = true; 
+          this.state.lastX = e.clientX; 
+          this.state.lastY = e.clientY; 
+          this.state.clickStartX = e.clientX; 
+          this.state.clickStartY = e.clientY; 
+        } 
       },
-      handleMouseMove(e) {
-        if (!this.state.dragging) return;
-        this.state.cam.x += e.clientX - this.state.lastX;
-        this.state.cam.y += e.clientY - this.state.lastY;
-        this.state.lastX = e.clientX;
-        this.state.lastY = e.clientY;
-        this.clampCamera();
+
+      handleMouseMove(e) { 
+        if (!this.state.dragging) return; 
+        this.state.cam.x += e.clientX - this.state.lastX; 
+        this.state.cam.y += e.clientY - this.state.lastY; 
+        this.state.lastX = e.clientX; 
+        this.state.lastY = e.clientY; 
+        this.clampCamera(); 
       },
+
       handleCanvasClick(e) {
         const dist = Math.hypot(e.clientX - this.state.clickStartX, e.clientY - this.state.clickStartY);
         if (dist > 5) return; 
         const [worldX, worldY] = this.screenToWorld(e.offsetX, e.offsetY);
         if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
-          const building = this.getBuildingAt(worldX, worldY);
-          this.state.selection = building || { x: worldX, y: worldY };
+          const building = this.getBuildingAt(worldX, worldY); this.state.selection = building || { x: worldX, y: worldY };
           if (this.state.selection) this.state.selection.pingStart = performance.now();
           if (this.dom.inpX && this.state.selection) this.dom.inpX.value = this.state.selection.x;
           if (this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
         }
       },
-      handleWheel(e) {
-        e.preventDefault(); const factor = e.deltaY < 0 ? 1.2 : 0.8;
-        let targetScale = this.state.cam.scale * factor;
-        targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-        this.animateZoom(targetScale, e.offsetX, e.offsetY, 150);
+
+      handleWheel(e) { 
+        e.preventDefault(); 
+        const factor = e.deltaY < 0 ? 1.2 : 0.8; 
+        let targetScale = this.state.cam.scale * factor; 
+        targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale)); 
+        this.animateZoom(targetScale, e.offsetX, e.offsetY, 150); 
       },
-      handleDblClick(e) {
-        e.preventDefault(); const factor = e.button === 2 ? 0.5 : 2.0;
-        let targetScale = this.state.cam.scale * factor;
-        targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-        this.animateZoom(targetScale, e.offsetX, e.offsetY, 150);
+
+      handleDblClick(e) { 
+        e.preventDefault(); 
+        const factor = e.button === 2 ? 0.5 : 2.0; 
+        let targetScale = this.state.cam.scale * factor; 
+        targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale)); 
+        this.animateZoom(targetScale, e.offsetX, e.offsetY, 150); 
       },
+
       handleZoomSlider() {
         if (!this.dom.zoomSlider) return; const pct = Number(this.dom.zoomSlider.value);
         let targetScale = (pct / 100) * this.config.baseScale;
         targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
         this.animateZoom(targetScale, this.dom.canvas.width / 2, this.dom.canvas.height / 2, 0);
-        this.updateFloatingZoomLabel();
       },
+
       handleKeyDown(e) {
         if (e.target && e.target.tagName === 'INPUT') return;
         switch (e.key) {
-          case '+': case '=': this.changeZoomBy(+1); break;
-          case '-':           this.changeZoomBy(-1); break;
-          case 'q':           this.changeZoomBy(+1); break;
-          case 'e':           this.changeZoomBy(-1); break;
+          case '+': case '=': this.changeZoomBy(+5); break;
+          case '-':           this.changeZoomBy(-5); break;
           case 'ArrowUp':     this.state.cam.y += this.config.tileW * 5; this.clampCamera(); break;
           case 'ArrowDown':   this.state.cam.y -= this.config.tileW * 5; this.clampCamera(); break;
           case 'ArrowLeft':   this.state.cam.x += this.config.tileW * 5; this.clampCamera(); break;
           case 'ArrowRight':  this.state.cam.x -= this.config.tileW * 5; this.clampCamera(); break;
         }
       },
+
       handleTouchStart(e) {
         e.preventDefault();
         if (e.touches.length === 1) {
@@ -1191,20 +1361,17 @@
           this.state.startCamX = this.state.cam.x; this.state.startCamY = this.state.cam.y;
         }
       },
+
       handleTouchMove(e) {
-        e.preventDefault();
-        if (this.state.animationId) { cancelAnimationFrame(this.state.animationId); this.state.animationId = null; }
+        e.preventDefault(); if (this.state.animationId) { cancelAnimationFrame(this.state.animationId); this.state.animationId = null; }
         if (this.state.touchMode === 'pan' && e.touches.length === 1) {
-          const t = e.touches[0];
-          this.state.cam.x -= t.clientX - this.state.lastX;
-          this.state.cam.y -= t.clientY - this.state.lastY;
-          this.state.lastX = t.clientX;
-          this.state.lastY = t.clientY;
-          this.clampCamera();
+          const t = e.touches[0]; 
+          this.state.cam.x += t.clientX - this.state.lastX; 
+          this.state.cam.y += t.clientY - this.state.lastY;
+          this.state.lastX = t.clientX; this.state.lastY = t.clientY; this.clampCamera();
         } else if (this.state.touchMode === 'pinch' && e.touches.length === 2) {
           const [a, b] = e.touches; const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
-          if (this.state.startDist === 0) return;
-          let newScale = this.state.startScale * (dist / this.state.startDist);
+          if (this.state.startDist === 0) return; let newScale = this.state.startScale * (dist / this.state.startDist);
           this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, newScale));
           if (isNaN(this.state.cam.scale)) this.state.cam.scale = this.state.startScale;
           const safeStartScale = (this.state.startScale === 0 || isNaN(this.state.startScale)) ? this.state.minFitScale : this.state.startScale;
@@ -1214,6 +1381,7 @@
           this.clampCamera();
         }
       },
+
       handleTouchEnd(e) {
         if (this.state.touchMode === 'pan' && e.changedTouches.length === 1) {
           const t = e.changedTouches[0]; const dist = Math.hypot(t.clientX - this.state.clickStartX, t.clientY - this.state.clickStartY);
@@ -1221,8 +1389,7 @@
           if (duration < 200 && dist < 10) {
             const [worldX, worldY] = this.screenToWorld(t.clientX, t.clientY);
             if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
-              const building = this.getBuildingAt(worldX, worldY);
-              this.state.selection = building || { x: worldX, y: worldY };
+              const building = this.getBuildingAt(worldX, worldY); this.state.selection = building || { x: worldX, y: worldY };
               if (this.state.selection) this.state.selection.pingStart = performance.now();
               if (this.dom.inpX && this.state.selection) this.dom.inpX.value = this.state.selection.x;
               if (this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
@@ -1236,8 +1403,7 @@
         this.dom.canvas.width = window.innerWidth; this.dom.canvas.height = window.innerHeight;
         if (this.dom.minimapCanvas && this.config.minimap) {
           const dpr = window.devicePixelRatio || 1;
-          this.dom.minimapCanvas.width = this.config.minimap.width * dpr;
-          this.dom.minimapCanvas.height = this.config.minimap.height * dpr;
+          this.dom.minimapCanvas.width = this.config.minimap.width * dpr; this.dom.minimapCanvas.height = this.config.minimap.height * dpr;
         }
         const mapTotalWidth = (this.config.N - 1) * this.config.tileW;
         const mapTotalHeight = (this.config.N - 1) * this.config.tileH;
@@ -1246,78 +1412,39 @@
         this.state.minFitScale = Math.max(0.1, Math.min(scaleX, scaleY) * 0.95);
         if (isNaN(this.state.minFitScale)) { this.state.minFitScale = 0.1; }
         if (this.state.isInitialLoad) {
-          this.state.isInitialLoad = false;
-          this.zoomToFit();
+          this.state.isInitialLoad = false; this.zoomToFit();
         } else {
           this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
           if (isNaN(this.state.cam.scale)) { this.state.cam.scale = this.state.minFitScale; }
           this.clampCamera();
         }
       },
-      
-      doSearch(isMobile = false) {
-        const xEl = isMobile ? this.dom.mobileInpX : this.dom.inpX;
-        const yEl = isMobile ? this.dom.mobileInpY : this.dom.inpY;
-        if (!xEl || !yEl) return;
-        const x = +xEl.value; const y = +yEl.value;
-        if (x >= 0 && y >= 0 && x < this.config.N && y < this.config.N) {
-          this.state.selection = this.getBuildingAt(x, y) || { x, y };
-          if (this.state.selection) this.state.selection.pingStart = performance.now();
-          const targetScale = (100 / 100) * this.config.baseScale;
-          const [screenX, screenY] = this.worldToScreen(x, y);
-          const targetCamX = this.dom.canvas.width / 2 - screenX * targetScale;
-          const targetCamY = this.dom.canvas.height / 2 - screenY * targetScale;
-          this.animatePanZoom(targetScale, targetCamX, targetCamY);
-          if (isMobile) this.closeAllMobilePanels();
-        }
-      },
-      
-      updateFloatingZoomLabel() {
-        if (!this.dom.zoomSlider || !this.dom.floatingZoomLabel) return;
-        const slider = this.dom.zoomSlider; const label = this.dom.floatingZoomLabel;
-        const min = parseInt(slider.min, 10); const max = parseInt(slider.max, 10); const val = parseInt(slider.value, 10);
-        if (max === min) { label.style.display = 'none'; return; }
-        const percent = (val - min) / (max - min); const thumbHeight = 15; const trackHeight = slider.offsetHeight;
-        const topPos = (1 - percent) * (trackHeight - thumbHeight) + (thumbHeight / 2);
-        label.style.top = `${topPos}px`; label.textContent = `Zoom: ${val}%`; label.style.display = 'block';
-        clearTimeout(this.state.hideLabelTimeout);
-        this.state.hideLabelTimeout = setTimeout(() => { label.style.display = 'none'; }, 1500);
+
+      doSearch() {
+        if (!this.dom.inpX || !this.dom.inpY) return;
+        this.goToBookmark(+this.dom.inpX.value, +this.dom.inpY.value);
       },
 
       drawIsometricMinimap(viewportCorners) {
-        if (!this.dom.minimapCtx || !this.state.isMinimapVisible || !this.config.minimap) return;
-        const mmCtx = this.dom.minimapCtx;
-        const { minimap, N, tileW, tileH, baseScale, maxPct } = this.config;
-        const canvasWidth = this.dom.minimapCanvas.width;
-        const canvasHeight = this.dom.minimapCanvas.height;
-        mmCtx.save();
-        mmCtx.setTransform(1, 0, 0, 1, 0, 0);
-        mmCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-        mmCtx.fillStyle = minimap.bgColor;
-        mmCtx.fillRect(0, 0, canvasWidth, canvasHeight);
-        const worldIsoWidth = N * tileW;
-        const worldIsoHeight = N * tileH;
-        const drawableWidth = canvasWidth - (minimap.padding * 2);
-        const drawableHeight = canvasHeight - (minimap.padding * 2);
+        if (!this.dom.minimapCtx || !this.dom.minimapContainer.classList.contains('visible') || !this.config.minimap) return;
+        const mmCtx = this.dom.minimapCtx; const { minimap, N, tileW, tileH, baseScale, maxPct } = this.config;
+        const canvasWidth = this.dom.minimapCanvas.width; const canvasHeight = this.dom.minimapCanvas.height;
+        mmCtx.save(); mmCtx.setTransform(1, 0, 0, 1, 0, 0); mmCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+        mmCtx.fillStyle = minimap.bgColor; mmCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+        const worldIsoWidth = N * tileW; const worldIsoHeight = N * tileH;
+        const drawableWidth = canvasWidth - (minimap.padding * 2); const drawableHeight = canvasHeight - (minimap.padding * 2);
         const baseMinimapScale = Math.min(drawableWidth / worldIsoWidth, drawableHeight / worldIsoHeight);
-        const mainMapCurrentScale = this.state.cam.scale;
-        const mainMapMaxScale = (maxPct / 100) * baseScale;
+        const mainMapCurrentScale = this.state.cam.scale; const mainMapMaxScale = (maxPct / 100) * baseScale;
         const zoomStartThresholdScale = minimap.mainMapZoomThresholdForMinimapZoom * baseScale;
         let zoomFactor; let normalizedZoom = 0;
         if (mainMapCurrentScale <= zoomStartThresholdScale) { zoomFactor = minimap.zoomFactorMin; } 
-        else {
-            normalizedZoom = Math.max(0, Math.min(1, (mainMapCurrentScale - zoomStartThresholdScale) / (mainMapMaxScale - zoomStartThresholdScale)));
-            zoomFactor = minimap.zoomFactorMin + (minimap.zoomFactorMax - minimap.zoomFactorMin) * normalizedZoom;
-        }
+        else { normalizedZoom = Math.max(0, Math.min(1, (mainMapCurrentScale - zoomStartThresholdScale) / (mainMapMaxScale - zoomStartThresholdScale))); zoomFactor = minimap.zoomFactorMin + (minimap.zoomFactorMax - minimap.zoomFactorMin) * normalizedZoom; }
         const finalMinimapScale = baseMinimapScale * zoomFactor;
-        const mapVisualCenterX_iso = 0;
-        const mapVisualCenterY_iso = -((N - 1) * tileH / 2);
+        const mapVisualCenterX_iso = 0; const mapVisualCenterY_iso = -((N - 1) * tileH / 2);
         const [mainViewCenterX, mainViewCenterY] = this.screenToWorld(this.dom.canvas.width / 2, this.dom.canvas.height / 2);
         const [viewportCenterX_iso, viewportCenterY_iso] = this.worldToScreen(mainViewCenterX, mainViewCenterY);
-        const focalPointX = mapVisualCenterX_iso + (viewportCenterX_iso - mapVisualCenterX_iso) * normalizedZoom;
-        const focalPointY = mapVisualCenterY_iso + (viewportCenterY_iso - mapVisualCenterY_iso) * normalizedZoom;
-        const translateX = (canvasWidth / 2) - (focalPointX * finalMinimapScale);
-        const translateY = (canvasHeight / 2) - (focalPointY * finalMinimapScale);
+        const focalPointX = mapVisualCenterX_iso + (viewportCenterX_iso - mapVisualCenterX_iso) * normalizedZoom; const focalPointY = mapVisualCenterY_iso + (viewportCenterY_iso - mapVisualCenterY_iso) * normalizedZoom;
+        const translateX = (canvasWidth / 2) - (focalPointX * finalMinimapScale); const translateY = (canvasHeight / 2) - (focalPointY * finalMinimapScale);
         this.state.minimapCam = { x: translateX, y: translateY, scale: finalMinimapScale };
         mmCtx.setTransform(finalMinimapScale, 0, 0, finalMinimapScale, translateX, translateY);
         const chunksToDraw = this.state.chunkLevels[3];
@@ -1327,20 +1454,13 @@
             if (b.displayName === "King's Castle") buildingFillStyle = minimap.kingCastleColor;
             else if (b.displayName.startsWith("Fortress")) buildingFillStyle = minimap.fortressColor;
             else if (b.displayName.startsWith("Sanctuary")) buildingFillStyle = minimap.sanctuaryColor;
-            if (buildingFillStyle) {
-                const originalFill = b.fillColor; b.fillColor = buildingFillStyle;
-                this.drawBuildingFootprint(b, null, false, mmCtx);
-                b.fillColor = originalFill;
-            }
+            if (buildingFillStyle) { const originalFill = b.fillColor; b.fillColor = buildingFillStyle; this.drawBuildingFootprint(b, null, false, mmCtx); b.fillColor = originalFill; }
         });
         if (viewportCorners) {
-            const p1 = this.worldToScreen(viewportCorners.tl.x, viewportCorners.tl.y);
-            const p2 = this.worldToScreen(viewportCorners.tr.x, viewportCorners.tr.y);
-            const p3 = this.worldToScreen(viewportCorners.br.x, viewportCorners.br.y);
-            const p4 = this.worldToScreen(viewportCorners.bl.x, viewportCorners.bl.y);
+            const p1 = this.worldToScreen(viewportCorners.tl.x, viewportCorners.tl.y); const p2 = this.worldToScreen(viewportCorners.tr.x, viewportCorners.tr.y);
+            const p3 = this.worldToScreen(viewportCorners.br.x, viewportCorners.br.y); const p4 = this.worldToScreen(viewportCorners.bl.x, viewportCorners.bl.y);
             mmCtx.fillStyle = minimap.viewportFillColor; mmCtx.strokeStyle = minimap.viewportBorderColor;
-            mmCtx.lineWidth = 2 / finalMinimapScale;
-            mmCtx.beginPath();
+            mmCtx.lineWidth = 2 / finalMinimapScale; mmCtx.beginPath();
             mmCtx.moveTo(p1[0], p1[1]); mmCtx.lineTo(p2[0], p2[1]); mmCtx.lineTo(p3[0], p3[1]); mmCtx.lineTo(p4[0], p4[1]);
             mmCtx.closePath(); mmCtx.fill(); mmCtx.stroke();
         }
@@ -1348,32 +1468,24 @@
       },
 
       drawTile(x, y, drawBorder = true) {
-        this.state.tileCount++;
-        const [sx, sy] = this.worldToScreen(x, y);
-        const { config } = this; const ctx = this.dom.ctx;
-        ctx.beginPath();
-        ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy);
-        ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy);
-        ctx.closePath();
-        ctx.fillStyle = config.biomeColors[this.getBiomeForTile(x, y)]; ctx.fill();
-        if (drawBorder) ctx.stroke();
-        const building = this.getBuildingAt(x, y);
+        this.state.tileCount++; const [sx, sy] = this.worldToScreen(x, y); const { config } = this; const ctx = this.dom.ctx;
+        ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy);
+        ctx.closePath(); ctx.fillStyle = config.biomeColors[this.getBiomeForTile(x, y)]; ctx.fill();
+        if (drawBorder) ctx.stroke(); const building = this.getBuildingAt(x, y);
         if (building && building.hideCoordinates) return;
         const currentCamScale = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
         const pct = Math.round((currentCamScale / config.baseScale) * 100);
         const showCoords = this.dom.coordsToggle ? this.dom.coordsToggle.checked : false;
         const showThreshold = showCoords ? 80 : 200;
         if (pct <= showThreshold) return;
-        const text = `${x}, ${y}`;
-        let optimalFontSize = Math.min(config.tileH * 0.8 * 0.5, (config.tileW * 0.8 / (text.length || 1)) * 1.8) * 0.7;
+        const text = `${x}, ${y}`; let optimalFontSize = Math.min(config.tileH * 0.8 * 0.5, (config.tileW * 0.8 / (text.length || 1)) * 1.8) * 0.7;
         if ((optimalFontSize * currentCamScale) < 5) return;
         ctx.fillStyle = config.textColor; ctx.font = `${optimalFontSize}px sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, sx, sy);
       },
 
       drawChunk(chunk, drawBorder = true, overrideCtx = null) {
-        this.state.tileCount++;
-        const ctx = overrideCtx || this.dom.ctx;
+        this.state.tileCount++; const ctx = overrideCtx || this.dom.ctx;
         const { x, y, size, biome } = chunk; const { config } = this;
         const currentCamScale = overrideCtx ? this.state.minimapCam.scale : this.state.cam.scale;
         const inflation = drawBorder || currentCamScale === 0 ? 0 : (1 / currentCamScale);
@@ -1382,12 +1494,9 @@
         const [stx, sty] = this.worldToScreen(x0 + w - 1, y0 + h - 1); const [slx, sly] = this.worldToScreen(x0, y0 + h - 1);
         const p_bottom = { x: sbx, y: sby + config.tileH / 2 + inflation }; const p_right = { x: srx + config.tileW / 2 + inflation, y: sry };
         const p_top = { x: stx, y: sty - config.tileH / 2 - inflation }; const p_left = { x: slx - config.tileW / 2 - inflation, y: sly };
-        ctx.beginPath();
-        ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x, p_right.y);
-        ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y);
-        ctx.closePath();
-        ctx.fillStyle = config.biomeColors[biome]; ctx.fill();
-        if (drawBorder) ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x, p_right.y);
+        ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y); ctx.closePath();
+        ctx.fillStyle = config.biomeColors[biome]; ctx.fill(); if (drawBorder) ctx.stroke();
       },
 
       drawBuildingFootprint(b, highlightStyle = null, drawBorder = true, overrideCtx = null) {
@@ -1399,16 +1508,12 @@
         const [stx, sty] = this.worldToScreen(x0 + w - 1, y0 + h - 1); const [slx, sly] = this.worldToScreen(x0, y0 + h - 1);
         const p_bottom = { x: sbx, y: sby + config.tileH / 2 }; const p_right = { x: srx + config.tileW / 2, y: sry };
         const p_top = { x: stx, y: sty - config.tileH / 2 }; const p_left = { x: slx - config.tileW / 2, y: sly };
-        ctx.beginPath();
-        ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x, p_right.y);
-        ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y);
-        ctx.closePath();
+        ctx.beginPath(); ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x, p_right.y);
+        ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y); ctx.closePath();
         ctx.fillStyle = fill; ctx.fill();
         if(drawBorder) {
-            ctx.strokeStyle = border;
-            const currentScale = overrideCtx ? this.state.minimapCam.scale : this.state.cam.scale;
-            ctx.lineWidth = (highlightStyle ? config.strokeW * 2 : config.strokeW) / (overrideCtx ? currentScale : 1);
-            ctx.stroke();
+            ctx.strokeStyle = border; const currentScale = overrideCtx ? this.state.minimapCam.scale : this.state.cam.scale;
+            ctx.lineWidth = (highlightStyle ? config.strokeW * 2 : config.strokeW) / (overrideCtx ? currentScale : 1); ctx.stroke();
         }
         if (overrideCtx || highlightStyle) return;
         const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
@@ -1418,46 +1523,36 @@
           const hasCoords = b.displayCoordinates; const heightFactor = hasCoords ? 0.5 : 1.0;
           const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9;
           ctx.font = `bold 100px sans-serif`; const textMetrics = ctx.measureText(b.displayName);
-          const displayNameWidth = textMetrics.width || 1;
-          const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
+          const displayNameWidth = textMetrics.width || 1; const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
           const optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
           if (optimalFontSize * currentCamScale < 7) return;
-          const centerX = (p_left.x + p_right.x) / 2;
-          const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
+          const centerX = (p_left.x + p_right.x) / 2; const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
           const centerY = (p_top.y + p_bottom.y) / 2 + yOffset;
           ctx.fillStyle = config.textColor; ctx.font = `bold ${optimalFontSize}px sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(b.displayName, centerX, centerY);
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(b.displayName, centerX, centerY);
           if (b.displayCoordinates) {
             const coordFontSize = optimalFontSize * 0.7; ctx.font = `${coordFontSize}px sans-serif`;
             ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.9);
           }
         }
       },
-      
+
       mainLoop(now) {
-        const { dom, state, config } = this;
-        const ctx = dom.ctx;
+        const { dom, state, config } = this; const ctx = dom.ctx;
         try {
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.clearRect(0, 0, dom.canvas.width, dom.canvas.height);
+          ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, dom.canvas.width, dom.canvas.height);
           const [centerX, centerY] = this.screenToWorld(dom.canvas.width / 2, dom.canvas.height / 2);
           if (dom.centerTileEl) dom.centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
           const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
           const pct = Math.round((currentCamScale / config.baseScale) * 100);
           if (dom.zoomLevelEl) dom.zoomLevelEl.textContent = `Zoom: ${pct}%`;
           if (dom.zoomSlider) {
-            const sliderMin = parseInt(dom.zoomSlider.min, 10); const sliderMax = parseInt(dom.zoomSlider.max, 10);
-            if (pct > sliderMax) dom.zoomSlider.max = pct.toString();
-            if (pct < sliderMin && pct < sliderMax) dom.zoomSlider.min = pct.toString();
-            else if (sliderMin > sliderMax) dom.zoomSlider.min = sliderMax.toString();
-            if (pct >= parseInt(dom.zoomSlider.min, 10) && pct <= parseInt(dom.zoomSlider.max, 10)) { dom.zoomSlider.value = pct.toString(); } 
-            else if (pct < parseInt(dom.zoomSlider.min, 10)) { dom.zoomSlider.value = dom.zoomSlider.min; } 
-            else { dom.zoomSlider.value = dom.zoomSlider.max; }
+              const minScalePct = Math.round((state.minFitScale / config.baseScale) * 100);
+              const maxScalePct = Math.round((config.maxPct / 100 * config.baseScale / config.baseScale) * 100);
+              dom.zoomSlider.min = minScalePct; dom.zoomSlider.max = maxScalePct;
+              if (document.activeElement !== dom.zoomSlider) dom.zoomSlider.value = pct;
           }
-          state.tileCount = 0;
-          ctx.save();
+          state.tileCount = 0; ctx.save();
           ctx.setTransform(currentCamScale, 0, 0, currentCamScale, state.cam.x, state.cam.y);
           ctx.strokeStyle = config.borderColor; ctx.lineWidth = config.strokeW;
           const [tl_x, tl_y] = this.screenToWorld(0, 0); const [tr_x, tr_y] = this.screenToWorld(dom.canvas.width, 0);
@@ -1468,83 +1563,51 @@
           };
           const viewportCorners = { tl: { x: tl_x, y: tl_y }, tr: { x: tr_x, y: tr_y }, bl: { x: bl_x, y: bl_y }, br: { x: br_x, y: br_y } };
           if (isNaN(viewBounds.minX) || isNaN(viewBounds.maxX) || isNaN(viewBounds.minY) || isNaN(viewBounds.maxY)) {
-            ctx.restore();
-            if (this.state.isMinimapVisible) this.drawIsometricMinimap(null);
-            requestAnimationFrame(this.mainLoop.bind(this)); return;
+            ctx.restore(); this.drawIsometricMinimap(null); requestAnimationFrame(this.mainLoop.bind(this)); return;
           }
           const chunkLevel = this.getChunkLevelForZoom(pct);
           const showGrid = dom.gridlinesToggle ? dom.gridlinesToggle.checked : false;
           const showRss = dom.allianceRssToggle ? dom.allianceRssToggle.checked : false;
           const alwaysShowRss = dom.allianceRssAlwaysVisibleToggle ? dom.allianceRssAlwaysVisibleToggle.checked : false;
           if (chunkLevel === -1) {
-            const shouldDrawBorders = showGrid && pct > 50;
-            const minSum = Math.floor(viewBounds.minX + viewBounds.minY); const maxSum = Math.ceil(viewBounds.maxX + viewBounds.maxY);
+            const shouldDrawBorders = showGrid && pct > 50; const minSum = Math.floor(viewBounds.minX + viewBounds.minY); const maxSum = Math.ceil(viewBounds.maxX + viewBounds.maxY);
             for (let sum = minSum; sum <= maxSum; sum++) {
-              const startXCoord = Math.floor(Math.max(viewBounds.minX, (sum - viewBounds.maxY)));
-              const endXCoord = Math.ceil(Math.min(viewBounds.maxX, (sum - viewBounds.minY)));
-              for (let x = startXCoord; x <= endXCoord; x++) {
-                const y = sum - x;
-                if (x < 0 || x >= config.N || y < 0 || y >= config.N) continue;
-                if (!this.getBuildingAt(x, y)) this.drawTile(x, y, shouldDrawBorders);
-              }
+              const startXCoord = Math.floor(Math.max(viewBounds.minX, (sum - viewBounds.maxY))); const endXCoord = Math.ceil(Math.min(viewBounds.maxX, (sum - viewBounds.minY)));
+              for (let x = startXCoord; x <= endXCoord; x++) { const y = sum - x; if (x < 0 || x >= config.N || y < 0 || y >= config.N) continue; if (!this.getBuildingAt(x, y)) this.drawTile(x, y, shouldDrawBorders); }
             }
-            state.allBuildings
-              .filter(b => (!b.isRss || showRss) && !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
-              .forEach(b => this.drawBuildingFootprint(b, null, shouldDrawBorders));
+            state.allBuildings.filter(b => (!b.isRss || showRss) && !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY)).forEach(b => this.drawBuildingFootprint(b, null, shouldDrawBorders));
             ctx.fillStyle = '#444';
-            (state.baseMap.unoccupiableTiles || []).forEach(([x, y]) => {
-              if (this.getBuildingAt(x, y)) return;
-              if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return;
-              const [sx, sy] = this.worldToScreen(x, y);
-              ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy);
-              ctx.closePath(); ctx.fill();
-            });
+            (state.baseMap.unoccupiableTiles || []).forEach(([x, y]) => { if (this.getBuildingAt(x, y)) return; if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return; const [sx, sy] = this.worldToScreen(x, y); ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy); ctx.closePath(); ctx.fill(); });
           } else {
             if (state.chunkLevels && state.chunkLevels[chunkLevel]) {
               const chunksToDraw = state.chunkLevels[chunkLevel]; const chunkSize = Math.pow(2, chunkLevel + 1);
               const startChunkX = Math.floor(viewBounds.minX / chunkSize) * chunkSize; const endChunkX = Math.ceil(viewBounds.maxX / chunkSize) * chunkSize;
               const startChunkY = Math.floor(viewBounds.minY / chunkSize) * chunkSize; const endChunkY = Math.ceil(viewBounds.maxY / chunkSize) * chunkSize;
-              for (let x = startChunkX; x <= endChunkX; x += chunkSize) {
-                for (let y = startChunkY; y <= endChunkY; y += chunkSize) {
-                  const chunk = chunksToDraw.get(`${x},${y}`); if (chunk) this.drawChunk(chunk, false);
-                }
-              }
+              for (let x = startChunkX; x <= endChunkX; x += chunkSize) { for (let y = startChunkY; y <= endChunkY; y += chunkSize) { const chunk = chunksToDraw.get(`${x},${y}`); if (chunk) this.drawChunk(chunk, false); } }
             }
-            (state.baseMap.defaultBuildings || [])
-            .filter(b => !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
-              .forEach(b => this.drawBuildingFootprint(b, null, false));
+            
+            // Draw all non-RSS buildings (default and user-added) that are in view
+            state.allBuildings.filter(b => !b.isRss && !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY)).forEach(b => this.drawBuildingFootprint(b, null, false));
+
+            // Conditionally draw all RSS buildings that are in view
             if (showRss && alwaysShowRss) {
-              state.allBuildings
-                .filter(b => b.isRss && !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
-                .forEach(b => this.drawBuildingFootprint(b, null, false));
+                // CORRECTED: b.h is used instead of h
+                state.allBuildings.filter(b => b.isRss && !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY)).forEach(b => this.drawBuildingFootprint(b, null, false));
             }
+            
             if (chunkLevel < 2) {
               ctx.fillStyle = '#444';
-              (state.baseMap.unoccupiableTiles || []).forEach(([x, y]) => {
-                if (this.getBuildingAt(x, y)) return;
-                if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return;
-                const [sx, sy] = this.worldToScreen(x, y);
-                ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy);
-                ctx.closePath(); ctx.fill();
-              });
+              (state.baseMap.unoccupiableTiles || []).forEach(([x, y]) => { if (this.getBuildingAt(x, y)) return; if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return; const [sx, sy] = this.worldToScreen(x, y); ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy); ctx.closePath(); ctx.fill(); });
             }
           }
           if (state.selection) {
             let highlightColor = config.selectionColor;
-            if (state.selection.pingStart && now - state.selection.pingStart < config.pingDuration) {
-              if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) { highlightColor = config.pingColor; }
-            }
-            if (state.selection.w) {
-              this.drawBuildingFootprint(state.selection, highlightColor, true);
-            } else {
-              const [sx, sy] = this.worldToScreen(state.selection.x, state.selection.y);
-              ctx.beginPath();
-              ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy);
-              ctx.closePath(); ctx.strokeStyle = highlightColor; ctx.lineWidth = config.strokeW * 1.5; ctx.stroke();
-            }
+            if (state.selection.pingStart && now - state.selection.pingStart < config.pingDuration) { if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) { highlightColor = config.pingColor; } }
+            if (state.selection.w) { this.drawBuildingFootprint(state.selection, highlightColor, true); } 
+            else { const [sx, sy] = this.worldToScreen(state.selection.x, state.selection.y); ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy); ctx.closePath(); ctx.strokeStyle = highlightColor; ctx.lineWidth = config.strokeW * 1.5; ctx.stroke(); }
           }
           ctx.restore();
-          if (this.state.isMinimapVisible) { this.drawIsometricMinimap(viewportCorners); }
+          this.drawIsometricMinimap(viewportCorners);
           const dt = now - state.lastFrame; state.lastFrame = now;
           if (dt > 0) { state.lastFPS = Math.round(1000 / dt); }
           state.lastTiles = state.tileCount;
@@ -1556,28 +1619,8 @@
         } catch (error) { console.error("Error in mainLoop:", error); }
         requestAnimationFrame(this.mainLoop.bind(this));
       }
+
     };
-
-    // A little polyfill for Element.prepend() for older browsers if needed
-    (function (arr) {
-      arr.forEach(function (item) {
-        if (item.hasOwnProperty('prepend')) { return; }
-        Object.defineProperty(item, 'prepend', {
-          configurable: true, enumerable: true, writable: true,
-          value: function prepend() {
-            var argArr = Array.prototype.slice.call(arguments),
-              docFrag = document.createDocumentFragment();
-            argArr.forEach(function (argItem) {
-              var isNode = argItem instanceof Node;
-              docFrag.appendChild(isNode ? argItem : document.createTextNode(String(argItem)));
-            });
-            this.insertBefore(docFrag, this.firstChild);
-          }
-        });
-      });
-    })([Element.prototype, Document.prototype, DocumentFragment.prototype]);
-
-    // Kick off the application
     KingshotPlanner.init();
   </script>
 </body>
