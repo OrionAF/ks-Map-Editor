@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1.2] - Patch
+
+### Changed
+- Re-made the mobile layout.  This is just a test.
+
 ## [0.3.1.1] - Minor
 
 ### Changed
