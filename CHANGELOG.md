@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1.1] - Minor
+
+### Changed
+- **Bookmarks can now be multi-pinned!** Instead of a single pinned favorite, you can now pin an unlimited number of landmarks.
+- Pinned bookmarks are now displayed as a persistent list in the top-right corner for immediate access. Each item has its own 'Go' and 'Unpin' buttons.
+- The expandable bookmark menu is now solely for adding new pins from a list of available (unpinned) landmarks.
+
 ## [0.3.1.0] - Major
 
 ### Added

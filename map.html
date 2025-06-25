@@ -304,8 +304,48 @@
       display: block; /* keep it in layout flow for transition */
     }
 
-    /* --- NEW BOOKMARKS STYLES --- */
-    #bookmarksContainer {
+    /* --- MULTI-PIN BOOKMARKS STYLES --- */
+    #pinnedBookmarksContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .pinned-bookmark-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 8px;
+      background-color: #333;
+      border: 1px solid #555;
+      border-radius: 3px;
+      font-family: sans-serif;
+      font-size: 13px;
+      color: #eee;
+    }
+    .pinned-bookmark-item > span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-grow: 1;
+      padding-right: 10px;
+    }
+    .pinned-bookmark-item .controls button {
+      padding: 2px 6px;
+      font-size: 12px;
+      line-height: 1;
+      background: #444;
+      border: 1px solid #666;
+      color: #eee;
+      margin-left: 5px;
+      cursor: pointer;
+    }
+    .pinned-bookmark-item .controls .unpin-btn {
+      color: #fdd;
+      background: #5a3838;
+      border-color: #855;
+    }
+
+    #addBookmarksContainer {
       width: 100%;
       background-color: #282828;
       border: 1px solid #444;
@@ -313,69 +353,49 @@
       font-family: sans-serif;
       font-size: 13px;
       color: #eee;
-      transition: margin-top 0.3s ease-out;
     }
 
-    #pinnedBookmarkDisplay {
+    #addBookmarksHeader {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 5px 8px;
       cursor: pointer;
     }
-    #pinnedBookmarkDisplay span {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex-grow: 1;
-      padding-right: 10px;
-    }
-    #pinnedBookmarkDisplay small { color: #888; }
-    #pinnedBookmarkDisplay button {
+    #addBookmarksToggleBtn {
+      transition: transform 0.2s ease-in-out;
       padding: 2px 6px;
       font-size: 14px;
       line-height: 1;
-      background: #444;
-      border: 1px solid #666;
     }
-    #bookmarksToggleBtn {
-      transition: transform 0.2s ease-in-out;
-    }
-    #bookmarksToggleBtn.open {
+    #addBookmarksToggleBtn.open {
       transform: rotate(180deg);
     }
-    #bookmarksList {
+    #addBookmarksList {
       max-height: 0;
       overflow: hidden;
       overflow-y: auto;
       transition: max-height 0.3s ease-out;
       border-top: 1px solid #444;
     }
-    #bookmarksList.open {
-      max-height: 250px; /* Adjust as needed */
+    #addBookmarksList.open {
+      max-height: 250px;
     }
-    .bookmark-item {
+    .add-bookmark-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 6px 8px;
       border-bottom: 1px solid #3a3a3a;
     }
-    .bookmark-item:last-child {
+    .add-bookmark-item:last-child {
       border-bottom: none;
     }
-    .bookmark-item > span {
-      flex-grow: 1;
-    }
-    .bookmark-item-controls button {
+    .add-bookmark-item button {
       padding: 2px 5px;
       font-size: 12px;
       margin-left: 5px;
       cursor: pointer;
-    }
-    .bookmark-item-controls .pin-btn.pinned {
-      background-color: #0b508f;
-      border-color: #1c72c8;
     }
 
 
@@ -388,7 +408,7 @@
       width: 100%;
       height: 100%;
       background-color: rgba(0, 0, 0, 0.7);
-      z-index: 1001; /* Above settings */
+      z-index: 1001;
     }
 
     #patchNotesModal {
@@ -406,13 +426,7 @@
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
     }
 
-    .patch-notes-header {
-      padding: 15px;
-      border-bottom: 1px solid #444;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    .patch-notes-header { padding: 15px; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }
     .patch-notes-header h3 { margin: 0; }
     .patch-notes-header .close-btn { background: none; border: none; color: #ccc; font-size: 24px; cursor: pointer; }
     .patch-notes-body { padding: 15px; max-height: 60vh; overflow-y: auto; }
@@ -423,7 +437,7 @@
 
     /* --- RESPONSIVE STYLES --- */
     @media (max-width: 768px) {
-      #minimapContainer {
+      #topRightContainer {
         display: none;
       }
     }
@@ -432,29 +446,21 @@
       #zoomControlsContainer { gap: 15px; }
       #zoomSlider { height: 70vh; }
       #searchControls { bottom: 10px; left: 50%; transform: translateX(-50%); }
-      #centerTile {left: 20%; font-size: 14px; }
+      #centerTile, #versionDisplay { display: none; }
     }
 
     @media (max-height: 500px) and (orientation: landscape) {
       #zoomControlsContainer {
-        left: 0;
-        right: 0;
-        top: auto;
-        bottom: 0;
-        transform: none;
-        width: 100%;
-        height: 60px;
-        padding: 0 10px;
-        box-sizing: border-box;
-        flex-direction: row;
-        justify-content: space-between;
+        left: 0; right: 0; top: auto; bottom: 0; transform: none; width: 100%; height: 60px;
+        padding: 0 10px; box-sizing: border-box; flex-direction: row; justify-content: space-between;
         background: rgba(0, 0, 0, 0.7);
       }
       #sliderWrapper { flex-grow: 1; margin: 0 10px; }
       #zoomSlider { -webkit-appearance: none; appearance: none; writing-mode: horizontal-tb; height: 25px; width: 100%; max-height: none; }
       #zoomPresetSelect { flex-direction: row; }
       #zoomLevel { font-size: 14px; }
-      #searchControls, #centerTile, #versionDisplay, #settingsContainer { display: none; }
+      #searchControls, #centerTile { display: none; }
+      #versionDisplay { bottom: 65px; left: 10px; right: auto; }
     }
   </style>
 </head>
@@ -471,13 +477,16 @@
       <button id="minimapToggleBtn" title="Toggle Minimap">Hide Minimap</button>
       <canvas id="minimapCanvas"></canvas>
     </div>
-    <div id="bookmarksContainer">
-      <div id="pinnedBookmarkDisplay">
-        <span>No bookmark pinned</span>
-        <button id="bookmarksToggleBtn" title="Show / Hide Bookmarks">▼</button>
+    <div id="pinnedBookmarksContainer">
+      <!-- Dynamically populated list of pinned bookmarks -->
+    </div>
+    <div id="addBookmarksContainer">
+      <div id="addBookmarksHeader">
+        <span>Add Bookmark</span>
+        <button id="addBookmarksToggleBtn" title="Show / Hide available landmarks">▼</button>
       </div>
-      <div id="bookmarksList">
-        <!-- Dynamically populated by JS -->
+      <div id="addBookmarksList">
+        <!-- Dynamically populated list of un-pinned landmarks -->
       </div>
     </div>
   </div>
@@ -590,7 +599,7 @@
     const KingshotPlanner = {
       // --- TWEAKABLE SETTINGS ---
       config: {
-        CURRENT_VERSION: '0.3.1.0',
+        CURRENT_VERSION: '0.3.1.1',
         N: 1200,
         tileW: 10,
         tileH: 10,
@@ -628,9 +637,9 @@
           kingCastleColor: 'rgba(255,215,0,0.9)',
           fortressColor: 'rgba(178,34,34,1)',
           sanctuaryColor: 'rgba(65,105,225,1)',
-          zoomFactorMin: 1.0, // When main map is zoomed out, minimap shows the whole map (1x)
-          zoomFactorMax: 12.0, // When main map is fully zoomed in, minimap zooms in by this factor
-          mainMapZoomThresholdForMinimapZoom: 0.08 // Main map zoom % at which minimap starts zooming
+          zoomFactorMin: 1.0, 
+          zoomFactorMax: 12.0,
+          mainMapZoomThresholdForMinimapZoom: 0.08
         }
       },
 
@@ -670,7 +679,7 @@
         minimapClickStartPos: { x: 0, y: 0 },
         minimapCam: { x: 0, y: 0, scale: 0.1 },
         animationId: null,
-        pinnedBookmark: null
+        pinnedBookmarks: []
       },
 
       // --- DOM REFERENCES ---
@@ -685,16 +694,18 @@
         tileDetailSelect: null, gridlinesToggle: null, allianceRssToggle: null,
         allianceRssAlwaysVisibleToggle: null, settingsBtn: null, settingsPanel: null,
         minimapCanvas: null, minimapCtx: null, minimapContainer: null, minimapToggleBtn: null,
-        bookmarksContainer: null, pinnedBookmarkDisplay: null, bookmarksToggleBtn: null, bookmarksList: null
+        pinnedBookmarksContainer: null, addBookmarksContainer: null, addBookmarksHeader: null,
+        addBookmarksToggleBtn: null, addBookmarksList: null
       },
 
       // --- CORE INITIALIZATION ---
       init() {
         const self = this;
         this.dom.canvas = document.getElementById('map');
-        if (!this.dom.canvas) { console.error("Fatal: Canvas element 'map' not found."); alert("Fatal Error: Canvas element not found. The application cannot start."); return; }
+        if (!this.dom.canvas) { console.error("Fatal: Canvas element 'map' not found."); return; }
         this.dom.ctx = this.dom.canvas.getContext('2d');
-        if (!this.dom.ctx) { console.error("Fatal: Could not get 2D rendering context for canvas."); alert("Fatal Error: Could not initialize 2D graphics. The application cannot start. Try a different browser or update your current one."); return; }
+        if (!this.dom.ctx) { console.error("Fatal: Could not get 2D rendering context for canvas."); return; }
+        // ... (all other getElementById calls) ...
         this.dom.inpX = document.getElementById('inpX');
         this.dom.inpY = document.getElementById('inpY');
         this.dom.btnGo = document.getElementById('btnGo');
@@ -729,10 +740,11 @@
         this.dom.minimapContainer = document.getElementById('minimapContainer');
         this.dom.minimapToggleBtn = document.getElementById('minimapToggleBtn');
         this.dom.minimapCanvas = document.getElementById('minimapCanvas');
-        this.dom.bookmarksContainer = document.getElementById('bookmarksContainer');
-        this.dom.pinnedBookmarkDisplay = document.getElementById('pinnedBookmarkDisplay');
-        this.dom.bookmarksToggleBtn = document.getElementById('bookmarksToggleBtn');
-        this.dom.bookmarksList = document.getElementById('bookmarksList');
+        this.dom.pinnedBookmarksContainer = document.getElementById('pinnedBookmarksContainer');
+        this.dom.addBookmarksContainer = document.getElementById('addBookmarksContainer');
+        this.dom.addBookmarksHeader = document.getElementById('addBookmarksHeader');
+        this.dom.addBookmarksToggleBtn = document.getElementById('addBookmarksToggleBtn');
+        this.dom.addBookmarksList = document.getElementById('addBookmarksList');
         if (this.dom.minimapCanvas) {
           this.dom.minimapCanvas.width = this.config.minimap.width * (window.devicePixelRatio || 1);
           this.dom.minimapCanvas.height = this.config.minimap.height * (window.devicePixelRatio || 1);
@@ -771,6 +783,7 @@
         if (this.dom.modalOverlay) this.dom.modalOverlay.addEventListener('click', this.hidePatchNotes.bind(this));
         const lastSeenVersion = localStorage.getItem('lastSeenVersion');
         if (lastSeenVersion !== this.config.CURRENT_VERSION) { this.showPatchNotes(); }
+        // ... (all other toggle/select setup) ...
         if (this.dom.tileDetailSelect) {
           const savedDetail = localStorage.getItem('mapTileDetail') || '49';
           this.dom.tileDetailSelect.value = savedDetail;
@@ -800,20 +813,19 @@
           this.dom.coordsToggle.checked = savedCoords;
           this.dom.coordsToggle.addEventListener('change', () => localStorage.setItem('mapShowCoords', this.dom.coordsToggle.checked));
         }
+        
+        // Initialize Bookmarks
+        this.loadPinnedBookmarks();
+        this.renderAllBookmarkUI();
+        if(this.dom.addBookmarksHeader) this.dom.addBookmarksHeader.addEventListener('click', this.toggleAddBookmarksList.bind(this));
+        
+        // ... (all other event listeners) ...
         if (this.dom.btnGo) this.dom.btnGo.addEventListener('click', this.doSearch.bind(this));
         if (this.dom.inpX && this.dom.inpY)[this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') this.doSearch(); }));
         if (this.dom.zoomDecBtn) this.dom.zoomDecBtn.addEventListener('click', () => this.changeZoomBy(-1));
         if (this.dom.zoomIncBtn) this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(+1));
         if (this.dom.zoomDec10Btn) this.dom.zoomDec10Btn.addEventListener('click', () => this.changeZoomBy(-10));
         if (this.dom.zoomInc10Btn) this.dom.zoomInc10Btn.addEventListener('click', () => this.changeZoomBy(+10));
-        
-        // Initialize Bookmarks
-        const savedPin = localStorage.getItem('pinnedBookmark');
-        if (savedPin) { this.state.pinnedBookmark = JSON.parse(savedPin); }
-        this.populateBookmarks();
-        this.updatePinnedDisplay();
-        if(this.dom.pinnedBookmarkDisplay) this.dom.pinnedBookmarkDisplay.addEventListener('click', this.toggleBookmarksList.bind(this));
-
         if (this.dom.zoomPresetSelect) {
             this.dom.zoomPresetSelect.addEventListener('change', (e) => {
                 const value = e.target.value;
@@ -864,15 +876,89 @@
         }
       },
 
-      populateBookmarks() {
-        if (!this.dom.bookmarksList || !this.state.baseMap.defaultBuildings) return;
-        this.dom.bookmarksList.innerHTML = ''; // Clear existing
+      // --- BOOKMARK LOGIC ---
+      loadPinnedBookmarks() {
+        const savedPins = localStorage.getItem('pinnedBookmarks');
+        if (savedPins) {
+          try {
+            const parsedPins = JSON.parse(savedPins);
+            if(Array.isArray(parsedPins)) {
+              this.state.pinnedBookmarks = parsedPins;
+            }
+          } catch(e) {
+            console.error("Could not parse pinned bookmarks from localStorage", e);
+            this.state.pinnedBookmarks = [];
+          }
+        }
+      },
 
-        const landmarks = this.state.baseMap.defaultBuildings.filter(b => 
+      savePinnedBookmarks() {
+        localStorage.setItem('pinnedBookmarks', JSON.stringify(this.state.pinnedBookmarks));
+      },
+      
+      pinBookmark(bookmark) {
+        const isAlreadyPinned = this.state.pinnedBookmarks.some(p => p.x === bookmark.x && p.y === bookmark.y);
+        if (!isAlreadyPinned) {
+          this.state.pinnedBookmarks.push({ x: bookmark.x, y: bookmark.y, displayName: bookmark.displayName });
+          this.savePinnedBookmarks();
+          this.renderAllBookmarkUI();
+        }
+      },
+
+      unpinBookmark(x, y) {
+        this.state.pinnedBookmarks = this.state.pinnedBookmarks.filter(p => !(p.x === x && p.y === y));
+        this.savePinnedBookmarks();
+        this.renderAllBookmarkUI();
+      },
+
+      renderAllBookmarkUI() {
+        this.renderPinnedBookmarks();
+        this.renderAddBookmarksList();
+      },
+
+      renderPinnedBookmarks() {
+        if (!this.dom.pinnedBookmarksContainer) return;
+        this.dom.pinnedBookmarksContainer.innerHTML = ''; // Clear
+
+        this.state.pinnedBookmarks.forEach(p => {
+          const item = document.createElement('div');
+          item.className = 'pinned-bookmark-item';
+          
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = p.displayName;
+          
+          const controlsDiv = document.createElement('div');
+          controlsDiv.className = 'controls';
+
+          const goBtn = document.createElement('button');
+          goBtn.textContent = 'Go';
+          goBtn.onclick = () => this.goToBookmark(p.x, p.y);
+
+          const unpinBtn = document.createElement('button');
+          unpinBtn.textContent = '×';
+          unpinBtn.className = 'unpin-btn';
+          unpinBtn.title = `Unpin ${p.displayName}`;
+          unpinBtn.onclick = () => this.unpinBookmark(p.x, p.y);
+
+          controlsDiv.append(goBtn, unpinBtn);
+          item.append(nameSpan, controlsDiv);
+          this.dom.pinnedBookmarksContainer.appendChild(item);
+        });
+      },
+
+      renderAddBookmarksList() {
+        if (!this.dom.addBookmarksList || !this.state.baseMap.defaultBuildings) return;
+        this.dom.addBookmarksList.innerHTML = ''; // Clear
+
+        const allLandmarks = this.state.baseMap.defaultBuildings.filter(b => 
             b.displayName && (b.displayName.includes("King's Castle") || b.displayName.includes("Fortress") || b.displayName.includes("Sanctuary"))
         );
 
-        landmarks.sort((a, b) => {
+        const unpinnedLandmarks = allLandmarks.filter(landmark => 
+            !this.state.pinnedBookmarks.some(p => p.x === landmark.x && p.y === landmark.y)
+        );
+
+        unpinnedLandmarks.sort((a, b) => {
             const getSortOrder = (name) => {
                 if (name.includes("King's Castle")) return 0;
                 if (name.includes("Fortress")) return 1;
@@ -884,46 +970,28 @@
             if (orderA !== orderB) return orderA - orderB;
             return a.displayName.localeCompare(b.displayName, undefined, { numeric: true });
         });
-        
-        landmarks.forEach(b => {
-            const item = document.createElement('div');
-            item.className = 'bookmark-item';
 
+        unpinnedLandmarks.forEach(b => {
+            const item = document.createElement('div');
+            item.className = 'add-bookmark-item';
             const nameSpan = document.createElement('span');
             nameSpan.textContent = b.displayName;
-
-            const controlsDiv = document.createElement('div');
-            controlsDiv.className = 'bookmark-item-controls';
-
-            const goBtn = document.createElement('button');
-            goBtn.textContent = 'Go';
-            goBtn.title = `Go to ${b.displayName}`;
-            goBtn.onclick = (e) => {
-                e.stopPropagation();
-                this.goToBookmark(b.x, b.y);
-                this.toggleBookmarksList(); // Close list after going
-            };
-
             const pinBtn = document.createElement('button');
-            pinBtn.innerHTML = '📌';
-            pinBtn.className = 'pin-btn';
-            pinBtn.title = `Pin ${b.displayName}`;
-            if (this.state.pinnedBookmark && this.state.pinnedBookmark.x === b.x && this.state.pinnedBookmark.y === b.y) {
-                pinBtn.classList.add('pinned');
-                pinBtn.title = `Unpin ${b.displayName}`;
-            }
-
+            pinBtn.textContent = 'Pin 📌';
             pinBtn.onclick = (e) => {
                 e.stopPropagation();
-                this.togglePinBookmark(b);
+                this.pinBookmark(b);
             };
-
-            controlsDiv.append(goBtn, pinBtn);
-            item.append(nameSpan, controlsDiv);
-            this.dom.bookmarksList.appendChild(item);
+            item.append(nameSpan, pinBtn);
+            this.dom.addBookmarksList.appendChild(item);
         });
       },
-      
+
+      toggleAddBookmarksList() {
+        this.dom.addBookmarksList.classList.toggle('open');
+        this.dom.addBookmarksToggleBtn.classList.toggle('open');
+      },
+
       goToBookmark(x, y) {
         if (x >= 0 && y >= 0) {
             this.state.selection = this.getBuildingAt(x, y) || { x, y };
@@ -936,59 +1004,7 @@
         }
       },
 
-      toggleBookmarksList() {
-        this.dom.bookmarksList.classList.toggle('open');
-        this.dom.bookmarksToggleBtn.classList.toggle('open');
-      },
-      
-      togglePinBookmark(bookmark) {
-        // If the clicked bookmark is already pinned, unpin it
-        if (this.state.pinnedBookmark && this.state.pinnedBookmark.x === bookmark.x && this.state.pinnedBookmark.y === bookmark.y) {
-            this.state.pinnedBookmark = null;
-            localStorage.removeItem('pinnedBookmark');
-        } else { // Otherwise, pin the new one
-            this.state.pinnedBookmark = { x: bookmark.x, y: bookmark.y, displayName: bookmark.displayName };
-            localStorage.setItem('pinnedBookmark', JSON.stringify(this.state.pinnedBookmark));
-        }
-        this.updatePinnedDisplay();
-        this.populateBookmarks(); // Repopulate to update the 'pinned' class on the pin button
-      },
-
-      updatePinnedDisplay() {
-        if (!this.dom.pinnedBookmarkDisplay) return;
-
-        const display = this.dom.pinnedBookmarkDisplay;
-        display.innerHTML = ''; // Clear it
-
-        const pinned = this.state.pinnedBookmark;
-        const nameSpan = document.createElement('span');
-
-        if (pinned) {
-            nameSpan.textContent = pinned.displayName;
-            const goBtn = document.createElement('button');
-            goBtn.textContent = 'Go';
-            goBtn.title = `Go to pinned bookmark: ${pinned.displayName}`;
-            goBtn.onclick = (e) => {
-                e.stopPropagation();
-                this.goToBookmark(pinned.x, pinned.y);
-            };
-            display.appendChild(nameSpan);
-            display.appendChild(goBtn);
-        } else {
-            nameSpan.innerHTML = '<small>No bookmark pinned</small>';
-            display.appendChild(nameSpan);
-        }
-
-        const toggleBtn = document.createElement('button');
-        toggleBtn.id = 'bookmarksToggleBtn';
-        toggleBtn.title = 'Show / Hide Bookmarks';
-        toggleBtn.innerHTML = '▼';
-        if (this.dom.bookmarksList && this.dom.bookmarksList.classList.contains('open')) {
-            toggleBtn.classList.add('open');
-        }
-        display.appendChild(toggleBtn);
-        this.dom.bookmarksToggleBtn = toggleBtn; // Re-assign DOM reference
-      },
+      // --- ALL OTHER METHODS (UNCHANGED FROM PREVIOUS VERSION) ---
 
       preProcessBuildings() {
         let buildings = [...(this.state.baseMap.defaultBuildings || []), ...(this.state.userBuildings || [])];
@@ -1063,7 +1079,6 @@
             const topOfMapY = mapScreenH; const bottomOfMapY = canvasH;
             this.state.cam.y = Math.max(bottomOfMapY, Math.min(topOfMapY, this.state.cam.y));
         } else {
-            // Correctly center the map vertically when it's smaller than the canvas
             this.state.cam.y = canvasH / 2 + mapScreenH / 2;
         }
         
