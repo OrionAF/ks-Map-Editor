@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1.0] - Major
+
+### Added
+- **New Advanced Bookmarks System!**
+  - Replaced the basic dropdown with a new expandable bookmark menu located conveniently under the minimap.
+  - **Pin a Favorite:** You can now pin a landmark! The pinned location is displayed when the menu is closed and is remembered across sessions.
+  - Each bookmark now has its own "Go" button for one-click navigation.
+
+### Changed
+- **Major UI Layout Overhaul:**
+  - The performance stats (FPS, Tiles) have been moved to a permanently visible panel in the top-left corner.
+  - The `Settings` button and panel have been relocated to the bottom-right corner. The panel now expands upwards.
+  - The version number display has been moved to the bottom-left corner for a cleaner layout.
+- The bookmark menu now smoothly slides up to fill the space when the minimap is hidden.
+- Adjusted the height of the vertical zoom slider for better compatibility with various screen aspect ratios.
+- On smaller screens (under 768px wide), only the minimap is hidden, keeping the new bookmark and settings panels accessible.
+
+### Removed
+- The previous bookmark dropdown from within the `Settings` panel.
+- The `Stats` button (📊), as the performance stats are now always visible.
+
 ## [0.3.0.0] - Major
 
 ### Added

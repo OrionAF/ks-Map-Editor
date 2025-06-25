@@ -25,13 +25,38 @@
     }
 
     /* --- LAYOUT CONTAINERS --- */
-    #settingsContainer {
+    #statsPanel {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 6px 10px;
+      border-radius: 4px;
+      color: #fff;
+      font-family: sans-serif;
+      font-size: 13px;
+    }
+
+    #topRightContainer {
       position: absolute;
       top: 10px;
       right: 10px;
+      z-index: 900;
+      width: 352px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    #settingsContainer {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
       z-index: 1000;
-      width: 210px;
-      text-align: right;
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: flex-end;
     }
 
     #zoomControlsContainer {
@@ -80,19 +105,13 @@
     }
 
     #minimapContainer {
-      position: absolute;
-      top: 10px;
-      margin-top: 40px;
-      right: 10px;
-      z-index: 900;
-      transition: margin-top 0.3s ease-out;
-      width: 352px;
+      width: 100%;
     }
 
     #versionDisplay {
       position: absolute;
       bottom: 10px;
-      right: 10px;
+      left: 10px;
       color: rgba(255, 255, 255, 0.5);
       font-family: sans-serif;
       font-size: 12px;
@@ -102,8 +121,8 @@
 
     /* --- COMPONENT STYLES --- */
     #settingsBtn {
-      margin-bottom: 5px;
       padding: 6px 10px;
+      width: 120px;
     }
 
     #settingsPanel {
@@ -116,6 +135,8 @@
       overflow: hidden;
       transition: max-height 0.3s ease-out, padding 0.3s ease-out;
       text-align: left;
+      width: 210px;
+      margin-bottom: 5px;
     }
 
     #settingsPanel.open {
@@ -128,10 +149,6 @@
       vertical-align: middle;
     }
     
-    #settingsPanel #bookmarksSelect {
-      width: 100%;
-    }
-
     #settingsPanel>div {
       margin-top: 4px;
       text-align: left;
@@ -151,15 +168,13 @@
       text-align: left;
     }
 
-    #infoBtn,
-    #statsBtn {
+    #infoBtn {
       margin-top: 6px;
       -webkit-user-select: none;
       user-select: none;
     }
 
-    #infoPanel,
-    #statsPanel {
+    #infoPanel {
       max-height: 0;
       overflow: hidden;
       transition: max-height 0.3s ease;
@@ -175,9 +190,10 @@
     #infoPanel.open {
       max-height: 160px;
     }
-
-    #statsPanel.open {
-      max-height: 120px;
+    
+    #statsPanel div {
+      margin: 4px 0;
+      color: #fff;
     }
 
     #infoPanel h4 {
@@ -195,11 +211,6 @@
       margin-bottom: 4px;
     }
 
-    #statsPanel div {
-      margin: 4px 0;
-      color: #fff;
-    }
-
     #zoomControlsContainer button {
       -webkit-user-select: none;
       user-select: none;
@@ -214,39 +225,19 @@
       user-select: none;
     }
 
-    #zoomControlsContainer #zoomInc10 {
-      order: 1;
-    }
-
-    #zoomControlsContainer #zoomInc {
-      order: 2;
-    }
-
-    #zoomControlsContainer #sliderWrapper {
-      order: 3;
-      position: relative;
-    }
-
-    #zoomControlsContainer #zoomDec {
-      order: 4;
-    }
-
-    #zoomControlsContainer #zoomDec10 {
-      order: 5;
-    }
-
-    #zoomControlsContainer #zoomLevel {
-      order: 7;
-      font-size: 14px;
-      margin-top: 5px;
-    }
+    #zoomControlsContainer #zoomInc10 { order: 1; }
+    #zoomControlsContainer #zoomInc { order: 2; }
+    #zoomControlsContainer #sliderWrapper { order: 3; position: relative; }
+    #zoomControlsContainer #zoomDec { order: 4; }
+    #zoomControlsContainer #zoomDec10 { order: 5; }
+    #zoomControlsContainer #zoomLevel { order: 7; font-size: 14px; margin-top: 5px; }
 
     #zoomSlider {
       -webkit-appearance: slider-vertical;
       appearance: slider-vertical;
       writing-mode: bt-lr;
-      height: 65vh;
-      max-height: 65vh;
+      height: 55vh;
+      max-height: 600px;
       width: auto;
       margin: 0;
     }
@@ -272,25 +263,10 @@
       text-align: left;
     }
 
-    #searchControls>div {
-      text-align: left;
-    }
-
-    #searchControls input {
-      width: 60px;
-    }
-
-    #searchControls button {
-      margin: 2px 0 2px 4px;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-
-    label.coords-label {
-      font-size: 13px;
-      vertical-align: middle;
-      user-select: none;
-    }
+    #searchControls>div { text-align: left; }
+    #searchControls input { width: 60px; }
+    #searchControls button { margin: 2px 0 2px 4px; -webkit-user-select: none; user-select: none; }
+    label.coords-label { font-size: 13px; vertical-align: middle; user-select: none; }
 
     #minimapToggleBtn {
       display: block;
@@ -316,11 +292,92 @@
       border-top: none;
       background-color: rgba(0, 0, 0, 0.5);
       display: block;
+      transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+      max-height: 300px;
+      opacity: 1;
     }
 
     #minimapCanvas.hidden {
-      display: none;
+      max-height: 0;
+      opacity: 0;
+      border-width: 0;
+      display: block; /* keep it in layout flow for transition */
     }
+
+    /* --- NEW BOOKMARKS STYLES --- */
+    #bookmarksContainer {
+      width: 100%;
+      background-color: #282828;
+      border: 1px solid #444;
+      border-radius: 4px;
+      font-family: sans-serif;
+      font-size: 13px;
+      color: #eee;
+      transition: margin-top 0.3s ease-out;
+    }
+
+    #pinnedBookmarkDisplay {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 8px;
+      cursor: pointer;
+    }
+    #pinnedBookmarkDisplay span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-grow: 1;
+      padding-right: 10px;
+    }
+    #pinnedBookmarkDisplay small { color: #888; }
+    #pinnedBookmarkDisplay button {
+      padding: 2px 6px;
+      font-size: 14px;
+      line-height: 1;
+      background: #444;
+      border: 1px solid #666;
+    }
+    #bookmarksToggleBtn {
+      transition: transform 0.2s ease-in-out;
+    }
+    #bookmarksToggleBtn.open {
+      transform: rotate(180deg);
+    }
+    #bookmarksList {
+      max-height: 0;
+      overflow: hidden;
+      overflow-y: auto;
+      transition: max-height 0.3s ease-out;
+      border-top: 1px solid #444;
+    }
+    #bookmarksList.open {
+      max-height: 250px; /* Adjust as needed */
+    }
+    .bookmark-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 8px;
+      border-bottom: 1px solid #3a3a3a;
+    }
+    .bookmark-item:last-child {
+      border-bottom: none;
+    }
+    .bookmark-item > span {
+      flex-grow: 1;
+    }
+    .bookmark-item-controls button {
+      padding: 2px 5px;
+      font-size: 12px;
+      margin-left: 5px;
+      cursor: pointer;
+    }
+    .bookmark-item-controls .pin-btn.pinned {
+      background-color: #0b508f;
+      border-color: #1c72c8;
+    }
+
 
     /* --- MODAL STYLES --- */
     #modalOverlay {
@@ -331,7 +388,7 @@
       width: 100%;
       height: 100%;
       background-color: rgba(0, 0, 0, 0.7);
-      z-index: 999;
+      z-index: 1001; /* Above settings */
     }
 
     #patchNotesModal {
@@ -345,7 +402,7 @@
       background: #2c2c2c;
       color: #eee;
       border-radius: 8px;
-      z-index: 1000;
+      z-index: 1002;
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
     }
 
@@ -356,78 +413,26 @@
       justify-content: space-between;
       align-items: center;
     }
-
-    .patch-notes-header h3 {
-      margin: 0;
-    }
-
-    .patch-notes-header .close-btn {
-      background: none;
-      border: none;
-      color: #ccc;
-      font-size: 24px;
-      cursor: pointer;
-    }
-
-    .patch-notes-body {
-      padding: 15px;
-      max-height: 60vh;
-      overflow-y: auto;
-    }
-
-    .patch-notes-body ul {
-      padding-left: 20px;
-      margin: 0;
-    }
-
-    .patch-notes-body li {
-      margin-bottom: 8px;
-    }
-
-    .patch-notes-footer {
-      padding: 10px 15px;
-      border-top: 1px solid #444;
-      background: #333;
-      border-radius: 0 0 8px 8px;
-    }
-
-    .patch-notes-footer label {
-      user-select: none;
-      font-size: 14px;
-    }
+    .patch-notes-header h3 { margin: 0; }
+    .patch-notes-header .close-btn { background: none; border: none; color: #ccc; font-size: 24px; cursor: pointer; }
+    .patch-notes-body { padding: 15px; max-height: 60vh; overflow-y: auto; }
+    .patch-notes-body ul { padding-left: 20px; margin: 0; }
+    .patch-notes-body li { margin-bottom: 8px; }
+    .patch-notes-footer { padding: 10px 15px; border-top: 1px solid #444; background: #333; border-radius: 0 0 8px 8px; }
+    .patch-notes-footer label { user-select: none; font-size: 14px; }
 
     /* --- RESPONSIVE STYLES --- */
     @media (max-width: 768px) {
-      #minimapContainer,
-      #settingsContainer {
+      #minimapContainer {
         display: none;
       }
     }
 
     @media (max-width: 768px) and (orientation: portrait) {
-      #zoomControlsContainer {
-        gap: 15px;
-      }
-
-      #zoomSlider {
-        height: 70vh;
-      }
-
-      #searchControls {
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-      }
-
-      #centerTile {
-        display: none;
-      }
-
-      #versionDisplay {
-        bottom: 5px;
-        right: 5px;
-        font-size: 10px;
-      }
+      #zoomControlsContainer { gap: 15px; }
+      #zoomSlider { height: 70vh; }
+      #searchControls { bottom: 10px; left: 50%; transform: translateX(-50%); }
+      #centerTile {left: 20%; font-size: 14px; }
     }
 
     @media (max-height: 500px) and (orientation: landscape) {
@@ -445,44 +450,40 @@
         justify-content: space-between;
         background: rgba(0, 0, 0, 0.7);
       }
-
-      #sliderWrapper {
-        flex-grow: 1;
-        margin: 0 10px;
-      }
-
-      #zoomSlider {
-        -webkit-appearance: none;
-        appearance: none;
-        writing-mode: horizontal-tb;
-        height: 25px;
-        width: 100%;
-        max-height: none;
-      }
-
-      #zoomPresetSelect {
-        flex-direction: row;
-      }
-
-      #zoomLevel {
-        font-size: 14px;
-      }
-
-      #searchControls,
-      #centerTile {
-        display: none;
-      }
-
-      #versionDisplay {
-        bottom: 65px;
-      }
+      #sliderWrapper { flex-grow: 1; margin: 0 10px; }
+      #zoomSlider { -webkit-appearance: none; appearance: none; writing-mode: horizontal-tb; height: 25px; width: 100%; max-height: none; }
+      #zoomPresetSelect { flex-direction: row; }
+      #zoomLevel { font-size: 14px; }
+      #searchControls, #centerTile, #versionDisplay, #settingsContainer { display: none; }
     }
   </style>
 </head>
 <body>
+  <!-- TOP LEFT UI -->
+  <div id="statsPanel">
+    <div id="statsFPS">FPS: –</div>
+    <div id="statsTiles">Tiles: –</div>
+  </div>
+
   <!-- TOP RIGHT UI -->
+  <div id="topRightContainer">
+    <div id="minimapContainer">
+      <button id="minimapToggleBtn" title="Toggle Minimap">Hide Minimap</button>
+      <canvas id="minimapCanvas"></canvas>
+    </div>
+    <div id="bookmarksContainer">
+      <div id="pinnedBookmarkDisplay">
+        <span>No bookmark pinned</span>
+        <button id="bookmarksToggleBtn" title="Show / Hide Bookmarks">▼</button>
+      </div>
+      <div id="bookmarksList">
+        <!-- Dynamically populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM RIGHT UI -->
   <div id="settingsContainer">
-    <button id="settingsBtn">⚙️ Settings</button>
     <div id="settingsPanel">
       <h4>Display</h4>
       <div>
@@ -515,16 +516,8 @@
         </select>
       </div>
       <hr>
-      <h4>Bookmarks</h4>
-      <div>
-        <select id="bookmarksSelect">
-          <option value="" disabled selected>— Select a Landmark —</option>
-        </select>
-      </div>
-      <hr>
       <div>
         <button id="infoBtn" title="Show controls">ℹ️</button>
-        <button id="statsBtn" title="Toggle stats">📊</button>
       </div>
       <div id="infoPanel">
         <h4>Controls</h4>
@@ -536,15 +529,8 @@
         </ul>
         <button id="patchNotesBtn">Patch Notes</button>
       </div>
-      <div id="statsPanel">
-        <div id="statsFPS">FPS: –</div>
-        <div id="statsTiles">Tiles: –</div>
-      </div>
     </div>
-  </div>
-  <div id="minimapContainer">
-    <button id="minimapToggleBtn" title="Toggle Minimap">Hide Minimap</button>
-    <canvas id="minimapCanvas"></canvas>
+    <button id="settingsBtn">⚙️ Settings</button>
   </div>
 
   <!-- LEFT & BOTTOM UI -->
@@ -591,7 +577,7 @@
     </div>
     <div class="patch-notes-body" id="patchNotesBody">
     </div>
-    <div class.patch-notes-footer">
+    <div class="patch-notes-footer">
       <input type="checkbox" id="hidePatchNotesCheckbox">
       <label for="hidePatchNotesCheckbox">Do not show this again until the next update.</label>
     </div>
@@ -604,7 +590,7 @@
     const KingshotPlanner = {
       // --- TWEAKABLE SETTINGS ---
       config: {
-        CURRENT_VERSION: '0.3.0.0',
+        CURRENT_VERSION: '0.3.1.0',
         N: 1200,
         tileW: 10,
         tileH: 10,
@@ -683,7 +669,8 @@
         isMinimapDragging: false,
         minimapClickStartPos: { x: 0, y: 0 },
         minimapCam: { x: 0, y: 0, scale: 0.1 },
-        animationId: null
+        animationId: null,
+        pinnedBookmark: null
       },
 
       // --- DOM REFERENCES ---
@@ -691,14 +678,14 @@
         canvas: null, ctx: null, inpX: null, inpY: null, btnGo: null,
         zoomLevelEl: null, zoomDecBtn: null, zoomIncBtn: null,zoomDec10Btn: null, zoomInc10Btn: null, zoomSlider: null,
         zoomPresetSelect: null, centerTileEl: null, infoBtn: null, infoPanel: null,
-        statsBtn: null, statsPanel: null, statsFPSEl: null, statsTilesEl: null,
+        statsPanel: null, statsFPSEl: null, statsTilesEl: null,
         coordsToggle: null, floatingZoomLabel: null, versionDisplay: null,
         patchNotesBtn: null, modalOverlay: null, patchNotesModal: null,
         patchNotesBody: null, closePatchNotesBtn: null, hidePatchNotesCheckbox: null,
         tileDetailSelect: null, gridlinesToggle: null, allianceRssToggle: null,
         allianceRssAlwaysVisibleToggle: null, settingsBtn: null, settingsPanel: null,
         minimapCanvas: null, minimapCtx: null, minimapContainer: null, minimapToggleBtn: null,
-        bookmarksSelect: null
+        bookmarksContainer: null, pinnedBookmarkDisplay: null, bookmarksToggleBtn: null, bookmarksList: null
       },
 
       // --- CORE INITIALIZATION ---
@@ -721,7 +708,6 @@
         this.dom.centerTileEl = document.getElementById('centerTile');
         this.dom.infoBtn = document.getElementById('infoBtn');
         this.dom.infoPanel = document.getElementById('infoPanel');
-        this.dom.statsBtn = document.getElementById('statsBtn');
         this.dom.statsPanel = document.getElementById('statsPanel');
         this.dom.statsFPSEl = document.getElementById('statsFPS');
         this.dom.statsTilesEl = document.getElementById('statsTiles');
@@ -743,7 +729,10 @@
         this.dom.minimapContainer = document.getElementById('minimapContainer');
         this.dom.minimapToggleBtn = document.getElementById('minimapToggleBtn');
         this.dom.minimapCanvas = document.getElementById('minimapCanvas');
-        this.dom.bookmarksSelect = document.getElementById('bookmarksSelect');
+        this.dom.bookmarksContainer = document.getElementById('bookmarksContainer');
+        this.dom.pinnedBookmarkDisplay = document.getElementById('pinnedBookmarkDisplay');
+        this.dom.bookmarksToggleBtn = document.getElementById('bookmarksToggleBtn');
+        this.dom.bookmarksList = document.getElementById('bookmarksList');
         if (this.dom.minimapCanvas) {
           this.dom.minimapCanvas.width = this.config.minimap.width * (window.devicePixelRatio || 1);
           this.dom.minimapCanvas.height = this.config.minimap.height * (window.devicePixelRatio || 1);
@@ -763,7 +752,6 @@
             Object.assign(self.state.baseMap, baseMapData);
             self.state.patchNotes = changelogText;
             self.preProcessBuildings();
-            self.populateBookmarks();
             self.preCalculateChunks();
             self.initializeUI();
             self.resize();
@@ -777,7 +765,6 @@
 
       initializeUI() {
         if (this.dom.infoBtn && this.dom.infoPanel) this.dom.infoBtn.addEventListener('click', () => this.dom.infoPanel.classList.toggle('open'));
-        if (this.dom.statsBtn && this.dom.statsPanel) this.dom.statsBtn.addEventListener('click', () => this.dom.statsPanel.classList.toggle('open'));
         if (this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
         if (this.dom.patchNotesBtn) this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
         if (this.dom.closePatchNotesBtn) this.dom.closePatchNotesBtn.addEventListener('click', this.hidePatchNotes.bind(this));
@@ -785,9 +772,9 @@
         const lastSeenVersion = localStorage.getItem('lastSeenVersion');
         if (lastSeenVersion !== this.config.CURRENT_VERSION) { this.showPatchNotes(); }
         if (this.dom.tileDetailSelect) {
-          const savedDetail = localStorage.getItem('mapTileDetail') || '50';
+          const savedDetail = localStorage.getItem('mapTileDetail') || '49';
           this.dom.tileDetailSelect.value = savedDetail;
-          this.state.currentTileDetailThreshold = parseInt(savedDetail, 10);
+          this.state.currentTileDetailThreshold = parseInt(this.dom.tileDetailSelect.value, 10);
           this.dom.tileDetailSelect.addEventListener('change', () => {
             localStorage.setItem('mapTileDetail', this.dom.tileDetailSelect.value);
             this.state.currentTileDetailThreshold = parseInt(this.dom.tileDetailSelect.value, 10);
@@ -819,37 +806,34 @@
         if (this.dom.zoomIncBtn) this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(+1));
         if (this.dom.zoomDec10Btn) this.dom.zoomDec10Btn.addEventListener('click', () => this.changeZoomBy(-10));
         if (this.dom.zoomInc10Btn) this.dom.zoomInc10Btn.addEventListener('click', () => this.changeZoomBy(+10));
-        if (this.dom.bookmarksSelect) { this.dom.bookmarksSelect.addEventListener('change', this.handleBookmarkSelect.bind(this)); }
+        
+        // Initialize Bookmarks
+        const savedPin = localStorage.getItem('pinnedBookmark');
+        if (savedPin) { this.state.pinnedBookmark = JSON.parse(savedPin); }
+        this.populateBookmarks();
+        this.updatePinnedDisplay();
+        if(this.dom.pinnedBookmarkDisplay) this.dom.pinnedBookmarkDisplay.addEventListener('click', this.toggleBookmarksList.bind(this));
+
         if (this.dom.zoomPresetSelect) {
             this.dom.zoomPresetSelect.addEventListener('change', (e) => {
                 const value = e.target.value;
-                if (value === 'Fit') {
-                    this.zoomToFit();
-                } else {
+                if (value === 'Fit') { this.zoomToFit(); } 
+                else {
                     const zoomVal = Number(value);
                     if (!isNaN(zoomVal)) {
                         const targetScale = (zoomVal / 100) * this.config.baseScale;
-                        const cx = this.dom.canvas.width / 2;
-                        const cy = this.dom.canvas.height / 2;
-                        this.animateZoom(targetScale, cx, cy, 200);
+                        this.animateZoom(targetScale, this.dom.canvas.width / 2, this.dom.canvas.height / 2, 200);
                     }
                 }
-                // This line now correctly resets to the "Presets" placeholder
                 e.target.selectedIndex = 0;
             });
         }
-        if (this.dom.settingsBtn && this.dom.settingsPanel && this.dom.minimapContainer) {
-          const panel = this.dom.settingsPanel; const minimap = this.dom.minimapContainer; const settingsBtn = this.dom.settingsBtn;
-          const originalMinimapMarginTop = getComputedStyle(minimap).marginTop; const gap = 10;
+        if (this.dom.settingsBtn && this.dom.settingsPanel) {
           this.dom.settingsBtn.addEventListener('click', () => {
-            const isOpening = !panel.classList.contains('open');
-            if (isOpening) { const panelContentHeight = panel.scrollHeight + 16; const settingsButtonHeight = settingsBtn.offsetHeight; const settingsButtonMarginBottom = parseInt(getComputedStyle(settingsBtn).marginBottom, 10) || 0; const newMarginTop = settingsButtonHeight + settingsButtonMarginBottom + panelContentHeight + gap; minimap.style.marginTop = `${newMarginTop}px`; panel.classList.add('open'); } 
-            else { minimap.style.marginTop = originalMinimapMarginTop; panel.classList.remove('open'); }
+            this.dom.settingsPanel.classList.toggle('open');
           });
         }
         if (this.dom.minimapToggleBtn && this.dom.minimapCanvas) {
-          this.dom.minimapCanvas.classList.toggle('hidden', !this.state.isMinimapVisible);
-          this.dom.minimapToggleBtn.textContent = this.state.isMinimapVisible ? 'Hide Minimap' : 'Show Minimap';
           this.dom.minimapToggleBtn.addEventListener('click', () => {
             this.state.isMinimapVisible = !this.state.isMinimapVisible;
             this.dom.minimapCanvas.classList.toggle('hidden', !this.state.isMinimapVisible);
@@ -881,7 +865,8 @@
       },
 
       populateBookmarks() {
-        if (!this.dom.bookmarksSelect || !this.state.baseMap.defaultBuildings) return;
+        if (!this.dom.bookmarksList || !this.state.baseMap.defaultBuildings) return;
+        this.dom.bookmarksList.innerHTML = ''; // Clear existing
 
         const landmarks = this.state.baseMap.defaultBuildings.filter(b => 
             b.displayName && (b.displayName.includes("King's Castle") || b.displayName.includes("Fortress") || b.displayName.includes("Sanctuary"))
@@ -901,21 +886,45 @@
         });
         
         landmarks.forEach(b => {
-            const option = document.createElement('option');
-            option.textContent = b.displayName;
-            option.dataset.x = b.x;
-            option.dataset.y = b.y;
-            this.dom.bookmarksSelect.appendChild(option);
+            const item = document.createElement('div');
+            item.className = 'bookmark-item';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = b.displayName;
+
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'bookmark-item-controls';
+
+            const goBtn = document.createElement('button');
+            goBtn.textContent = 'Go';
+            goBtn.title = `Go to ${b.displayName}`;
+            goBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.goToBookmark(b.x, b.y);
+                this.toggleBookmarksList(); // Close list after going
+            };
+
+            const pinBtn = document.createElement('button');
+            pinBtn.innerHTML = '📌';
+            pinBtn.className = 'pin-btn';
+            pinBtn.title = `Pin ${b.displayName}`;
+            if (this.state.pinnedBookmark && this.state.pinnedBookmark.x === b.x && this.state.pinnedBookmark.y === b.y) {
+                pinBtn.classList.add('pinned');
+                pinBtn.title = `Unpin ${b.displayName}`;
+            }
+
+            pinBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.togglePinBookmark(b);
+            };
+
+            controlsDiv.append(goBtn, pinBtn);
+            item.append(nameSpan, controlsDiv);
+            this.dom.bookmarksList.appendChild(item);
         });
       },
       
-      handleBookmarkSelect(e) {
-        const selectedOption = e.target.options[e.target.selectedIndex];
-        if (!selectedOption || !selectedOption.dataset.x) return;
-
-        const x = +selectedOption.dataset.x;
-        const y = +selectedOption.dataset.y;
-
+      goToBookmark(x, y) {
         if (x >= 0 && y >= 0) {
             this.state.selection = this.getBuildingAt(x, y) || { x, y };
             if (this.state.selection) this.state.selection.pingStart = performance.now();
@@ -925,9 +934,60 @@
             const targetCamY = this.dom.canvas.height / 2 - screenY * targetScale;
             this.animatePanZoom(targetScale, targetCamX, targetCamY);
         }
-        
-        // Reset dropdown to placeholder
-        e.target.selectedIndex = 0;
+      },
+
+      toggleBookmarksList() {
+        this.dom.bookmarksList.classList.toggle('open');
+        this.dom.bookmarksToggleBtn.classList.toggle('open');
+      },
+      
+      togglePinBookmark(bookmark) {
+        // If the clicked bookmark is already pinned, unpin it
+        if (this.state.pinnedBookmark && this.state.pinnedBookmark.x === bookmark.x && this.state.pinnedBookmark.y === bookmark.y) {
+            this.state.pinnedBookmark = null;
+            localStorage.removeItem('pinnedBookmark');
+        } else { // Otherwise, pin the new one
+            this.state.pinnedBookmark = { x: bookmark.x, y: bookmark.y, displayName: bookmark.displayName };
+            localStorage.setItem('pinnedBookmark', JSON.stringify(this.state.pinnedBookmark));
+        }
+        this.updatePinnedDisplay();
+        this.populateBookmarks(); // Repopulate to update the 'pinned' class on the pin button
+      },
+
+      updatePinnedDisplay() {
+        if (!this.dom.pinnedBookmarkDisplay) return;
+
+        const display = this.dom.pinnedBookmarkDisplay;
+        display.innerHTML = ''; // Clear it
+
+        const pinned = this.state.pinnedBookmark;
+        const nameSpan = document.createElement('span');
+
+        if (pinned) {
+            nameSpan.textContent = pinned.displayName;
+            const goBtn = document.createElement('button');
+            goBtn.textContent = 'Go';
+            goBtn.title = `Go to pinned bookmark: ${pinned.displayName}`;
+            goBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.goToBookmark(pinned.x, pinned.y);
+            };
+            display.appendChild(nameSpan);
+            display.appendChild(goBtn);
+        } else {
+            nameSpan.innerHTML = '<small>No bookmark pinned</small>';
+            display.appendChild(nameSpan);
+        }
+
+        const toggleBtn = document.createElement('button');
+        toggleBtn.id = 'bookmarksToggleBtn';
+        toggleBtn.title = 'Show / Hide Bookmarks';
+        toggleBtn.innerHTML = '▼';
+        if (this.dom.bookmarksList && this.dom.bookmarksList.classList.contains('open')) {
+            toggleBtn.classList.add('open');
+        }
+        display.appendChild(toggleBtn);
+        this.dom.bookmarksToggleBtn = toggleBtn; // Re-assign DOM reference
       },
 
       preProcessBuildings() {
@@ -1012,26 +1072,14 @@
       },
       
       changeZoomBy(delta) {
-        // Get the current zoom percentage, rounded to what the user sees
         let currentPct = Math.round((this.state.cam.scale / this.config.baseScale) * 100);
-        if (isNaN(currentPct)) {
-          currentPct = Math.round((this.state.minFitScale / this.config.baseScale) * 100);
-        }
-        
-        // Calculate the target percentage by adding the delta (+1 or -1)
+        if (isNaN(currentPct)) { currentPct = Math.round((this.state.minFitScale / this.config.baseScale) * 100); }
         const targetPct = currentPct + delta;
-
-        // Convert the target percentage back to a scale value
         let targetScale = (targetPct / 100) * this.config.baseScale;
-        
-        // Clamp the new scale to the allowed min/max zoom levels
         const minScale = this.state.minFitScale;
         const maxScale = (this.config.maxPct / 100) * this.config.baseScale;
         targetScale = Math.max(minScale, Math.min(maxScale, targetScale));
-
-        if (!isNaN(targetScale)) {
-          this.animateZoom(targetScale, this.dom.canvas.width / 2, this.dom.canvas.height / 2, 150);
-        }
+        if (!isNaN(targetScale)) { this.animateZoom(targetScale, this.dom.canvas.width / 2, this.dom.canvas.height / 2, 150); }
       },
 
       animateZoom(targetScale, anchorX, anchorY, duration = 150) {
@@ -1080,40 +1128,26 @@
       zoomToFit() {
         const targetScale = this.state.minFitScale;
         const targetCamX = this.dom.canvas.width / 2;
-        // Correctly calculate the Y position to center the isometric diamond
         const targetCamY = this.dom.canvas.height / 2 + ((this.config.N - 1) * this.config.tileH / 2) * targetScale;
         this.animatePanZoom(targetScale, targetCamX, targetCamY, 200);
       },
       showPatchNotes() {
         if (!this.dom.patchNotesBody || !this.dom.modalOverlay || !this.dom.patchNotesModal) return;
-        
-        if (typeof marked !== 'undefined') {
-          marked.setOptions({ gfm: true, breaks: true, sanitize: false });
-        } else { 
-          console.warn("marked.js library not loaded. Markdown processing will be basic.");
-        }
-        
+        if (typeof marked !== 'undefined') { marked.setOptions({ gfm: true, breaks: true, sanitize: false }); } 
+        else { console.warn("marked.js library not loaded. Markdown processing will be basic."); }
         let changelogText = this.state.patchNotes || '';
-        
-        if (!changelogText.trim()) {
-          this.dom.patchNotesBody.innerHTML = `<p>No changelog is available at this time.</p>`;
-        } else {
-            // To make it cleaner, remove the main "# Changelog" title from the modal
+        if (!changelogText.trim()) { this.dom.patchNotesBody.innerHTML = `<p>No changelog is available at this time.</p>`; } 
+        else {
             const firstVersionIndex = changelogText.indexOf('## [');
-            if (firstVersionIndex !== -1) {
-                changelogText = changelogText.substring(firstVersionIndex);
-            }
+            if (firstVersionIndex !== -1) { changelogText = changelogText.substring(firstVersionIndex); }
             this.dom.patchNotesBody.innerHTML = marked.parse(changelogText);
         }
-        
         this.dom.modalOverlay.style.display = 'block';
         this.dom.patchNotesModal.style.display = 'block';
       },
       hidePatchNotes() {
         if (!this.dom.modalOverlay || !this.dom.patchNotesModal) return;
-        if (this.dom.hidePatchNotesCheckbox && this.dom.hidePatchNotesCheckbox.checked) {
-          localStorage.setItem('lastSeenVersion', this.config.CURRENT_VERSION);
-        }
+        if (this.dom.hidePatchNotesCheckbox && this.dom.hidePatchNotesCheckbox.checked) { localStorage.setItem('lastSeenVersion', this.config.CURRENT_VERSION); }
         this.dom.modalOverlay.style.display = 'none';
         this.dom.patchNotesModal.style.display = 'none';
       },
@@ -1126,23 +1160,16 @@
       handleMinimapMouseMove(e) {
         if (!this.state.isMinimapDragging) return;
         if (this.state.animationId) { cancelAnimationFrame(this.state.animationId); this.state.animationId = null; }
-
-        // Teleport-drag: Instantly center the main view on the world coordinate under the mouse.
         const rect = this.dom.minimapCanvas.getBoundingClientRect();
         const minimapCam = this.state.minimapCam;
-        
         const clickScreenX = (e.clientX - rect.left); 
         const clickScreenY = (e.clientY - rect.top);
-
         const lx = (clickScreenX - minimapCam.x) / minimapCam.scale;
         const ly = (clickScreenY - minimapCam.y) / minimapCam.scale;
-        
         const tileW_half = this.config.tileW / 2; const tileH_half = this.config.tileH / 2;
         const u = lx / tileW_half; const v = -ly / tileH_half;
         const world_x = (u + v) / 2; const world_y = (v - u) / 2;
-        
         const [targetScreenX, targetScreenY] = this.worldToScreen(world_x, world_y);
-        
         this.state.cam.x = this.dom.canvas.width / 2 - targetScreenX * this.state.cam.scale;
         this.state.cam.y = this.dom.canvas.height / 2 - targetScreenY * this.state.cam.scale;
         this.clampCamera();
@@ -1150,22 +1177,16 @@
       handleMinimapMouseUp(e) {
         if (!this.state.isMinimapDragging) return;
         this.state.isMinimapDragging = false;
-        
         const dist = Math.hypot(e.clientX - this.state.minimapClickStartPos.x, e.clientY - this.state.minimapClickStartPos.y);
-
         if (dist < 5) {
           const rect = this.dom.minimapCanvas.getBoundingClientRect();
           const minimapCam = this.state.minimapCam;
-          
           const clickScreenX = (e.clientX - rect.left); const clickScreenY = (e.clientY - rect.top);
-
           const lx = (clickScreenX - minimapCam.x) / minimapCam.scale;
           const ly = (clickScreenY - minimapCam.y) / minimapCam.scale;
-          
           const tileW_half = this.config.tileW / 2; const tileH_half = this.config.tileH / 2;
           const u = lx / tileW_half; const v = -ly / tileH_half;
           const world_x = (u + v) / 2; const world_y = (v - u) / 2;
-          
           const [targetScreenX, targetScreenY] = this.worldToScreen(world_x, world_y);
           const targetCamX = this.dom.canvas.width / 2 - targetScreenX * this.state.cam.scale;
           const targetCamY = this.dom.canvas.height / 2 - targetScreenY * this.state.cam.scale;
@@ -1180,7 +1201,6 @@
       },
       handleMouseMove(e) {
         if (!this.state.dragging) return;
-        // "Content Grab" - camera moves in the opposite direction of the mouse.
         this.state.cam.x += e.clientX - this.state.lastX;
         this.state.cam.y += e.clientY - this.state.lastY;
         this.state.lastX = e.clientX;
@@ -1248,7 +1268,6 @@
         if (this.state.animationId) { cancelAnimationFrame(this.state.animationId); this.state.animationId = null; }
         if (this.state.touchMode === 'pan' && e.touches.length === 1) {
           const t = e.touches[0];
-          // Invert drag direction to match mouse "content drag"
           this.state.cam.x -= t.clientX - this.state.lastX;
           this.state.cam.y -= t.clientY - this.state.lastY;
           this.state.lastX = t.clientX;
@@ -1336,97 +1355,63 @@
 
       drawIsometricMinimap(viewportCorners) {
         if (!this.dom.minimapCtx || !this.state.isMinimapVisible || !this.config.minimap) return;
-
         const mmCtx = this.dom.minimapCtx;
         const { minimap, N, tileW, tileH, baseScale, maxPct } = this.config;
         const canvasWidth = this.dom.minimapCanvas.width;
         const canvasHeight = this.dom.minimapCanvas.height;
-
         mmCtx.save();
-        mmCtx.setTransform(1, 0, 0, 1, 0, 0); // Reset
+        mmCtx.setTransform(1, 0, 0, 1, 0, 0);
         mmCtx.clearRect(0, 0, canvasWidth, canvasHeight);
         mmCtx.fillStyle = minimap.bgColor;
         mmCtx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-        // --- Interpolated Focus Rendering Logic ---
-
-        // 1. Calculate base scale. (No change)
         const worldIsoWidth = N * tileW;
         const worldIsoHeight = N * tileH;
         const drawableWidth = canvasWidth - (minimap.padding * 2);
         const drawableHeight = canvasHeight - (minimap.padding * 2);
         const baseMinimapScale = Math.min(drawableWidth / worldIsoWidth, drawableHeight / worldIsoHeight);
-
-        // 2. Determine the dynamic zoom factor and a normalized progress value. (No change in zoomFactor, added normalizedZoom)
         const mainMapCurrentScale = this.state.cam.scale;
         const mainMapMaxScale = (maxPct / 100) * baseScale;
         const zoomStartThresholdScale = minimap.mainMapZoomThresholdForMinimapZoom * baseScale;
-        
-        let zoomFactor;
-        let normalizedZoom = 0; // This will be our 0-to-1 interpolation factor
-        if (mainMapCurrentScale <= zoomStartThresholdScale) {
-            zoomFactor = minimap.zoomFactorMin;
-        } else {
+        let zoomFactor; let normalizedZoom = 0;
+        if (mainMapCurrentScale <= zoomStartThresholdScale) { zoomFactor = minimap.zoomFactorMin; } 
+        else {
             normalizedZoom = Math.max(0, Math.min(1, (mainMapCurrentScale - zoomStartThresholdScale) / (mainMapMaxScale - zoomStartThresholdScale)));
             zoomFactor = minimap.zoomFactorMin + (minimap.zoomFactorMax - minimap.zoomFactorMin) * normalizedZoom;
         }
         const finalMinimapScale = baseMinimapScale * zoomFactor;
-
-        // 4. **[MODIFIED]** Interpolate the translation between the map's center and the viewport's center.
-        
-        // Target 1: The center of the entire map (for a static overview)
         const mapVisualCenterX_iso = 0;
         const mapVisualCenterY_iso = -((N - 1) * tileH / 2);
-
-        // Target 2: The center of the user's viewport (for a focused view)
         const [mainViewCenterX, mainViewCenterY] = this.screenToWorld(this.dom.canvas.width / 2, this.dom.canvas.height / 2);
         const [viewportCenterX_iso, viewportCenterY_iso] = this.worldToScreen(mainViewCenterX, mainViewCenterY);
-
-        // Linearly interpolate between the two focal points using our normalizedZoom factor.
         const focalPointX = mapVisualCenterX_iso + (viewportCenterX_iso - mapVisualCenterX_iso) * normalizedZoom;
         const focalPointY = mapVisualCenterY_iso + (viewportCenterY_iso - mapVisualCenterY_iso) * normalizedZoom;
-        
-        // Calculate the final translation needed to place our interpolated focal point in the center of the canvas.
         const translateX = (canvasWidth / 2) - (focalPointX * finalMinimapScale);
         const translateY = (canvasHeight / 2) - (focalPointY * finalMinimapScale);
-        
-        // 5. Store this transform for correct click/drag handling on the minimap.
         this.state.minimapCam = { x: translateX, y: translateY, scale: finalMinimapScale };
-        
-        // 6. Apply the final transform and draw the map content.
         mmCtx.setTransform(finalMinimapScale, 0, 0, finalMinimapScale, translateX, translateY);
-
         const chunksToDraw = this.state.chunkLevels[3];
         chunksToDraw.forEach(chunk => { this.drawChunk(chunk, false, mmCtx); });
-        
         (this.state.baseMap.defaultBuildings || []).forEach(b => {
             let buildingFillStyle = null;
             if (b.displayName === "King's Castle") buildingFillStyle = minimap.kingCastleColor;
             else if (b.displayName.startsWith("Fortress")) buildingFillStyle = minimap.fortressColor;
             else if (b.displayName.startsWith("Sanctuary")) buildingFillStyle = minimap.sanctuaryColor;
-            
             if (buildingFillStyle) {
                 const originalFill = b.fillColor; b.fillColor = buildingFillStyle;
                 this.drawBuildingFootprint(b, null, false, mmCtx);
                 b.fillColor = originalFill;
             }
         });
-
-        // 7. Draw the moving viewport indicator. (No change)
         if (viewportCorners) {
             const p1 = this.worldToScreen(viewportCorners.tl.x, viewportCorners.tl.y);
             const p2 = this.worldToScreen(viewportCorners.tr.x, viewportCorners.tr.y);
             const p3 = this.worldToScreen(viewportCorners.br.x, viewportCorners.br.y);
             const p4 = this.worldToScreen(viewportCorners.bl.x, viewportCorners.bl.y);
-
-            mmCtx.fillStyle = minimap.viewportFillColor;
-            mmCtx.strokeStyle = minimap.viewportBorderColor;
+            mmCtx.fillStyle = minimap.viewportFillColor; mmCtx.strokeStyle = minimap.viewportBorderColor;
             mmCtx.lineWidth = 2 / finalMinimapScale;
             mmCtx.beginPath();
             mmCtx.moveTo(p1[0], p1[1]); mmCtx.lineTo(p2[0], p2[1]); mmCtx.lineTo(p3[0], p3[1]); mmCtx.lineTo(p4[0], p4[1]);
-            mmCtx.closePath();
-            mmCtx.fill();
-            mmCtx.stroke();
+            mmCtx.closePath(); mmCtx.fill(); mmCtx.stroke();
         }
         mmCtx.restore();
       },
@@ -1452,9 +1437,7 @@
         let optimalFontSize = Math.min(config.tileH * 0.8 * 0.5, (config.tileW * 0.8 / (text.length || 1)) * 1.8) * 0.7;
         if ((optimalFontSize * currentCamScale) < 5) return;
         ctx.fillStyle = config.textColor; ctx.font = `${optimalFontSize}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, sx, sy);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, sx, sy);
       },
 
       drawChunk(chunk, drawBorder = true, overrideCtx = null) {
@@ -1618,22 +1601,15 @@
           if (state.selection) {
             let highlightColor = config.selectionColor;
             if (state.selection.pingStart && now - state.selection.pingStart < config.pingDuration) {
-              if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) {
-                highlightColor = config.pingColor;
-              }
+              if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) { highlightColor = config.pingColor; }
             }
             if (state.selection.w) {
-              // It's a building with width, use the footprint function
               this.drawBuildingFootprint(state.selection, highlightColor, true);
             } else {
-              // It's a single tile, draw the diamond manually
               const [sx, sy] = this.worldToScreen(state.selection.x, state.selection.y);
               ctx.beginPath();
               ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy);
-              ctx.closePath();
-              ctx.strokeStyle = highlightColor;
-              ctx.lineWidth = config.strokeW * 1.5;
-              ctx.stroke();
+              ctx.closePath(); ctx.strokeStyle = highlightColor; ctx.lineWidth = config.strokeW * 1.5; ctx.stroke();
             }
           }
           ctx.restore();
