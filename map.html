@@ -6,381 +6,477 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
+    /* --- BASE STYLES --- */
     body {
-        margin:0; background:#111; overflow:hidden;
-        -webkit-user-select:none; user-select:none;
-    }
-    canvas { display:block; cursor:grab; }
-    canvas:active { cursor:grabbing; }
-
-    /* --- MODIFIED: Search Controls (Now Bottom-Center) --- */
-    #searchControls {
-        position: fixed;
-        bottom: 45px; /* Position it above #centerTile (which is at 10px) */
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 10; /* Match z-index of #centerTile */
-        background: rgba(0,0,0,0.6);
-        padding: 6px 10px;
-        border-radius: 4px;
-        width: auto; /* Let the width fit the content */
-        box-sizing: border-box;
-        white-space: nowrap; /* Prevent inputs from wrapping on smaller screens */
-    }
-    #searchControls h4 {
-        margin: 0 0 4px;
-        font-size: 13px;
-        color: #aaa;
-        text-transform: uppercase;
-        text-align: left;
-    }
-    #searchControls > div {
-        text-align: left;
-    }
-    #searchControls input { width:60px; }
-    #searchControls button {
-        margin:2px 0 2px 4px; /* Adjusted margin */
-        -webkit-user-select:none; user-select:none;
+      margin: 0;
+      background: #111;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
-    /* --- MODIFIED: Settings Panel (Top Right) --- */
-    #settingsContainer { /* Ensure settings has higher z-index to pop over everything if panel opens wide */
-        position:absolute; top:10px; right:10px; z-index:1000;
-        width: 210px; 
-        text-align: right;
-    }
-    #settingsBtn {
-        margin-bottom: 5px; /* Space between button and panel */
-        padding: 6px 10px;
-    }
-    #settingsPanel { /* Formerly #searchBox */
-        color:#fff; font-family:sans-serif;
-        background:rgba(0,0,0,0.6); padding:8px; border-radius:4px;
-        max-height: 0; /* Collapsed by default */
-        padding: 0; /* No padding when collapsed */
-        overflow: hidden;
-        transition: max-height 0.3s ease-out, padding 0.3s ease-out; /* Modified transition */
-        text-align: left; /* Content within panel is left-aligned */
-    }
-    #settingsPanel.open {
-        max-height: 500px; /* Adjust as needed to fit all content */
-        padding: 8px; /* Add padding back when open */
-    }
-    #settingsPanel input[type="checkbox"], 
-    #settingsPanel select { 
-        vertical-align: middle; 
-    }
-    #settingsPanel > div { margin-top: 4px; text-align: left; }
-    #settingsPanel > hr {
-        border: none;
-        border-top: 1px solid #444;
-        margin: 8px 0;
-    }
-    #settingsPanel h4 {
-        margin: 6px 0 2px;
-        font-size: 13px;
-        color: #aaa;
-        text-transform: uppercase;
-        text-align: left;
-    }
-    
-    /* Center Tile Display - MOVED to bottom-center */
-    #centerTile {
-        position: fixed;
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.5);
-        padding: 4px 8px;
-        border-radius: 4px;
-        color:#fff; font-family:sans-serif;
-        font-size:14px;
-        -webkit-user-select:none; user-select:none;
-        z-index: 10;
+    canvas {
+      display: block;
+      cursor: grab;
     }
 
-    /* Coords Toggle Label Style */
-    label.coords-label {
-        font-size: 13px;
-        vertical-align: middle;
-        user-select: none;
+    canvas:active {
+      cursor: grabbing;
     }
 
-    /* Info & Stats panels (remain mostly the same, but now inside #settingsPanel) */
-    #infoBtn, #statsBtn {
-        margin-top:6px; -webkit-user-select:none; user-select:none;
+    /* --- LAYOUT CONTAINERS --- */
+    #settingsContainer {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      width: 210px;
+      text-align: right;
     }
-    #infoPanel, #statsPanel {
-        max-height:0; overflow:hidden;
-        transition:max-height 0.3s ease;
-        margin-top:6px;
-        background:rgba(58,55,55,0.85);
-        padding:0 6px; border-radius:4px;
-        font-size:13px; color:#ddd;
-        text-align: left;
-    }
-    #infoPanel.open { max-height:160px; } 
-    #statsPanel.open { max-height:120px; }
-    #infoPanel h4 { margin:6px 0 4px; color:#fff; text-transform: none; }
-    #infoPanel ul { padding-left:16px; margin:0 }
-    #infoPanel li { margin-bottom:4px; }
-    #statsPanel div { margin:4px 0; color:#fff; }
 
-
-    /* --- STYLES for Vertical Zoom Controls (LEFT) --- */
     #zoomControlsContainer {
-        position: absolute;
-        left: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-        padding: 10px; /* Reduced padding slightly */
-        border-radius: 4px;
-        z-index: 10;
-        color: #fff;
-        font-family: sans-serif;
+      position: absolute;
+      left: 1px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      z-index: 10;
+      color: #fff;
+      font-family: sans-serif;
+      width: 100px;
     }
-    
-    #zoomControlsContainer #presetButtons {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        order: 4; /* Search will be order 0 */
+
+    #searchControls {
+      position: fixed;
+      bottom: 45px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 6px 10px;
+      border-radius: 4px;
+      width: auto;
+      box-sizing: border-box;
+      white-space: nowrap;
+    }
+
+    #centerTile {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.5);
+      padding: 4px 8px;
+      border-radius: 4px;
+      color: #fff;
+      font-family: sans-serif;
+      font-size: 14px;
+      -webkit-user-select: none;
+      user-select: none;
+      z-index: 10;
+    }
+
+    #minimapContainer {
+      position: absolute;
+      top: 10px;
+      margin-top: 40px;
+      right: 10px;
+      z-index: 900;
+      transition: margin-top 0.3s ease-out;
+      width: 452px;
+    }
+
+    #versionDisplay {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      color: rgba(255, 255, 255, 0.5);
+      font-family: sans-serif;
+      font-size: 12px;
+      user-select: none;
+      z-index: 10;
+    }
+
+    /* --- COMPONENT STYLES --- */
+    #settingsBtn {
+      margin-bottom: 5px;
+      padding: 6px 10px;
+    }
+
+    #settingsPanel {
+      color: #fff;
+      font-family: sans-serif;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 4px;
+      max-height: 0;
+      padding: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+      text-align: left;
+    }
+
+    #settingsPanel.open {
+      max-height: 500px;
+      padding: 8px;
+    }
+
+    #settingsPanel input[type="checkbox"],
+    #settingsPanel select {
+      vertical-align: middle;
+    }
+
+    #settingsPanel>div {
+      margin-top: 4px;
+      text-align: left;
+    }
+
+    #settingsPanel>hr {
+      border: none;
+      border-top: 1px solid #444;
+      margin: 8px 0;
+    }
+
+    #settingsPanel h4 {
+      margin: 6px 0 2px;
+      font-size: 13px;
+      color: #aaa;
+      text-transform: uppercase;
+      text-align: left;
+    }
+
+    #infoBtn,
+    #statsBtn {
+      margin-top: 6px;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    #infoPanel,
+    #statsPanel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      margin-top: 6px;
+      background: rgba(58, 55, 55, 0.85);
+      padding: 0 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #ddd;
+      text-align: left;
+    }
+
+    #infoPanel.open {
+      max-height: 160px;
+    }
+
+    #statsPanel.open {
+      max-height: 120px;
+    }
+
+    #infoPanel h4 {
+      margin: 6px 0 4px;
+      color: #fff;
+      text-transform: none;
+    }
+
+    #infoPanel ul {
+      padding-left: 16px;
+      margin: 0
+    }
+
+    #infoPanel li {
+      margin-bottom: 4px;
+    }
+
+    #statsPanel div {
+      margin: 4px 0;
+      color: #fff;
     }
 
     #zoomControlsContainer button {
-        -webkit-user-select:none; user-select:none;
-        margin: 0;
-        width: 60px;
+      -webkit-user-select: none;
+      user-select: none;
+      margin: 0;
+      width: 60px;
     }
 
-    #settingsPanel select { /* Ensure select within settings panel is styled */
-        background: #333;
-        color: #fff;
-        border: 1px solid #555;
-        border-radius: 2px;
-        padding: 2px;
-        width: 100%; 
+    #zoomControlsContainer #presetButtons {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      order: 4;
     }
 
-    #zoomControlsContainer #zoomInc { order: 1; } /* Adjusted order */
-    #zoomControlsContainer #sliderWrapper { order: 2; position: relative; } /* Adjusted order */
-    #zoomControlsContainer #zoomDec { order: 3; } /* Adjusted order */
-    #zoomControlsContainer #zoomLevel { order: 4; font-size: 14px; margin-top: 5px; } /* Adjusted order */
+    #zoomControlsContainer #zoomInc {
+      order: 1;
+    }
 
+    #zoomControlsContainer #sliderWrapper {
+      order: 2;
+      position: relative;
+    }
+
+    #zoomControlsContainer #zoomDec {
+      order: 3;
+    }
+
+    #zoomControlsContainer #zoomLevel {
+      order: 4;
+      font-size: 14px;
+      margin-top: 5px;
+    }
 
     #zoomSlider {
-        -webkit-appearance: slider-vertical;
-        appearance: slider-vertical;
-        writing-mode: bt-lr; 
-        height: 55vh; /* Adjusted height slightly */
-        max-height: 400px; /* Adjusted max-height */
-        width: auto;
-        margin: 0;
+      -webkit-appearance: slider-vertical;
+      appearance: slider-vertical;
+      writing-mode: bt-lr;
+      height: 65vh;
+      max-height: 65vh;
+      width: auto;
+      margin: 0;
     }
 
     #floatingZoomLabel {
-        position: absolute;
-        display: none;
-        left: 25px;
-        background-color: #0b508f;
-        color: white;
-        padding: 3px 6px;
-        border-radius: 4px;
-        font-size: 13px;
-        pointer-events: none;
-        transform: translateY(-50%);
+      position: absolute;
+      display: none;
+      left: 25px;
+      background-color: #0b508f;
+      color: white;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      pointer-events: none;
+      transform: translateY(-50%);
     }
 
-    /* --- STYLES for Version Display & Patch Notes --- */
-    #versionDisplay {
-        position: absolute;
-        bottom: 10px;
-        right: 10px;
-        color: rgba(255, 255, 255, 0.5);
-        font-family: sans-serif;
-        font-size: 12px;
-        user-select: none;
-        z-index: 10;
+    #searchControls h4 {
+      margin: 0 0 4px;
+      font-size: 13px;
+      color: #aaa;
+      text-transform: uppercase;
+      text-align: left;
     }
 
+    #searchControls>div {
+      text-align: left;
+    }
+
+    #searchControls input {
+      width: 60px;
+    }
+
+    #searchControls button {
+      margin: 2px 0 2px 4px;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    label.coords-label {
+      font-size: 13px;
+      vertical-align: middle;
+      user-select: none;
+    }
+
+    #minimapToggleBtn {
+      display: block;
+      width: 100%;
+      padding: 0;
+      line-height: 1.5;
+      background-color: #282828;
+      color: #bbb;
+      border: 1px solid #444;
+      font-family: sans-serif;
+      font-size: 13px;
+      text-align: center;
+      cursor: pointer;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #minimapCanvas {
+      width: 450px;
+      height: 300px;
+      border: 1px solid #444;
+      border-top: none;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: block;
+    }
+
+    #minimapCanvas.hidden {
+      display: none;
+    }
+
+    /* --- MODAL STYLES --- */
     #modalOverlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.7);
-        z-index: 999;
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 999;
     }
 
     #patchNotesModal {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 90%;
-        max-width: 500px;
-        background: #2c2c2c;
-        color: #eee;
-        border-radius: 8px;
-        z-index: 1000;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 500px;
+      background: #2c2c2c;
+      color: #eee;
+      border-radius: 8px;
+      z-index: 1000;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
     }
+
     .patch-notes-header {
-        padding: 15px;
-        border-bottom: 1px solid #444;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+      padding: 15px;
+      border-bottom: 1px solid #444;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    .patch-notes-header h3 { margin: 0; }
+
+    .patch-notes-header h3 {
+      margin: 0;
+    }
+
     .patch-notes-header .close-btn {
-        background: none;
-        border: none;
-        color: #ccc;
-        font-size: 24px;
-        cursor: pointer;
+      background: none;
+      border: none;
+      color: #ccc;
+      font-size: 24px;
+      cursor: pointer;
     }
+
     .patch-notes-body {
-        padding: 15px;
-        max-height: 60vh;
-        overflow-y: auto;
+      padding: 15px;
+      max-height: 60vh;
+      overflow-y: auto;
     }
+
     .patch-notes-body ul {
-        padding-left: 20px;
-        margin: 0;
+      padding-left: 20px;
+      margin: 0;
     }
-    .patch-notes-body li { margin-bottom: 8px; }
+
+    .patch-notes-body li {
+      margin-bottom: 8px;
+    }
+
     .patch-notes-footer {
-        padding: 10px 15px;
-        border-top: 1px solid #444;
-        background: #333;
-        border-radius: 0 0 8px 8px;
+      padding: 10px 15px;
+      border-top: 1px solid #444;
+      background: #333;
+      border-radius: 0 0 8px 8px;
     }
-    .patch-notes-footer label { user-select: none; font-size: 14px; }
 
-    /* --- NEW: Minimap Styles --- */
-    #minimapContainer {
-        position: absolute;
-        top: 10px; 
-        margin-top: 40px; 
-        right: 10px;
-        z-index: 900; 
-        transition: margin-top 0.3s ease-out; /* <<< CORRECTION APPLIED HERE */
-        width: 452px; 
+    .patch-notes-footer label {
+      user-select: none;
+      font-size: 14px;
     }
-    #minimapToggleBtn { 
-        display: block;
-        width: 100%;
-        padding: 0; /* Increased vertical padding */
-        line-height: 1.5; /* Browser default line height */
-        background-color: #282828; 
-        color: #bbb; 
-        border: 1px solid #444;
-        font-family: sans-serif;
-        font-size: 13px; 
-        text-align: center;
-        cursor: pointer;
-        box-sizing: border-box;
-        user-select: none;
-        -webkit-user-select: none;
-    }
-    #minimapCanvas {
-        width: 450px; 
-        height: 300px; 
-        border: 1px solid #444; 
-        border-top: none; 
-        background-color: rgba(0,0,0,0.5); 
-        display: block; 
-    }
-    #minimapCanvas.hidden {
+
+    /* --- RESPONSIVE STYLES --- */
+    /* Common styles for all small screens (< 768px) */
+    @media (max-width: 768px) {
+      #minimapContainer,
+      #minimapToggleBtn,
+      #minimapCanvas,
+      #settingsContainer {
         display: none;
+      }
     }
 
-/* --- Common Mobile Styles (Portrait & Landscape) --- */
-@media (max-width: 768px) {
-  /* Hide the minimap and its settings button on all mobile views */
-  #minimapContainer, #minimapToggleBtn, #minimapCanvas {
-    display: none;
-  }
-}
+    /* Styles for PORTRAIT mobile view */
+    @media (max-width: 768px) and (orientation: portrait) {
+      #zoomControlsContainer {
+        gap: 15px;
+      }
 
-/* --- Portrait Mobile Styles (e.g., phone held upright) --- */
-@media (max-width: 768px) and (orientation: portrait) {
-  /* Keep the zoom bar on the left, but make it taller */
-  #zoomControlsContainer {
-    gap: 15px;
-  }
-  #zoomSlider {
-    height: 70vh; /* Span most of the screen height */
-  }
+      #zoomSlider {
+        height: 70vh;
+      }
 
-  /* Move search and center displays to the bottom */
-  #searchControls {
-    bottom: 10px; /* New bottom position */
-    left: 50%;
-    transform: translateX(-50%);
-  }
-  #centerTile {
-    display: none; /* Hide center tile in portrait to save space */
-  }
-  #versionDisplay {
-    bottom: 5px; right: 5px; font-size: 10px;
-  }
-}
+      #searchControls {
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
 
-/* --- Landscape Mobile Styles (e.g., phone held sideways) --- */
-@media (max-height: 500px) and (orientation: landscape) {
-  /* Turn the left bar into a bottom control bar */
-  #zoomControlsContainer {
-    left: 0; right: 0; top: auto; bottom: 0;
-    transform: none;
-    width: 100%;
-    height: 60px; /* Give it a fixed height */
-    padding: 0 10px;
-    box-sizing: border-box;
-    flex-direction: row;
-    justify-content: space-between; /* Space out items */
-    background: rgba(0,0,0,0.7);
-  }
+      #centerTile {
+        display: none;
+      }
 
-  /* Make the slider horizontal and flexible */
-  #sliderWrapper {
-    flex-grow: 1; /* Allow the slider to fill empty space */
-    margin: 0 10px;
-  }
-  #zoomSlider {
-    -webkit-appearance: none;
-    appearance: none;
-    writing-mode: horizontal-tb;
-    height: 25px;
-    width: 100%;
-    max-height: none;
-  }
-  
-  /* Rearrange buttons and text for the horizontal bar */
-  #presetButtons { flex-direction: row; }
-  #zoomLevel { font-size: 14px; }
-  #searchControls, #centerTile { display: none; } /* Hide text fields in landscape */
+      #versionDisplay {
+        bottom: 5px;
+        right: 5px;
+        font-size: 10px;
+      }
+    }
 
-  #versionDisplay {
-    bottom: 65px; /* Position above the new bottom bar */
-  }
-}
+    /* Styles for LANDSCAPE mobile view */
+    @media (max-height: 500px) and (orientation: landscape) {
+      #zoomControlsContainer {
+        left: 0;
+        right: 0;
+        top: auto;
+        bottom: 0;
+        transform: none;
+        width: 100%;
+        height: 60px;
+        padding: 0 10px;
+        box-sizing: border-box;
+        flex-direction: row;
+        justify-content: space-between;
+        background: rgba(0, 0, 0, 0.7);
+      }
 
+      #sliderWrapper {
+        flex-grow: 1;
+        margin: 0 10px;
+      }
+
+      #zoomSlider {
+        -webkit-appearance: none;
+        appearance: none;
+        writing-mode: horizontal-tb;
+        height: 25px;
+        width: 100%;
+        max-height: none;
+      }
+
+      #presetButtons {
+        flex-direction: row;
+      }
+
+      #zoomLevel {
+        font-size: 14px;
+      }
+
+      #searchControls,
+      #centerTile {
+        display: none;
+      }
+
+      #versionDisplay {
+        bottom: 65px;
+      }
+    }
   </style>
 </head>
 <body>
-  <!-- Settings Container (Top Right) -->
+  <!-- TOP RIGHT UI -->
   <div id="settingsContainer">
     <button id="settingsBtn">⚙️ Settings</button>
-    <div id="settingsPanel"> <!-- Formerly #searchBox -->
+    <div id="settingsPanel">
       <h4>Display</h4>
       <div>
         <input type="checkbox" id="gridlinesToggle">
@@ -395,23 +491,26 @@
         <label for="allianceRssToggle" class="coords-label">Show Alliance RSS</label>
       </div>
       <div>
-          <input type="checkbox" id="allianceRssAlwaysVisibleToggle">
-          <label for="allianceRssAlwaysVisibleToggle" class="coords-label">Always Show RSS</label>
+        <input type="checkbox" id="allianceRssAlwaysVisibleToggle">
+        <label for="allianceRssAlwaysVisibleToggle" class="coords-label">Always Show RSS</label>
       </div>
       <hr>
       <h4>Performance</h4>
       <div>
-          <label for="tileDetailSelect" class="coords-label">Tile Detail:</label>
-          <select id="tileDetailSelect">
-              <option value="25">Low (Merge Early)</option>
-              <option value="50">Normal (Balanced)</option>
-              <option value="80">High (Merge Late)</option>
-          </select>
+        <label for="tileDetailSelect" class="coords-label">Merge tiles at zoom level:</label>
+        <select id="tileDetailSelect">
+          <option value="19">20% (Ultra)</option>
+          <option value="39">40% (Super)</option>
+          <option value="49">50% (High)</option>
+          <option value="59">60% (Medium)</option>
+          <option value="69">70% (Low)</option>
+          <option value="79">80% (Very Low)</option>
+        </select>
       </div>
       <hr>
       <div>
         <button id="infoBtn" title="Show controls">ℹ️</button>
-        <button id="statsBtn" title="Toggle stats">📊</button> <!-- Changed icon for stats -->
+        <button id="statsBtn" title="Toggle stats">📊</button>
       </div>
       <div id="infoPanel">
         <h4>Controls</h4>
@@ -429,984 +528,1089 @@
       </div>
     </div>
   </div>
+  <div id="minimapContainer">
+    <button id="minimapToggleBtn" title="Toggle Minimap">Hide Minimap</button>
+    <canvas id="minimapCanvas"></canvas>
+  </div>
 
-<!-- Vertically oriented zoom controls (LEFT) -->
-<div id="zoomControlsContainer">
+  <!-- LEFT & BOTTOM UI -->
+  <div id="zoomControlsContainer">
     <button id="zoomInc">+</button>
     <div id="sliderWrapper">
-        <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
-        <div id="floatingZoomLabel"></div>
+      <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
+      <div id="floatingZoomLabel"></div>
     </div>
     <button id="zoomDec">−</button>
     <div id="presetButtons">
-        <button data-zoom="Fit">Fit</button>
-        <button data-zoom="50">50%</button>
-        <button data-zoom="75">75%</button>
-        <button data-zoom="100">100%</button>
+      <button data-zoom="Fit">Fit</button>
+      <button data-zoom="50">50%</button>
+      <button data-zoom="75">75%</button>
+      <button data-zoom="100">100%</button>
     </div>
     <div id="zoomLevel">Zoom: 100%</div>
-</div>
-
-<!-- Bottom-center controls are now separate for maximum flexibility -->
-<div id="searchControls">
+  </div>
+  <div id="searchControls">
     <h4>Go To</h4>
     <div>
-        X: <input id="inpX" type="number" min="0" max="1199" value="0">
-        Y: <input id="inpY" type="number" min="0" max="1199" value="0">
-        <button id="btnGo">Go</button>
+      X: <input id="inpX" type="number" min="0" max="1199" value="0">
+      Y: <input id="inpY" type="number" min="0" max="1199" value="0">
+      <button id="btnGo">Go</button>
     </div>
-</div>
-<div id="centerTile">Center: X0 Y0</div>
-
-<div id="versionDisplay"></div>
-
-
-  <!-- Minimap Container (Top Right) -->
-  <div id="minimapContainer">
-      <button id="minimapToggleBtn" title="Toggle Minimap">Hide Minimap</button>
-      <canvas id="minimapCanvas"></canvas>
   </div>
-  
-  <!-- Patch Notes Modal -->
+  <div id="centerTile">Center: X0 Y0</div>
+  <div id="versionDisplay"></div>
+
+  <!-- MODALS -->
   <div id="modalOverlay"></div>
   <div id="patchNotesModal">
-      <div class="patch-notes-header">
-          <h3>What's New</h3>
-          <button id="closePatchNotesBtn" class="close-btn">×</button>
-      </div>
-      <div class="patch-notes-body" id="patchNotesBody">
-          <!-- Content will be injected by JS -->
-      </div>
-      <div class.patch-notes-footer"> 
-          <input type="checkbox" id="hidePatchNotesCheckbox">
-          <label for="hidePatchNotesCheckbox">Do not show this again until the next update.</label>
-      </div>
+    <div class="patch-notes-header">
+      <h3>What's New?!</h3>
+      <button id="closePatchNotesBtn" class="close-btn">×</button>
+    </div>
+    <div class="patch-notes-body" id="patchNotesBody">
+    </div>
+    <div class.patch-notes-footer">
+      <input type="checkbox" id="hidePatchNotesCheckbox">
+      <label for="hidePatchNotesCheckbox">Do not show this again until the next update.</label>
+    </div>
   </div>
 
+  <!-- MAIN CANVAS -->
   <canvas id="map"></canvas>
 
-<script>
-const KingshotPlanner = {
-  // —— CONFIGURATION ——
-  config: {
-    CURRENT_VERSION: '0.2.8.0', // Version bump for minimap camera icon & toggle button padding
-    N: 1200,
-    tileW: 10, tileH: 10,
-    strokeW: 0.3, 
-    borderColor: '#000', 
-    textColor: '#fff',
-    maxPct: 1000,
-    selectionColor: '#ff0',
-    pingColor: '#fff',
-    pingDuration: 500, 
-    baseScale: 5, 
-    biomeColors: {
-      fertile:  'rgb(109, 159, 62)',
-      plains:   'rgb(158, 180, 103)',
-      badlands: 'rgb(191, 208, 152)'
-    },
-    biomeRegions: {
-        fertile:  { x1: 480, y1: 480, x2: 719, y2: 719 },
-        plains:   { x1: 320, y1: 320, x2: 879, y2: 879 },
-        badlands: { x1: 0,   y1: 0,   x2: 1199,y2: 1199}
-    },
-    ALLIANCE_RSS_STYLES: {
-      wood:  { displayName: 'Wood',  fillColor: 'rgba(139,69,19,1)', borderColor: 'rgba(111,55,15,1)' },
-      food:  { displayName: 'Food',  fillColor: 'rgba(255,165,0,1)', borderColor: 'rgba(204,132,0,1)' },
-      stone: { displayName: 'Stone', fillColor: 'rgba(128,128,128,1)', borderColor: 'rgba(102,102,102,1)' },
-      iron:  { displayName: 'Iron',  fillColor: 'rgba(192,192,192,1)', borderColor: 'rgba(153,153,153,1)' },
-    },
-    minimap: { 
-        width: 450, // Width of the minimap canvas  Note: This is actually the height of the minimap, as the map is isometric.
-        height: 300, // Height of the minimap canvas.  NOTE: This is actually the width of the minimap, as the map is isometric.
-        padding: 0, // Padding around the minimap content
-        bgColor: 'rgba(40,40,40,0.8)',
-        viewportFillColor: 'rgba(0, 0, 0, 0.25)',       
-        viewportBorderColor: 'rgba(20, 20, 20, 0.85)',  
-        viewportCameraIconColor: 'rgba(30,30,30,0.95)', // Color for camera icon
-        buildingColor: 'rgba(200,200,200,0.7)', 
-        kingCastleColor: 'rgba(255,215,0,0.8)',
-        zoomFactorMin: 1, // Minimum zoom level for minimap
-        zoomFactorMax: 12.0, // Maximum zoom level for minimap
-        mainMapZoomThresholdForMinimapZoom: 0.04, // Minimum zoom level for minimap to adjust
-    }
-  },
-
-  // —— APPLICATION STATE ——
-  state: { // ... same as 0.2.7.8 ...
-    baseMap: { unoccupiableTiles:[], defaultBuildings:[] },
-    patchNotes: {},
-    allBuildings: [],
-    buildingMap: new Map(),
-    chunkLevels: [],
-    userBuildings: [],
-    cam: { x:0, y:0, scale:1 }, 
-    lastFrame: 0,
-    tileCount: 0,
-    lastFPS: 0,
-    lastTiles: 0,
-    selection: null, 
-    minFitScale: 0.1, 
-    isInitialLoad: true,
-    touchStartTime: 0,
-    dragging: false, 
-    lastX: 0, lastY: 0,
-    clickStartX: 0, clickStartY: 0,
-    touchMode: null,
-    startDist: 0, startScale: 1, pinchCenter: null,
-    startCamX: 0, startCamY: 0,
-    hideLabelTimeout: null,
-    statsUpdateTime: 0, 
-    currentTileDetailThreshold: 50, 
-    
-    baseMinimapScale: 0.1,
-    minimapActualScale: 0.1, 
-    minimapWorldOffsetX: 0,  
-    minimapWorldOffsetY: 0,  
-    isMinimapVisible: true, 
-    animationId: null 
-   },
-
-  // —— DOM REFERENCES ——
-  dom: { // ... same as 0.2.7.8 ...
-    canvas: null, ctx: null, inpX: null, inpY: null, btnGo: null,
-    zoomLevelEl: null, zoomDecBtn: null, zoomIncBtn: null, zoomSlider: null,
-    presetBtns: null, centerTileEl: null, infoBtn: null, infoPanel: null,
-    statsBtn: null, statsPanel: null, statsFPSEl: null, statsTilesEl: null,
-    coordsToggle: null, floatingZoomLabel: null, versionDisplay: null,
-    patchNotesBtn: null, modalOverlay: null, patchNotesModal: null,
-    patchNotesBody: null, closePatchNotesBtn: null, hidePatchNotesCheckbox: null,
-    tileDetailSelect: null, gridlinesToggle: null, allianceRssToggle: null,
-    allianceRssAlwaysVisibleToggle: null,
-    settingsBtn: null, settingsPanel: null, 
-    minimapCanvas: null, minimapCtx: null,
-    minimapContainer: null,
-    minimapToggleBtn: null 
-  },
-
-  // —— INITIALIZATION ——
-  init() { // ... same as 0.2.7.8 ...
-    const self = this; 
-
-    this.dom.canvas = document.getElementById('map');
-    if (!this.dom.canvas) {
-        console.error("Fatal: Canvas element 'map' not found.");
-        alert("Fatal Error: Canvas element not found. The application cannot start.");
-        return; 
-    }
-    this.dom.ctx = this.dom.canvas.getContext('2d');
-    if (!this.dom.ctx) {
-        console.error("Fatal: Could not get 2D rendering context for canvas.");
-        alert("Fatal Error: Could not initialize 2D graphics. The application cannot start. Try a different browser or update your current one.");
-        return; 
-    }
-
-    this.dom.inpX = document.getElementById('inpX');
-    this.dom.inpY = document.getElementById('inpY');
-    this.dom.btnGo = document.getElementById('btnGo');
-    this.dom.zoomLevelEl = document.getElementById('zoomLevel');
-    this.dom.zoomDecBtn = document.getElementById('zoomDec');
-    this.dom.zoomIncBtn = document.getElementById('zoomInc');
-    this.dom.zoomSlider = document.getElementById('zoomSlider');
-    this.dom.presetBtns = document.querySelectorAll('#presetButtons button');
-    this.dom.centerTileEl = document.getElementById('centerTile');
-    this.dom.infoBtn = document.getElementById('infoBtn');
-    this.dom.infoPanel = document.getElementById('infoPanel');
-    this.dom.statsBtn = document.getElementById('statsBtn');
-    this.dom.statsPanel = document.getElementById('statsPanel');
-    this.dom.statsFPSEl = document.getElementById('statsFPS');
-    this.dom.statsTilesEl = document.getElementById('statsTiles');
-    this.dom.coordsToggle = document.getElementById('coordsToggle');
-    this.dom.floatingZoomLabel = document.getElementById('floatingZoomLabel');
-    this.dom.versionDisplay = document.getElementById('versionDisplay');
-    this.dom.patchNotesBtn = document.getElementById('patchNotesBtn');
-    this.dom.modalOverlay = document.getElementById('modalOverlay');
-    this.dom.patchNotesModal = document.getElementById('patchNotesModal');
-    this.dom.patchNotesBody = document.getElementById('patchNotesBody');
-    this.dom.closePatchNotesBtn = document.getElementById('closePatchNotesBtn');
-    this.dom.hidePatchNotesCheckbox = document.getElementById('hidePatchNotesCheckbox');
-    this.dom.tileDetailSelect = document.getElementById('tileDetailSelect');
-    this.dom.gridlinesToggle = document.getElementById('gridlinesToggle');
-    this.dom.allianceRssToggle = document.getElementById('allianceRssToggle');
-    this.dom.allianceRssAlwaysVisibleToggle = document.getElementById('allianceRssAlwaysVisibleToggle');
-    this.dom.settingsBtn = document.getElementById('settingsBtn');
-    this.dom.settingsPanel = document.getElementById('settingsPanel');
-    this.dom.minimapContainer = document.getElementById('minimapContainer');
-    this.dom.minimapToggleBtn = document.getElementById('minimapToggleBtn'); 
-    this.dom.minimapCanvas = document.getElementById('minimapCanvas');
-    if (this.dom.minimapCanvas) {
-        this.dom.minimapCanvas.width = this.config.minimap.width * (window.devicePixelRatio || 1);
-        this.dom.minimapCanvas.height = this.config.minimap.height * (window.devicePixelRatio || 1);
-        this.dom.minimapCtx = this.dom.minimapCanvas.getContext('2d');
-    } else {
-        console.warn("Minimap canvas element not found.");
-    }
-    
-    for (const key in this.dom) {
-        if (this.dom[key] === null && !['ctx', 'canvas', 'minimapCtx', 'minimapCanvas'].includes(key) && this.dom.hasOwnProperty(key)) { 
-            console.warn(`DOM element for '${key}' not found.`);
+  <script>
+    const KingshotPlanner = {
+      // --- TWEAKABLE SETTINGS ---
+      // This object contains all the core settings. You can change these values
+      // to alter the map's appearance and behavior.
+      config: {
+        CURRENT_VERSION: '0.2.8.1', // Used for display and patch notes logic
+        N: 1200, // The size of the map grid (N x N)
+        tileW: 10, // Visual width of a single tile in the isometric view
+        tileH: 10, // Visual height of a single tile in the isometric view
+        strokeW: 0.3, // The thickness of tile and building outlines
+        borderColor: '#000', // Color of outlines
+        textColor: '#fff', // Color of text labels on tiles and buildings
+        maxPct: 250, // The maximum allowed zoom percentage
+        selectionColor: '#ff0', // The color of the highlight for a selected tile/building
+        pingColor: '#fff', // The color of the flashing highlight when searching
+        pingDuration: 500, // How long the ping animation lasts, in milliseconds
+        baseScale: 5, // A baseline zoom multiplier. All zoom levels are relative to this.
+        biomeColors: {
+          fertile: 'rgb(109, 159, 62)',
+          plains: 'rgb(158, 180, 103)',
+          badlands: 'rgb(191, 208, 152)'
+        },
+        biomeRegions: {
+          fertile: { x1: 480, y1: 480, x2: 719, y2: 719 },
+          plains: { x1: 320, y1: 320, x2: 879, y2: 879 },
+          badlands: { x1: 0, y1: 0, x2: 1199, y2: 1199 }
+        },
+        ALLIANCE_RSS_STYLES: {
+          wood: { displayName: 'Wood', fillColor: 'rgba(139,69,19,1)', borderColor: 'rgba(111,55,15,1)' },
+          food: { displayName: 'Food', fillColor: 'rgba(255,165,0,1)', borderColor: 'rgba(204,132,0,1)' },
+          stone: { displayName: 'Stone', fillColor: 'rgba(128,128,128,1)', borderColor: 'rgba(102,102,102,1)' },
+          iron: { displayName: 'Iron', fillColor: 'rgba(192,192,192,1)', borderColor: 'rgba(153,153,153,1)' },
+        },
+        minimap: {
+          width: 450, // Canvas width for the minimap
+          height: 300, // Canvas height for the minimap
+          padding: 0,
+          bgColor: 'rgba(40,40,40,0.8)',
+          viewportFillColor: 'rgba(0, 0, 0, 0.25)', // The semi-transparent box showing the main viewport
+          viewportBorderColor: 'rgba(20, 20, 20, 0.85)',
+          viewportCameraIconColor: 'rgba(30,30,30,0.95)',
+          buildingColor: 'rgba(200,200,200,0.7)',
+          kingCastleColor: 'rgba(255,215,0,0.8)',
+          fortressColor: 'rgba(178,34,34,1)',
+          sanctuaryColor: 'rgba(65,105,225,1)',
+          zoomFactorMin: 1, // Minimum zoom level for the dynamic minimap
+          zoomFactorMax: 10.0, // Maximum zoom level for the dynamic minimap
+          mainMapZoomThresholdForMinimapZoom: 0.1, // Main map zoom level at which minimap starts zooming in
+          dragSensitivity: 3.5 // Lower is slower/less sensitive.
         }
-    }
+      },
 
-    this.state.lastFrame = performance.now();
-    
-    Promise.all([
-      fetch('baseMap.json').then(r => r.ok ? r.json() : Promise.resolve({ unoccupiableTiles:[], defaultBuildings:[] })),
-      fetch('patch_notes.json').then(r => r.ok ? r.json() : Promise.resolve({}))
-    ])
-    .then(([baseMapData, patchNotesData]) => {
-        Object.assign(self.state.baseMap, baseMapData);
-        self.state.patchNotes = patchNotesData;
+      // --- APPLICATION STATE ---
+      // This object holds all the dynamic data and state variables for the application.
+      // It should not be manually tweaked.
+      state: {
+        baseMap: { unoccupiableTiles: [], defaultBuildings: [] },
+        patchNotes: {},
+        allBuildings: [],
+        buildingMap: new Map(),
+        chunkLevels: [],
+        userBuildings: [],
+        cam: { x: 0, y: 0, scale: 1 },
+        lastFrame: 0,
+        tileCount: 0,
+        lastFPS: 0,
+        lastTiles: 0,
+        selection: null,
+        minFitScale: 0.1,
+        isInitialLoad: true,
+        touchStartTime: 0,
+        dragging: false,
+        lastX: 0,
+        lastY: 0,
+        clickStartX: 0,
+        clickStartY: 0,
+        touchMode: null,
+        startDist: 0,
+        startScale: 1,
+        pinchCenter: null,
+        startCamX: 0,
+        startCamY: 0,
+        hideLabelTimeout: null,
+        statsUpdateTime: 0,
+        currentTileDetailThreshold: 50,
+        baseMinimapScale: 0.1,
+        minimapActualScale: 0.1,
+        minimapWorldOffsetX: 0,
+        minimapWorldOffsetY: 0,
+        isMinimapVisible: true,
+        isMinimapDragging: false,
+        minimapDragOffset: { x: 0, y: 0 },
+        minimapClickStartPos: { x: 0, y: 0 },
+        animationId: null
+      },
 
-        self.preProcessBuildings();
-        self.preCalculateChunks();
-        self.calculateBaseMinimapScale(); 
-        self.initializeUI();
-        self.resize(); 
-        
-        requestAnimationFrame(self.mainLoop.bind(self));
-    })
-    .catch(e => {
-        console.error("Error during application initialization:", e);
-        alert('Error loading essential application data or initializing. Check console for details.');
-    });
-  },
+      // --- DOM REFERENCES ---
+      // Caches references to all necessary DOM elements for performance.
+      dom: {
+        canvas: null, ctx: null, inpX: null, inpY: null, btnGo: null,
+        zoomLevelEl: null, zoomDecBtn: null, zoomIncBtn: null, zoomSlider: null,
+        presetBtns: null, centerTileEl: null, infoBtn: null, infoPanel: null,
+        statsBtn: null, statsPanel: null, statsFPSEl: null, statsTilesEl: null,
+        coordsToggle: null, floatingZoomLabel: null, versionDisplay: null,
+        patchNotesBtn: null, modalOverlay: null, patchNotesModal: null,
+        patchNotesBody: null, closePatchNotesBtn: null, hidePatchNotesCheckbox: null,
+        tileDetailSelect: null, gridlinesToggle: null, allianceRssToggle: null,
+        allianceRssAlwaysVisibleToggle: null, settingsBtn: null, settingsPanel: null,
+        minimapCanvas: null, minimapCtx: null, minimapContainer: null, minimapToggleBtn: null
+      },
 
-  initializeUI() {
-    if(this.dom.infoBtn && this.dom.infoPanel) this.dom.infoBtn.addEventListener('click', ()=>this.dom.infoPanel.classList.toggle('open'));
-    if(this.dom.statsBtn && this.dom.statsPanel) this.dom.statsBtn.addEventListener('click', ()=>this.dom.statsPanel.classList.toggle('open'));
-    if(this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
-    if(this.dom.patchNotesBtn) this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
-    if(this.dom.closePatchNotesBtn) this.dom.closePatchNotesBtn.addEventListener('click', this.hidePatchNotes.bind(this));
-    if(this.dom.modalOverlay) this.dom.modalOverlay.addEventListener('click', this.hidePatchNotes.bind(this));
-    
-    const lastSeenVersion = localStorage.getItem('lastSeenVersion');
-    if (lastSeenVersion !== this.config.CURRENT_VERSION) {
-        this.showPatchNotes();
-    }
+      // --- CORE INITIALIZATION ---
+      /**
+       * The main entry point of the application.
+       * Fetches data, initializes the DOM, and starts the render loop.
+       */
+      init() {
+        const self = this;
+        this.dom.canvas = document.getElementById('map');
+        if (!this.dom.canvas) {
+          console.error("Fatal: Canvas element 'map' not found.");
+          alert("Fatal Error: Canvas element not found. The application cannot start.");
+          return;
+        }
+        this.dom.ctx = this.dom.canvas.getContext('2d');
+        if (!this.dom.ctx) {
+          console.error("Fatal: Could not get 2D rendering context for canvas.");
+          alert("Fatal Error: Could not initialize 2D graphics. The application cannot start. Try a different browser or update your current one.");
+          return;
+        }
+        this.dom.inpX = document.getElementById('inpX');
+        this.dom.inpY = document.getElementById('inpY');
+        this.dom.btnGo = document.getElementById('btnGo');
+        this.dom.zoomLevelEl = document.getElementById('zoomLevel');
+        this.dom.zoomDecBtn = document.getElementById('zoomDec');
+        this.dom.zoomIncBtn = document.getElementById('zoomInc');
+        this.dom.zoomSlider = document.getElementById('zoomSlider');
+        this.dom.presetBtns = document.querySelectorAll('#presetButtons button');
+        this.dom.centerTileEl = document.getElementById('centerTile');
+        this.dom.infoBtn = document.getElementById('infoBtn');
+        this.dom.infoPanel = document.getElementById('infoPanel');
+        this.dom.statsBtn = document.getElementById('statsBtn');
+        this.dom.statsPanel = document.getElementById('statsPanel');
+        this.dom.statsFPSEl = document.getElementById('statsFPS');
+        this.dom.statsTilesEl = document.getElementById('statsTiles');
+        this.dom.coordsToggle = document.getElementById('coordsToggle');
+        this.dom.floatingZoomLabel = document.getElementById('floatingZoomLabel');
+        this.dom.versionDisplay = document.getElementById('versionDisplay');
+        this.dom.patchNotesBtn = document.getElementById('patchNotesBtn');
+        this.dom.modalOverlay = document.getElementById('modalOverlay');
+        this.dom.patchNotesModal = document.getElementById('patchNotesModal');
+        this.dom.patchNotesBody = document.getElementById('patchNotesBody');
+        this.dom.closePatchNotesBtn = document.getElementById('closePatchNotesBtn');
+        this.dom.hidePatchNotesCheckbox = document.getElementById('hidePatchNotesCheckbox');
+        this.dom.tileDetailSelect = document.getElementById('tileDetailSelect');
+        this.dom.gridlinesToggle = document.getElementById('gridlinesToggle');
+        this.dom.allianceRssToggle = document.getElementById('allianceRssToggle');
+        this.dom.allianceRssAlwaysVisibleToggle = document.getElementById('allianceRssAlwaysVisibleToggle');
+        this.dom.settingsBtn = document.getElementById('settingsBtn');
+        this.dom.settingsPanel = document.getElementById('settingsPanel');
+        this.dom.minimapContainer = document.getElementById('minimapContainer');
+        this.dom.minimapToggleBtn = document.getElementById('minimapToggleBtn');
+        this.dom.minimapCanvas = document.getElementById('minimapCanvas');
+        if (this.dom.minimapCanvas) {
+          this.dom.minimapCanvas.width = this.config.minimap.width * (window.devicePixelRatio || 1);
+          this.dom.minimapCanvas.height = this.config.minimap.height * (window.devicePixelRatio || 1);
+          this.dom.minimapCtx = this.dom.minimapCanvas.getContext('2d');
+        } else {
+          console.warn("Minimap canvas element not found.");
+        }
+        for (const key in this.dom) {
+          if (this.dom[key] === null && !['ctx', 'canvas', 'minimapCtx', 'minimapCanvas'].includes(key) && this.dom.hasOwnProperty(key)) {
+            console.warn(`DOM element for '${key}' not found.`);
+          }
+        }
+        this.state.lastFrame = performance.now();
+        Promise.all([
+            fetch('baseMap.json').then(r => r.ok ? r.json() : Promise.resolve({
+              unoccupiableTiles: [],
+              defaultBuildings: []
+            })),
+            fetch('patch_notes.json').then(r => r.ok ? r.json() : Promise.resolve({}))
+          ])
+          .then(([baseMapData, patchNotesData]) => {
+            Object.assign(self.state.baseMap, baseMapData);
+            self.state.patchNotes = patchNotesData;
+            self.preProcessBuildings();
+            self.preCalculateChunks();
+            self.calculateBaseMinimapScale();
+            self.initializeUI();
+            self.resize();
+            requestAnimationFrame(self.mainLoop.bind(self));
+          })
+          .catch(e => {
+            console.error("Error during application initialization:", e);
+            alert('Error loading essential application data or initializing. Check console for details.');
+          });
+      },
 
-    if(this.dom.tileDetailSelect) {
-        const savedDetail = localStorage.getItem('mapTileDetail') || '50';
-        this.dom.tileDetailSelect.value = savedDetail;
-        this.state.currentTileDetailThreshold = parseInt(savedDetail, 10); 
-        this.dom.tileDetailSelect.addEventListener('change', () => {
+      /**
+       * Attaches all event listeners to the DOM elements.
+       */
+      initializeUI() {
+        if (this.dom.infoBtn && this.dom.infoPanel) this.dom.infoBtn.addEventListener('click', () => this.dom.infoPanel.classList.toggle('open'));
+        if (this.dom.statsBtn && this.dom.statsPanel) this.dom.statsBtn.addEventListener('click', () => this.dom.statsPanel.classList.toggle('open'));
+        if (this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
+        if (this.dom.patchNotesBtn) this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
+        if (this.dom.closePatchNotesBtn) this.dom.closePatchNotesBtn.addEventListener('click', this.hidePatchNotes.bind(this));
+        if (this.dom.modalOverlay) this.dom.modalOverlay.addEventListener('click', this.hidePatchNotes.bind(this));
+        const lastSeenVersion = localStorage.getItem('lastSeenVersion');
+        if (lastSeenVersion !== this.config.CURRENT_VERSION) {
+          this.showPatchNotes();
+        }
+        if (this.dom.tileDetailSelect) {
+          const savedDetail = localStorage.getItem('mapTileDetail') || '50';
+          this.dom.tileDetailSelect.value = savedDetail;
+          this.state.currentTileDetailThreshold = parseInt(savedDetail, 10);
+          this.dom.tileDetailSelect.addEventListener('change', () => {
             localStorage.setItem('mapTileDetail', this.dom.tileDetailSelect.value);
-            this.state.currentTileDetailThreshold = parseInt(this.dom.tileDetailSelect.value, 10); 
-        });
-    }
-    if(this.dom.allianceRssAlwaysVisibleToggle) {
-        const savedAlwaysVisible = localStorage.getItem('mapAlwaysShowRss') === 'true';
-        this.dom.allianceRssAlwaysVisibleToggle.checked = savedAlwaysVisible;
-        this.dom.allianceRssAlwaysVisibleToggle.addEventListener('change', () => localStorage.setItem('mapAlwaysShowRss', this.dom.allianceRssAlwaysVisibleToggle.checked));
-    }
-    if(this.dom.gridlinesToggle) {
-        const savedGridlines = localStorage.getItem('mapShowGridlines') !== 'false';
-        this.dom.gridlinesToggle.checked = savedGridlines;
-        this.dom.gridlinesToggle.addEventListener('change', () => localStorage.setItem('mapShowGridlines', this.dom.gridlinesToggle.checked));
-    }
-    if(this.dom.allianceRssToggle) {
-        const savedAllianceRss = localStorage.getItem('mapShowAllianceRss') !== 'false';
-        this.dom.allianceRssToggle.checked = savedAllianceRss;
-        this.dom.allianceRssToggle.addEventListener('change', () => localStorage.setItem('mapShowAllianceRss', this.dom.allianceRssToggle.checked));
-    }
-    if(this.dom.coordsToggle) {
-        const savedCoords = localStorage.getItem('mapShowCoords') === 'true';
-        this.dom.coordsToggle.checked = savedCoords;
-        this.dom.coordsToggle.addEventListener('change', () => localStorage.setItem('mapShowCoords', this.dom.coordsToggle.checked));
-    }
-    if(this.dom.btnGo) this.dom.btnGo.addEventListener('click', this.doSearch.bind(this));
-    if(this.dom.inpX && this.dom.inpY) [this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => { if (e.key==='Enter') this.doSearch(); }));
-    if(this.dom.zoomDecBtn) this.dom.zoomDecBtn.addEventListener('click', () => this.changeZoomBy(-1));
-    if(this.dom.zoomIncBtn) this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(+1));
-    if(this.dom.presetBtns) this.dom.presetBtns.forEach(b => {
-        const zoomVal = b.dataset.zoom;
-        if (zoomVal === 'Fit') {
+            this.state.currentTileDetailThreshold = parseInt(this.dom.tileDetailSelect.value, 10);
+          });
+        }
+        if (this.dom.allianceRssAlwaysVisibleToggle) {
+          const savedAlwaysVisible = localStorage.getItem('mapAlwaysShowRss') === 'true';
+          this.dom.allianceRssAlwaysVisibleToggle.checked = savedAlwaysVisible;
+          this.dom.allianceRssAlwaysVisibleToggle.addEventListener('change', () => localStorage.setItem('mapAlwaysShowRss', this.dom.allianceRssAlwaysVisibleToggle.checked));
+        }
+        if (this.dom.gridlinesToggle) {
+          const savedGridlines = localStorage.getItem('mapShowGridlines') !== 'false';
+          this.dom.gridlinesToggle.checked = savedGridlines;
+          this.dom.gridlinesToggle.addEventListener('change', () => localStorage.setItem('mapShowGridlines', this.dom.gridlinesToggle.checked));
+        }
+        if (this.dom.allianceRssToggle) {
+          const savedAllianceRss = localStorage.getItem('mapShowAllianceRss') !== 'false';
+          this.dom.allianceRssToggle.checked = savedAllianceRss;
+          this.dom.allianceRssToggle.addEventListener('change', () => localStorage.setItem('mapShowAllianceRss', this.dom.allianceRssToggle.checked));
+        }
+        if (this.dom.coordsToggle) {
+          const savedCoords = localStorage.getItem('mapShowCoords') === 'true';
+          this.dom.coordsToggle.checked = savedCoords;
+          this.dom.coordsToggle.addEventListener('change', () => localStorage.setItem('mapShowCoords', this.dom.coordsToggle.checked));
+        }
+        if (this.dom.btnGo) this.dom.btnGo.addEventListener('click', this.doSearch.bind(this));
+        if (this.dom.inpX && this.dom.inpY)[this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => {
+          if (e.key === 'Enter') this.doSearch();
+        }));
+        if (this.dom.zoomDecBtn) this.dom.zoomDecBtn.addEventListener('click', () => this.changeZoomBy(-1));
+        if (this.dom.zoomIncBtn) this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(+1));
+        if (this.dom.presetBtns) this.dom.presetBtns.forEach(b => {
+          const zoomVal = b.dataset.zoom;
+          if (zoomVal === 'Fit') {
             b.textContent = 'Fit';
             b.addEventListener('click', this.zoomToFit.bind(this));
-        } else {
+          } else {
             b.addEventListener('click', () => {
-                const cx = this.dom.canvas.width/2, cy = this.dom.canvas.height/2;
-                this.animateZoom((Number(zoomVal) / 100) * this.config.baseScale, cx, cy, 200);
+              const cx = this.dom.canvas.width / 2,
+                cy = this.dom.canvas.height / 2;
+              this.animateZoom((Number(zoomVal) / 100) * this.config.baseScale, cx, cy, 200);
             });
-        }
-    });
-
-    // --- [ADD THIS CORRECTED BLOCK] ---
-    if(this.dom.settingsBtn && this.dom.settingsPanel && this.dom.minimapContainer) {
-        const panel = this.dom.settingsPanel;
-        const minimap = this.dom.minimapContainer;
-        const settingsBtn = this.dom.settingsBtn;
-        const originalMinimapMarginTop = getComputedStyle(minimap).marginTop;
-        const gap = 10;
-        
-        // Also modify the CSS for #settingsPanel.open to include `padding: 8px;`
-        // and add `padding` to the transition property on #settingsPanel for the smoothest effect.
-        
-        this.dom.settingsBtn.addEventListener('click', () => {
-            const isOpening = !panel.classList.contains('open');
-            
-            if (isOpening) {
-                // Calculate the final height. scrollHeight gives the height of the content.
-                // We add 16 to account for the 8px top and bottom padding that will be added.
-                const panelContentHeight = panel.scrollHeight + 16;
-                const settingsButtonHeight = settingsBtn.offsetHeight;
-                const settingsButtonMarginBottom = parseInt(getComputedStyle(settingsBtn).marginBottom, 10) || 0;
-                
-                const newMarginTop = settingsButtonHeight + settingsButtonMarginBottom + panelContentHeight + gap;
-                
-                // Trigger both animations by setting the target styles
-                minimap.style.marginTop = `${newMarginTop}px`;
-                panel.classList.add('open');
-            } else {
-                // Trigger both animations to return to the original state
-                minimap.style.marginTop = originalMinimapMarginTop;
-                panel.classList.remove('open');
-            }
+          }
         });
-    }
-    // --- [END] CORRECTION ---
-
-    if (this.dom.minimapToggleBtn && this.dom.minimapCanvas) {
-        this.dom.minimapCanvas.classList.toggle('hidden', !this.state.isMinimapVisible);
-        this.dom.minimapToggleBtn.textContent = this.state.isMinimapVisible ? 'Hide Minimap' : 'Show Minimap';
-
-        this.dom.minimapToggleBtn.addEventListener('click', () => {
+        if (this.dom.settingsBtn && this.dom.settingsPanel && this.dom.minimapContainer) {
+          const panel = this.dom.settingsPanel;
+          const minimap = this.dom.minimapContainer;
+          const settingsBtn = this.dom.settingsBtn;
+          const originalMinimapMarginTop = getComputedStyle(minimap).marginTop;
+          const gap = 10;
+          this.dom.settingsBtn.addEventListener('click', () => {
+            const isOpening = !panel.classList.contains('open');
+            if (isOpening) {
+              const panelContentHeight = panel.scrollHeight + 16;
+              const settingsButtonHeight = settingsBtn.offsetHeight;
+              const settingsButtonMarginBottom = parseInt(getComputedStyle(settingsBtn).marginBottom, 10) || 0;
+              const newMarginTop = settingsButtonHeight + settingsButtonMarginBottom + panelContentHeight + gap;
+              minimap.style.marginTop = `${newMarginTop}px`;
+              panel.classList.add('open');
+            } else {
+              minimap.style.marginTop = originalMinimapMarginTop;
+              panel.classList.remove('open');
+            }
+          });
+        }
+        if (this.dom.minimapToggleBtn && this.dom.minimapCanvas) {
+          this.dom.minimapCanvas.classList.toggle('hidden', !this.state.isMinimapVisible);
+          this.dom.minimapToggleBtn.textContent = this.state.isMinimapVisible ? 'Hide Minimap' : 'Show Minimap';
+          this.dom.minimapToggleBtn.addEventListener('click', () => {
             this.state.isMinimapVisible = !this.state.isMinimapVisible;
             this.dom.minimapCanvas.classList.toggle('hidden', !this.state.isMinimapVisible);
             this.dom.minimapToggleBtn.textContent = this.state.isMinimapVisible ? 'Hide Minimap' : 'Show Minimap';
-        });
-    }
-
-
-    if(this.dom.zoomSlider) {
-        this.dom.zoomSlider.addEventListener('input', this.handleZoomSlider.bind(this));
-        this.dom.zoomSlider.addEventListener('mousedown', () => {
+          });
+        }
+        if (this.dom.zoomSlider) {
+          this.dom.zoomSlider.addEventListener('input', this.handleZoomSlider.bind(this));
+          this.dom.zoomSlider.addEventListener('mousedown', () => {
             clearTimeout(this.state.hideLabelTimeout);
             this.updateFloatingZoomLabel();
+          });
+        }
+        window.addEventListener('resize', this.resize.bind(this));
+        window.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        window.addEventListener('mouseup', () => {
+          this.state.dragging = false;
         });
-    }
+        window.addEventListener('keydown', this.handleKeyDown.bind(this));
+        this.dom.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+        this.dom.canvas.addEventListener('click', this.handleCanvasClick.bind(this));
+        this.dom.canvas.addEventListener('wheel', this.handleWheel.bind(this), {
+          passive: false
+        });
+        this.dom.canvas.addEventListener('dblclick', this.handleDblClick.bind(this));
+        this.dom.canvas.addEventListener('contextmenu', e => e.preventDefault());
+        this.dom.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), {
+          passive: false
+        });
+        this.dom.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), {
+          passive: false
+        });
+        this.dom.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
+        if (this.dom.minimapCanvas) {
+          this.dom.minimapCanvas.addEventListener('mousedown', this.handleMinimapMouseDown.bind(this));
+          this.dom.minimapCanvas.addEventListener('mousemove', this.handleMinimapMouseMove.bind(this));
+          this.dom.minimapCanvas.addEventListener('mouseleave', this.handleMinimapMouseUp.bind(this));
+          
+          window.addEventListener('mouseup', this.handleMinimapMouseUp.bind(this));
+        }
+      },
 
-    window.addEventListener('resize', this.resize.bind(this));
-    window.addEventListener('mousemove', this.handleMouseMove.bind(this));
-    window.addEventListener('mouseup', () => { this.state.dragging = false; });
-    window.addEventListener('keydown', this.handleKeyDown.bind(this));
-    
-    this.dom.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-    this.dom.canvas.addEventListener('click', this.handleCanvasClick.bind(this));
-    this.dom.canvas.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
-    this.dom.canvas.addEventListener('dblclick', this.handleDblClick.bind(this));
-    this.dom.canvas.addEventListener('contextmenu', e => e.preventDefault());
-    this.dom.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
-    this.dom.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
-    this.dom.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
-
-    if (this.dom.minimapCanvas) {
-        this.dom.minimapCanvas.addEventListener('click', this.handleMinimapClick.bind(this));
-    }
-  },
-
-  calculateBaseMinimapScale() { // ... same as 0.2.7.8 ...
-    if (!this.dom.minimapCanvas || !this.config.minimap) return; 
-    const { minimap, N } = this.config;
-    const dpr = window.devicePixelRatio || 1;
-    
-    const canvasBufferWidth = this.dom.minimapCanvas.width; 
-    const canvasBufferHeight = this.dom.minimapCanvas.height; 
-
-    const effectiveDrawableWidth = canvasBufferWidth - (2 * minimap.padding * dpr);
-    const effectiveDrawableHeight = canvasBufferHeight - (2 * minimap.padding * dpr);
-
-    this.state.baseMinimapScale = Math.min(effectiveDrawableWidth / N, effectiveDrawableHeight / N);
-
-    if (this.state.baseMinimapScale <= 0) {
-        console.warn("Base minimap scale calculated to be zero or negative. Setting to a small positive value.", 
-                     { N, effectiveDrawableWidth, effectiveDrawableHeight });
-        this.state.baseMinimapScale = 0.01; 
-    }
-   },
-
-  preProcessBuildings() { // ... same as 0.2.7.8 ...
-    let buildings = [...(this.state.baseMap.defaultBuildings || []), ...(this.state.userBuildings || [])];
-    if (this.state.baseMap.allianceRssBuildings) {
-      const formattedRssBuildings = this.state.baseMap.allianceRssBuildings.map(rss => {
-        const style = this.config.ALLIANCE_RSS_STYLES[rss.type] || {};
-        return {
-          x: rss.x, y: rss.y, w: 2, h: 2,
-          displayName: style.displayName,
-          fillColor: style.fillColor,
-          borderColor: style.borderColor,
-          displayCoordinates: false,
-          isRss: true
-        };
-      });
-      buildings = buildings.concat(formattedRssBuildings);
-    }
-    this.state.allBuildings = buildings;
-    this.state.buildingMap.clear();
-    for (const b of this.state.allBuildings) {
-      if (typeof b.w === 'number' && typeof b.h === 'number') { 
-        for (let dx = 0; dx < b.w; dx++) {
-          for (let dy = 0; dy < b.h; dy++) {
-            this.state.buildingMap.set(`${b.x + dx},${b.y + dy}`, b);
+      // --- DATA PRE-PROCESSING ---
+      /**
+       * Pre-calculates the scale of the minimap based on its canvas size and map size.
+       */
+      calculateBaseMinimapScale() {
+        if (!this.dom.minimapCanvas || !this.config.minimap) return;
+        const { minimap, N } = this.config;
+        const dpr = window.devicePixelRatio || 1;
+        const canvasBufferWidth = this.dom.minimapCanvas.width;
+        const canvasBufferHeight = this.dom.minimapCanvas.height;
+        const effectiveDrawableWidth = canvasBufferWidth - (2 * minimap.padding * dpr);
+        const effectiveDrawableHeight = canvasBufferHeight - (2 * minimap.padding * dpr);
+        this.state.baseMinimapScale = Math.min(effectiveDrawableWidth / N, effectiveDrawableHeight / N);
+        if (this.state.baseMinimapScale <= 0) {
+          this.state.baseMinimapScale = 0.01;
+        }
+      },
+      /**
+       * Combines default and user buildings and creates a Map for quick lookups.
+       */
+      preProcessBuildings() {
+        let buildings = [...(this.state.baseMap.defaultBuildings || []), ...(this.state.userBuildings || [])];
+        if (this.state.baseMap.allianceRssBuildings) {
+          const formattedRssBuildings = this.state.baseMap.allianceRssBuildings.map(rss => {
+            const style = this.config.ALLIANCE_RSS_STYLES[rss.type] || {};
+            return { x: rss.x, y: rss.y, w: 2, h: 2, displayName: style.displayName, fillColor: style.fillColor, borderColor: style.borderColor, displayCoordinates: false, isRss: true };
+          });
+          buildings = buildings.concat(formattedRssBuildings);
+        }
+        this.state.allBuildings = buildings;
+        this.state.buildingMap.clear();
+        for (const b of this.state.allBuildings) {
+          if (typeof b.w === 'number' && typeof b.h === 'number') {
+            for (let dx = 0; dx < b.w; dx++) {
+              for (let dy = 0; dy < b.h; dy++) {
+                this.state.buildingMap.set(`${b.x + dx},${b.y + dy}`, b);
+              }
+            }
           }
         }
-      }
-    }
-   },
+      },
 
-  preCalculateChunks() { // ... same as 0.2.7.8 ...
-    const numLevels = 4;
-    this.state.chunkLevels = []; 
-    for (let level = 0; level < numLevels; level++) {
-      const chunkSize = Math.pow(2, level + 1);
-      const levelMap = new Map();
-      for (let x = 0; x < this.config.N; x += chunkSize) {
-        for (let y = 0; y < this.config.N; y += chunkSize) {
-          const biome = this.getBiomeForTile(x, y);
-          levelMap.set(`${x},${y}`, { x, y, size: chunkSize, biome: biome });
+      /**
+       * Pre-calculates merged biome chunks for different zoom levels to improve performance.
+       */
+      preCalculateChunks() {
+        const numLevels = 4;
+        this.state.chunkLevels = [];
+        for (let level = 0; level < numLevels; level++) {
+          const chunkSize = Math.pow(2, level + 1);
+          const levelMap = new Map();
+          for (let x = 0; x < this.config.N; x += chunkSize) {
+            for (let y = 0; y < this.config.N; y += chunkSize) {
+              const biome = this.getBiomeForTile(x, y);
+              levelMap.set(`${x},${y}`, { x, y, size: chunkSize, biome: biome });
+            }
+          }
+          this.state.chunkLevels.push(levelMap);
         }
-      }
-      this.state.chunkLevels.push(levelMap);
-    }
-   },
+      },
 
-  worldToScreen(x,y) { // ... same as 0.2.7.8 ...
-    return [(x - y)*(this.config.tileW/2), -(x + y)*(this.config.tileH/2)];
-   },
+      // --- COORDINATE & CAMERA LOGIC ---
+      /**
+       * Converts world coordinates (grid X, Y) to isometric screen coordinates.
+       */
+      worldToScreen(x, y) {
+        return [(x - y) * (this.config.tileW / 2), -(x + y) * (this.config.tileH / 2)];
+      },
 
-  screenToWorld(sx,sy) { // ... same as 0.2.7.8 ...
-    const scale = (this.state.cam.scale === 0 || isNaN(this.state.cam.scale)) ? this.state.minFitScale : this.state.cam.scale;
-    const tileW_half = this.config.tileW / 2;
-    const tileH_half = this.config.tileH / 2;
+      /**
+       * Converts screen coordinates (pixel X, Y) to the nearest world coordinate.
+       */
+      screenToWorld(sx, sy) {
+        const scale = (this.state.cam.scale === 0 || isNaN(this.state.cam.scale)) ? this.state.minFitScale : this.state.cam.scale;
+        const tileW_half = this.config.tileW / 2;
+        const tileH_half = this.config.tileH / 2;
+        if (tileW_half === 0 || tileH_half === 0) { return [0, 0]; }
+        if (scale === 0) { return [0, 0]; }
+        const lx = (sx - this.state.cam.x) / scale;
+        const ly = (sy - this.state.cam.y) / scale;
+        const u = lx / tileW_half;
+        const v = -ly / tileH_half;
+        const world_x = Math.round((u + v) / 2);
+        const world_y = Math.round((v - u) / 2);
+        return [world_x, world_y];
+      },
 
-    if (tileW_half === 0 || tileH_half === 0) { 
-        console.error("tileW or tileH is zero in config!");
-        return [0,0]; 
-    }
-    if (scale === 0) { 
-        console.error("screenToWorld: scale is zero!");
-        return [0,0];
-    }
+      /**
+       * Returns the building object at a given world coordinate, if one exists.
+       */
+      getBuildingAt(x, y) {
+        return this.state.buildingMap.get(`${x},${y}`) || null;
+      },
 
-    const lx = (sx - this.state.cam.x)/scale;
-    const ly = (sy - this.state.cam.y)/scale;
-    const u  = lx/tileW_half;
-    const v  = -ly/tileH_half;
-    const world_x = Math.round((u+v)/2);
-    const world_y = Math.round((v-u)/2);
-    return [world_x,world_y];
-   },
+      /**
+       * Determines which biome a given tile belongs to based on predefined regions.
+       */
+      getBiomeForTile(x, y) {
+        const { fertile, plains } = this.config.biomeRegions;
+        if (x >= fertile.x1 && x <= fertile.x2 && y >= fertile.y1 && y <= fertile.y2) return 'fertile';
+        if (x >= plains.x1 && x <= plains.x2 && y >= plains.y1 && y <= plains.y2) return 'plains';
+        return 'badlands';
+      },
 
-  getBuildingAt(x, y) { // ... same as 0.2.7.8 ...
-    return this.state.buildingMap.get(`${x},${y}`) || null;
-   },
+      /**
+       * Determines which pre-calculated chunk level to use based on the current zoom percentage.
+       * @returns {number} The level index, or -1 to draw individual tiles.
+       */
+      getChunkLevelForZoom(pct) {
+        if (isNaN(pct)) pct = (this.state.cam.scale / this.config.baseScale) * 100;
+        const detailThreshold = this.state.currentTileDetailThreshold;
+        if (pct > detailThreshold) return -1;
+        if (pct > detailThreshold / 2) return 0;
+        if (pct > detailThreshold / 5) return 1;
+        if (pct > detailThreshold / 10) return 2;
+        return 3;
+      },
 
-  getBiomeForTile(x, y) { // ... same as 0.2.7.8 ...
-    const { fertile, plains } = this.config.biomeRegions;
-    if (x >= fertile.x1 && x <= fertile.x2 && y >= fertile.y1 && y <= fertile.y2) return 'fertile';
-    if (x >= plains.x1 && x <= plains.x2 && y >= plains.y1 && y <= plains.y2) return 'plains';
-    return 'badlands';
-   },
+      /**
+       * Ensures the camera does not pan beyond the map boundaries.
+       */
+      clampCamera() {
+        const s = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
+        const canvasW = this.dom.canvas.width;
+        const canvasH = this.dom.canvas.height;
+        const mapScreenW = (this.config.N - 1) * this.config.tileW * s;
+        const mapScreenH = (this.config.N - 1) * this.config.tileH * s;
 
-  getChunkLevelForZoom(pct) { // ... same as 0.2.7.8 ...
-    if (isNaN(pct)) pct = (this.state.cam.scale / this.config.baseScale) * 100; 
-    const detailThreshold = this.state.currentTileDetailThreshold; 
-    if (pct > detailThreshold) return -1;
-    if (pct > detailThreshold / 2) return 0;
-    if (pct > detailThreshold / 5) return 1;
-    if (pct > detailThreshold / 10) return 2;
-    return 3;
-   },
+        if (mapScreenW > canvasW) {
+          const minCamX = canvasW - mapScreenW / 2;
+          const maxCamX = mapScreenW / 2;
+          this.state.cam.x = Math.max(minCamX, Math.min(maxCamX, this.state.cam.x));
+        } else {
+          this.state.cam.x = canvasW / 2;
+        }
 
-  showPatchNotes() { // ... same as 0.2.7.8 ...
-    if (!this.dom.patchNotesBody || !this.dom.modalOverlay || !this.dom.patchNotesModal) return;
-    
-    if (typeof marked !== 'undefined') { 
-        marked.setOptions({
-            gfm: true,      
-            breaks: true,   
-            sanitize: false 
-        });
-    } else {
-        console.warn("marked.js library not loaded. Markdown processing will be basic.");
-    }
+        if (mapScreenH > canvasH) {
+          const minCamY = canvasH;
+          const maxCamY = mapScreenH;
+          this.state.cam.y = Math.max(minCamY, Math.min(maxCamY, this.state.cam.y));
+        } else {
+          this.state.cam.y = canvasH / 2 + mapScreenH / 2;
+        }
 
-    const versions = Object.keys(this.state.patchNotes || {});
-    if (versions.length === 0) {
-        this.dom.patchNotesBody.innerHTML = `<p>No patch notes are available at this time.</p>`;
-    } else {
-        versions.sort((a, b) => {
+        if (isNaN(this.state.cam.x)) this.state.cam.x = canvasW / 2;
+        if (isNaN(this.state.cam.y)) this.state.cam.y = canvasH / 2;
+      },
+
+      // --- ANIMATION & ZOOM ---
+      /**
+       * Changes the zoom level by a relative amount and animates the transition.
+       * @param {number} delta - Positive value to zoom in, negative to zoom out.
+       */
+      changeZoomBy(delta) {
+        let currentPct = (this.state.cam.scale / this.config.baseScale) * 100;
+        if (isNaN(currentPct)) currentPct = (this.state.minFitScale / this.config.baseScale) * 100;
+        const changeAmt = delta > 0 ? currentPct * 0.25 : currentPct * -0.2;
+        let targetScale = ((currentPct + changeAmt) / 100) * this.config.baseScale;
+        targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
+        if (isNaN(targetScale)) targetScale = this.state.cam.scale;
+        const cx = this.dom.canvas.width / 2,
+          cy = this.dom.canvas.height / 2;
+        this.animateZoom(targetScale, cx, cy, 150);
+      },
+
+      /**
+       * Smoothly animates the camera's zoom level towards a target scale.
+       * @param {number} targetScale - The destination scale.
+       * @param {number} anchorX - The screen X coordinate to zoom towards.
+       * @param {number} anchorY - The screen Y coordinate to zoom towards.
+       * @param {number} [duration=150] - Animation duration in milliseconds.
+       */
+      animateZoom(targetScale, anchorX, anchorY, duration = 150) {
+        if (this.state.animationId) {
+          cancelAnimationFrame(this.state.animationId);
+        }
+        const startScale = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
+        const startX = this.state.cam.x,
+          startY = this.state.cam.y;
+        const start = performance.now();
+        if (startScale === 0) {
+          this.state.cam.scale = targetScale;
+          this.clampCamera();
+          return;
+        }
+        const wx = (anchorX - startX) / startScale;
+        const wy = (anchorY - startY) / startScale;
+        if (isNaN(wx) || isNaN(wy)) {
+          this.state.cam.scale = targetScale;
+          this.clampCamera();
+          return;
+        }
+        const step = (now) => {
+          const t = duration === 0 ? 1 : Math.min(1, (now - start) / duration);
+          const k = t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; // Ease-in-out cubic function
+          this.state.cam.scale = startScale + (targetScale - startScale) * k;
+          this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
+          if (isNaN(this.state.cam.scale)) this.state.cam.scale = startScale;
+          this.state.cam.x = anchorX - wx * this.state.cam.scale;
+          this.state.cam.y = anchorY - wy * this.state.cam.scale;
+          this.clampCamera();
+          if (t < 1) {
+            this.state.animationId = requestAnimationFrame(step);
+          } else {
+            this.state.animationId = null;
+          }
+        };
+        this.state.animationId = requestAnimationFrame(step);
+      },
+
+      /**
+       * Smoothly animates both camera position and zoom level.
+       */
+      animatePanZoom(targetScale, targetX, targetY, duration = 300) {
+        if (this.state.animationId) {
+          cancelAnimationFrame(this.state.animationId);
+        }
+        const startScale = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
+        const startX = this.state.cam.x,
+          startY = this.state.cam.y;
+        const start = performance.now();
+        const step = (now) => {
+          const t = Math.min(1, (now - start) / duration);
+          const k = t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; // Ease-in-out cubic function
+          this.state.cam.scale = startScale + (targetScale - startScale) * k;
+          this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
+          if (isNaN(this.state.cam.scale)) this.state.cam.scale = startScale;
+          this.state.cam.x = startX + (targetX - startX) * k;
+          this.state.cam.y = startY + (targetY - startY) * k;
+          this.clampCamera();
+          if (t < 1) {
+            this.state.animationId = requestAnimationFrame(step);
+          } else {
+            this.state.animationId = null;
+          }
+        };
+        this.state.animationId = requestAnimationFrame(step);
+      },
+
+      /**
+       * Zooms out to fit the entire map within the viewport.
+       */
+      zoomToFit() {
+        const targetScale = this.state.minFitScale;
+        const targetCamX = this.dom.canvas.width / 2;
+        const targetCamY = this.dom.canvas.height / 2 + ((this.config.N - 1) * this.config.tileH / 2) * targetScale;
+        this.animatePanZoom(targetScale, targetCamX, targetCamY, 200);
+      },
+
+      // --- UI & EVENT HANDLERS ---
+      /**
+       * Displays the patch notes modal.
+       */
+      showPatchNotes() {
+        if (!this.dom.patchNotesBody || !this.dom.modalOverlay || !this.dom.patchNotesModal) return;
+        if (typeof marked !== 'undefined') {
+          marked.setOptions({ gfm: true, breaks: true, sanitize: false });
+        } else {
+          console.warn("marked.js library not loaded. Markdown processing will be basic.");
+        }
+        const versions = Object.keys(this.state.patchNotes || {});
+        if (versions.length === 0) {
+          this.dom.patchNotesBody.innerHTML = `<p>No patch notes are available at this time.</p>`;
+        } else {
+          versions.sort((a, b) => { // Sort versions descending
             const partsA = a.split('.').map(Number);
             const partsB = b.split('.').map(Number);
             for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-                const numA = partsA[i] || 0;
-                const numB = partsB[i] || 0;
-                if (numA !== numB) return numB - numA;
+              const numA = partsA[i] || 0;
+              const numB = partsB[i] || 0;
+              if (numA !== numB) return numB - numA;
             }
             return 0;
-        });
-        let content = '';
-        versions.forEach((version, index) => {
-            const notesForVersion = this.state.patchNotes[version] || [];
-            const notesHtml = notesForVersion.map(noteText => {
-                let htmlOutput = '';
-                if (typeof marked !== 'undefined') {
-                    htmlOutput = marked.parse(noteText.trim()); 
-                } else {
-                    htmlOutput = noteText.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">"); 
-                }
-                return `<li>${htmlOutput}</li>`;
-            }).join('');
+          });
+          let content = '';
+          versions.forEach((version, index) => {
+              const notesForVersion = this.state.patchNotes[version] || [];
+              
+              // Join all lines for this version into a single markdown string, separated by newlines.
+              const fullMarkdownBlock = notesForVersion.join('\n');
+              
+              let versionHtml = '';
+              if (typeof marked !== 'undefined') {
+                  // Parse the entire block at once. Marked will create the <ul> and <li> tags itself.
+                  versionHtml = marked.parse(fullMarkdownBlock);
+              } else {
+                  // Basic fallback if marked.js fails to load
+                  versionHtml = `<ul><li>${notesForVersion.join('</li><li>')}</li></ul>`;
+              }
 
-            content += `<h4>Version ${version}</h4><ul>${notesHtml}</ul>`;
-            if (index < versions.length - 1) content += '<hr style="border-color: #444; border-top: 0;">';
-        });
-        this.dom.patchNotesBody.innerHTML = content;
-    }
-    this.dom.modalOverlay.style.display = 'block';
-    this.dom.patchNotesModal.style.display = 'block';
-   },
+              // Add the version header and the fully parsed HTML.
+              content += `<h4>Version ${version}</h4>${versionHtml}`;
+              if (index < versions.length - 1) content += '<hr style="border-color: #444; border-top: 0;">';
+          });
+          this.dom.patchNotesBody.innerHTML = content;
+        }
+        this.dom.modalOverlay.style.display = 'block';
+        this.dom.patchNotesModal.style.display = 'block';
+      },
 
-  hidePatchNotes() { // ... same as 0.2.7.8 ...
-    if (!this.dom.modalOverlay || !this.dom.patchNotesModal) return;
-    if (this.dom.hidePatchNotesCheckbox && this.dom.hidePatchNotesCheckbox.checked) {
-        localStorage.setItem('lastSeenVersion', this.config.CURRENT_VERSION);
-    }
-    this.dom.modalOverlay.style.display = 'none';
-    this.dom.patchNotesModal.style.display = 'none';
-   },
+      /**
+       * Hides the patch notes modal.
+       */
+      hidePatchNotes() {
+        if (!this.dom.modalOverlay || !this.dom.patchNotesModal) return;
+        if (this.dom.hidePatchNotesCheckbox && this.dom.hidePatchNotesCheckbox.checked) {
+          localStorage.setItem('lastSeenVersion', this.config.CURRENT_VERSION);
+        }
+        this.dom.modalOverlay.style.display = 'none';
+        this.dom.patchNotesModal.style.display = 'none';
+      },
 
-  handleMouseDown(e) { // ... same as 0.2.7.8 ...
-    if (e.button===0) {
-      this.state.dragging = true;
-      this.state.lastX = e.clientX;
-      this.state.lastY = e.clientY;
-      this.state.clickStartX = e.clientX;
-      this.state.clickStartY = e.clientY;
-    }
-   },
+      // --- MINIMAP INTERACTION HANDLERS (REVISED FOR CORRECT DRAGGING) ---
+      /**
+       * Converts a mouse event over the minimap to a world coordinate.
+       * @param {MouseEvent} e - The mouse event.
+       * @returns {number[]} An array containing [worldX, worldY].
+       */
+      minimapToWorld(e) {
+        if (!this.dom.minimapCanvas) return [0, 0];
+        const { minimap, N } = this.config;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = this.dom.minimapCanvas.getBoundingClientRect();
+        const clickX = (e.clientX - rect.left) * dpr;
+        const clickY = (e.clientY - rect.top) * dpr;
+        const padding = minimap.padding * dpr;
+        const minimapScale = this.state.minimapActualScale;
+        if (minimapScale <= 0) return [0, 0];
 
-  handleMouseMove(e) { // ... same as 0.2.7.8 ...
-    if (!this.state.dragging) return;
-    this.state.cam.x += e.clientX - this.state.lastX;
-    this.state.cam.y += e.clientY - this.state.lastY;
-    this.state.lastX = e.clientX;
-    this.state.lastY = e.clientY;
-    this.clampCamera();
-   },
+        const localClickedWorldX = (clickX - padding) / minimapScale;
+        const localClickedWorldY = (clickY - padding) / minimapScale;
+        const worldX = localClickedWorldX + this.state.minimapWorldOffsetX;
+        const worldY = localClickedWorldY + this.state.minimapWorldOffsetY;
 
-  handleCanvasClick(e) { // ... same as 0.2.7.8 ...
-    const dist = Math.hypot(e.clientX - this.state.clickStartX, e.clientY - this.state.clickStartY);
-    if (dist > 5) return;
-    
-    const [worldX, worldY] = this.screenToWorld(e.offsetX, e.offsetY);
-    if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
-      const building = this.getBuildingAt(worldX, worldY);
-      this.state.selection = building || { x: worldX, y: worldY };
-      if(this.state.selection) this.state.selection.pingStart = performance.now(); 
-      if(this.dom.inpX && this.state.selection) this.dom.inpX.value = this.state.selection.x;
-      if(this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
-    }
-   },
+        return [
+          Math.max(0, Math.min(N - 1, worldX)),
+          Math.max(0, Math.min(N - 1, worldY))
+        ];
+      },
 
-  handleWheel(e) { // ... same as 0.2.7.8 ...
-    e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.2 : 0.8;
-    let targetScale = this.state.cam.scale * factor;
-    targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-    this.animateZoom(targetScale, e.offsetX, e.offsetY, 150); 
-   },
-
-  handleDblClick(e) { // ... same as 0.2.7.8 ...
-    e.preventDefault();
-    const factor = e.button === 2 ? 0.5 : 2.0;
-    let targetScale = this.state.cam.scale * factor;
-    targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-    this.animateZoom(targetScale, e.offsetX, e.offsetY, 150);
-   },
-
-  handleZoomSlider() { // ... same as 0.2.7.8 ...
-    if(!this.dom.zoomSlider) return;
-    const pct = Number(this.dom.zoomSlider.value);
-    let targetScale = (pct / 100) * this.config.baseScale;
-    targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-    const cx = this.dom.canvas.width / 2, cy = this.dom.canvas.height / 2;
-    this.animateZoom(targetScale, cx, cy, 0); 
-    this.updateFloatingZoomLabel();
-   },
-
-  handleKeyDown(e) { // ... same as 0.2.7.8 ...
-    if (e.target && e.target.tagName==='INPUT') return;
-    switch(e.key) {
-      case '+': case '=': this.changeZoomBy(+1); break;
-      case '-': this.changeZoomBy(-1); break;
-      case 'q': this.changeZoomBy(+1); break;
-      case 'e': this.changeZoomBy(-1); break;
-      case 'ArrowUp':    this.state.cam.y += this.config.tileW * 5; this.clampCamera(); break;
-      case 'ArrowDown':  this.state.cam.y -= this.config.tileW * 5; this.clampCamera(); break;
-      case 'ArrowLeft':  this.state.cam.x += this.config.tileW * 5; this.clampCamera(); break;
-      case 'ArrowRight': this.state.cam.x -= this.config.tileW * 5; this.clampCamera(); break;
-    }
-   },
-
-  handleTouchStart(e) { // ... same as 0.2.7.8 ...
-    e.preventDefault();
-    if (e.touches.length === 1) {
-        this.state.touchMode = 'pan';
-        const t = e.touches[0];
-        this.state.lastX = t.clientX;
-        this.state.lastY = t.clientY;
-        this.state.clickStartX = t.clientX;
-        this.state.clickStartY = t.clientY;
-        this.state.touchStartTime = performance.now();
-    } else if (e.touches.length === 2) {
-        this.state.touchMode = 'pinch';
-        const [a,b] = e.touches;
-        this.state.startDist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
-        this.state.startScale = this.state.cam.scale;
-        this.state.pinchCenter = { x: (a.clientX + b.clientX)/2, y: (a.clientY + b.clientY)/2 };
+      /**
+       * Instantly centers the main map view on a specific world coordinate without animation.
+       */
+      centerOnWorldCoord(worldX, worldY) {
+        const [screenX, screenY] = this.worldToScreen(worldX, worldY);
+        this.state.cam.x = this.dom.canvas.width / 2 - screenX * this.state.cam.scale;
+        this.state.cam.y = this.dom.canvas.height / 2 - screenY * this.state.cam.scale;
+        this.clampCamera();
+      },
+      
+      /**
+       * Handles mouse down on the minimap to prepare for a click or drag.
+       */
+      handleMinimapMouseDown(e) {
+        this.state.isMinimapDragging = true;
+        this.state.minimapClickStartPos = { x: e.clientX, y: e.clientY };
         
+        // Store the camera's initial position when the drag starts
         this.state.startCamX = this.state.cam.x;
         this.state.startCamY = this.state.cam.y;
-    }
-   },
+      },
 
-  handleTouchMove(e) { // ... same as 0.2.7.8 ...
-    e.preventDefault();
-    if (this.state.animationId) {
-        cancelAnimationFrame(this.state.animationId);
-        this.state.animationId = null;
-    }
+      /**
+       * Handles mouse move on the minimap to pan the map during a drag.
+       */
+      handleMinimapMouseMove(e) {
+        if (!this.state.isMinimapDragging) return;
 
-    if (this.state.touchMode === 'pan' && e.touches.length === 1) {
-        const t = e.touches[0];
-        this.state.cam.x += t.clientX - this.state.lastX;
-        this.state.cam.y += t.clientY - this.state.lastY;
-        this.state.lastX = t.clientX; this.state.lastY = t.clientY;
+        const dpr = window.devicePixelRatio || 1;
+        // Sensitivity can be tuned in the config. A higher value makes dragging faster.
+        const sensitivity = this.config.minimap.dragSensitivity || 1.0;
+
+        // This ratio is the key to scaling the drag speed correctly.
+        // It figures out how many main canvas pixels to pan for every one minimap pixel dragged.
+        const panRatio = this.state.cam.scale / (this.state.minimapActualScale / dpr);
+
+        // Get the mouse movement delta (how far the mouse has moved since the drag started).
+        const mouseDeltaX = e.clientX - this.state.minimapClickStartPos.x;
+        const mouseDeltaY = e.clientY - this.state.minimapClickStartPos.y;
+
+        // This is the corrected vector transformation.
+        // It converts the flat, orthogonal drag vector from the minimap into a pan
+        // vector that is correctly rotated and scaled for the isometric view.
+        const panDeltaX = (mouseDeltaX - mouseDeltaY) * 0.5;
+        const panDeltaY = (mouseDeltaX + mouseDeltaY) * 0.25;
+
+        // Apply the transformed and scaled pan to the camera's initial position.
+        // Note: We use "+" here because dragging the map content to the right
+        // requires moving the camera itself to the right in screen space.
+        this.state.cam.x = this.state.startCamX + panDeltaX * panRatio * sensitivity;
+        this.state.cam.y = this.state.startCamY + panDeltaY * panRatio * sensitivity;
+
         this.clampCamera();
-    } else if (this.state.touchMode === 'pinch' && e.touches.length === 2) {
-        const [a,b] = e.touches;
-        const dist = Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
+      },
 
-        if (this.state.startDist === 0) {
-            return; 
-        }
-
-        let newScale = this.state.startScale * (dist / this.state.startDist);
+      /**
+       * Handles mouse up to end a drag, and determines if it was a click or a drag.
+       */
+      handleMinimapMouseUp(e) {
+        if (!this.state.isMinimapDragging) return;
+        this.state.isMinimapDragging = false;
         
-        this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct/100 * this.config.baseScale, newScale));
-        if (isNaN(this.state.cam.scale)) this.state.cam.scale = this.state.startScale; 
+        const dist = Math.hypot(
+          e.clientX - this.state.minimapClickStartPos.x,
+          e.clientY - this.state.minimapClickStartPos.y
+        );
 
-        const safeStartScale = (this.state.startScale === 0 || isNaN(this.state.startScale)) ? this.state.minFitScale : this.state.startScale;
+        // If the mouse barely moved, treat it as a click and do an animated jump.
+        if (dist < 5) {
+          const [worldX, worldY] = this.minimapToWorld(e);
+          const [screenX, screenY] = this.worldToScreen(worldX, worldY);
+          const targetCamX = this.dom.canvas.width / 2 - screenX * this.state.cam.scale;
+          const targetCamY = this.dom.canvas.height / 2 - screenY * this.state.cam.scale;
+          this.animatePanZoom(this.state.cam.scale, targetCamX, targetCamY, 200);
+        }
+      },
 
-        const wx = (this.state.pinchCenter.x - this.state.startCamX) / safeStartScale;
-        const wy = (this.state.pinchCenter.y - this.state.startCamY) / safeStartScale;
+      /**
+       * Handles mouse down event for starting a drag.
+       */
+      handleMouseDown(e) {
+        if (e.button === 0) {
+          this.state.dragging = true;
+          this.state.lastX = e.clientX;
+          this.state.lastY = e.clientY;
+          this.state.clickStartX = e.clientX;
+          this.state.clickStartY = e.clientY;
+        }
+      },
 
-        if (isNaN(wx) || isNaN(wy)) { 
-             this.state.cam.x = this.state.startCamX;
-             this.state.cam.y = this.state.startCamY;
-        } else {
+      /**
+       * Handles mouse move for panning the camera.
+       */
+      handleMouseMove(e) {
+        if (!this.state.dragging) return;
+        this.state.cam.x += e.clientX - this.state.lastX;
+        this.state.cam.y += e.clientY - this.state.lastY;
+        this.state.lastX = e.clientX;
+        this.state.lastY = e.clientY;
+        this.clampCamera();
+      },
+
+      /**
+       * Handles canvas click for selecting tiles.
+       */
+      handleCanvasClick(e) {
+        const dist = Math.hypot(e.clientX - this.state.clickStartX, e.clientY - this.state.clickStartY);
+        if (dist > 5) return; // Don't register as click if mouse moved too far
+        const [worldX, worldY] = this.screenToWorld(e.offsetX, e.offsetY);
+        if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
+          const building = this.getBuildingAt(worldX, worldY);
+          this.state.selection = building || { x: worldX, y: worldY };
+          if (this.state.selection) this.state.selection.pingStart = performance.now();
+          if (this.dom.inpX && this.state.selection) this.dom.inpX.value = this.state.selection.x;
+          if (this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
+        }
+      },
+
+      /**
+       * Handles mouse wheel for zooming.
+       */
+      handleWheel(e) {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.2 : 0.8;
+        let targetScale = this.state.cam.scale * factor;
+        targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
+        this.animateZoom(targetScale, e.offsetX, e.offsetY, 150);
+      },
+
+      /**
+       * Handles double click for quick zooming.
+       */
+      handleDblClick(e) {
+        e.preventDefault();
+        const factor = e.button === 2 ? 0.5 : 2.0;
+        let targetScale = this.state.cam.scale * factor;
+        targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
+        this.animateZoom(targetScale, e.offsetX, e.offsetY, 150);
+      },
+
+      /**
+       * Handles the zoom slider input.
+       */
+      handleZoomSlider() {
+        if (!this.dom.zoomSlider) return;
+        const pct = Number(this.dom.zoomSlider.value);
+        let targetScale = (pct / 100) * this.config.baseScale;
+        targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
+        const cx = this.dom.canvas.width / 2,
+          cy = this.dom.canvas.height / 2;
+        this.animateZoom(targetScale, cx, cy, 0);
+        this.updateFloatingZoomLabel();
+      },
+
+      /**
+       * Handles keyboard input for panning and zooming.
+       */
+      handleKeyDown(e) {
+        if (e.target && e.target.tagName === 'INPUT') return;
+        switch (e.key) {
+          case '+': case '=': this.changeZoomBy(+1); break;
+          case '-':           this.changeZoomBy(-1); break;
+          case 'q':           this.changeZoomBy(+1); break;
+          case 'e':           this.changeZoomBy(-1); break;
+          case 'ArrowUp':     this.state.cam.y += this.config.tileW * 5; this.clampCamera(); break;
+          case 'ArrowDown':   this.state.cam.y -= this.config.tileW * 5; this.clampCamera(); break;
+          case 'ArrowLeft':   this.state.cam.x += this.config.tileW * 5; this.clampCamera(); break;
+          case 'ArrowRight':  this.state.cam.x -= this.config.tileW * 5; this.clampCamera(); break;
+        }
+      },
+
+      /**
+       * Handles touch events for mobile panning and pinching.
+       */
+      handleTouchStart(e) {
+        e.preventDefault();
+        if (e.touches.length === 1) {
+          this.state.touchMode = 'pan';
+          const t = e.touches[0];
+          this.state.lastX = t.clientX;
+          this.state.lastY = t.clientY;
+          this.state.clickStartX = t.clientX;
+          this.state.clickStartY = t.clientY;
+          this.state.touchStartTime = performance.now();
+        } else if (e.touches.length === 2) {
+          this.state.touchMode = 'pinch';
+          const [a, b] = e.touches;
+          this.state.startDist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+          this.state.startScale = this.state.cam.scale;
+          this.state.pinchCenter = { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
+          this.state.startCamX = this.state.cam.x;
+          this.state.startCamY = this.state.cam.y;
+        }
+      },
+      handleTouchMove(e) {
+        e.preventDefault();
+        if (this.state.animationId) {
+          cancelAnimationFrame(this.state.animationId);
+          this.state.animationId = null;
+        }
+        if (this.state.touchMode === 'pan' && e.touches.length === 1) {
+          const t = e.touches[0];
+          this.state.cam.x += t.clientX - this.state.lastX;
+          this.state.cam.y += t.clientY - this.state.lastY;
+          this.state.lastX = t.clientX;
+          this.state.lastY = t.clientY;
+          this.clampCamera();
+        } else if (this.state.touchMode === 'pinch' && e.touches.length === 2) {
+          const [a, b] = e.touches;
+          const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+          if (this.state.startDist === 0) return;
+          let newScale = this.state.startScale * (dist / this.state.startDist);
+          this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, newScale));
+          if (isNaN(this.state.cam.scale)) this.state.cam.scale = this.state.startScale;
+          const safeStartScale = (this.state.startScale === 0 || isNaN(this.state.startScale)) ? this.state.minFitScale : this.state.startScale;
+          const wx = (this.state.pinchCenter.x - this.state.startCamX) / safeStartScale;
+          const wy = (this.state.pinchCenter.y - this.state.startCamY) / safeStartScale;
+          if (isNaN(wx) || isNaN(wy)) {
+            this.state.cam.x = this.state.startCamX;
+            this.state.cam.y = this.state.startCamY;
+          } else {
             this.state.cam.x = this.state.pinchCenter.x - wx * this.state.cam.scale;
             this.state.cam.y = this.state.pinchCenter.y - wy * this.state.cam.scale;
+          }
+          this.clampCamera();
         }
-        this.clampCamera();
-    }
-   },
-
-  handleTouchEnd(e) { // ... same as 0.2.7.8 ...
-    if (this.state.touchMode === 'pan' && e.changedTouches.length === 1) {
-      const t = e.changedTouches[0];
-      const dist = Math.hypot(t.clientX - this.state.clickStartX, t.clientY - this.state.clickStartY);
-      const duration = performance.now() - this.state.touchStartTime;
-      if (duration < 200 && dist < 10) {
-          const [worldX, worldY] = this.screenToWorld(t.clientX, t.clientY);
-          if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
+      },
+      handleTouchEnd(e) {
+        if (this.state.touchMode === 'pan' && e.changedTouches.length === 1) {
+          const t = e.changedTouches[0];
+          const dist = Math.hypot(t.clientX - this.state.clickStartX, t.clientY - this.state.clickStartY);
+          const duration = performance.now() - this.state.touchStartTime;
+          if (duration < 200 && dist < 10) { // It was a tap
+            const [worldX, worldY] = this.screenToWorld(t.clientX, t.clientY);
+            if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
               const building = this.getBuildingAt(worldX, worldY);
               this.state.selection = building || { x: worldX, y: worldY };
-              if(this.state.selection) this.state.selection.pingStart = performance.now(); 
-              if(this.dom.inpX && this.state.selection) this.dom.inpX.value = this.state.selection.x;
-              if(this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
+              if (this.state.selection) this.state.selection.pingStart = performance.now();
+              if (this.dom.inpX && this.state.selection) this.dom.inpX.value = this.state.selection.x;
+              if (this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
+            }
           }
-      }
-    }
-    if (e.touches.length < 2) this.state.touchMode = null;
-   },
-
-  doSearch() { // ... same as 0.2.7.8 ...
-    if(!this.dom.inpX || !this.dom.inpY) return;
-    const x = +this.dom.inpX.value, y = +this.dom.inpY.value;
-    if (x >= 0 && y >= 0 && x < this.config.N && y < this.config.N) {
-      this.state.selection = this.getBuildingAt(x, y) || { x, y };
-      if(this.state.selection) this.state.selection.pingStart = performance.now(); 
-      const targetScale = (150 / 100) * this.config.baseScale;
-      const [screenX, screenY] = this.worldToScreen(x, y);
-      const targetCamX = this.dom.canvas.width/2 - screenX * targetScale;
-      const targetCamY = this.dom.canvas.height/2 - screenY * targetScale;
-      this.animatePanZoom(targetScale, targetCamX, targetCamY); 
-    }
-   },
-  
-  centerOn(x,y) { // ... same as 0.2.7.8 ...
-    const [lx, ly] = this.worldToScreen(x,y);
-    this.state.cam.x = this.dom.canvas.width*0.5 - lx*this.state.cam.scale;
-    this.state.cam.y = this.dom.canvas.height*0.5 - ly*this.state.cam.scale;
-    this.clampCamera();
-   },
-  
-  zoomToFit() { // ... same as 0.2.7.8 ...
-    const targetScale = this.state.minFitScale;
-    const targetCamX = this.dom.canvas.width / 2;
-    const targetCamY = this.dom.canvas.height / 2 + ((this.config.N - 1) * this.config.tileH / 2) * targetScale;
-    this.animatePanZoom(targetScale, targetCamX, targetCamY, 200); 
-   },
-  
-  resize() { // ... same as 0.2.7.8 ...
-    this.dom.canvas.width  = window.innerWidth;
-    this.dom.canvas.height = window.innerHeight;
-    
-    if (this.dom.minimapCanvas && this.config.minimap) { 
-        const dpr = window.devicePixelRatio || 1;
-        this.dom.minimapCanvas.width = this.config.minimap.width * dpr;
-        this.dom.minimapCanvas.height = this.config.minimap.height * dpr;
-        this.calculateBaseMinimapScale(); 
-    }
-
-    const mapTotalWidth = (this.config.N - 1) * this.config.tileW;
-    const mapTotalHeight = (this.config.N - 1) * this.config.tileH;
-
-    const safeMapTotalWidth = Math.max(1, mapTotalWidth);
-    const safeMapTotalHeight = Math.max(1, mapTotalHeight);
-
-    const scaleX = this.dom.canvas.width / safeMapTotalWidth;
-    const scaleY = this.dom.canvas.height / safeMapTotalHeight;
-    
-    let calculatedMinFit = Math.min(scaleX, scaleY) * 0.95; 
-    this.state.minFitScale = Math.max(0.1, calculatedMinFit); 
-    if (isNaN(this.state.minFitScale)) {
-        this.state.minFitScale = 0.1; 
-    }
-    
-    if (this.state.isInitialLoad) {
-        this.state.cam.scale = this.state.minFitScale; 
-        this.state.cam.x = this.dom.canvas.width / 2;
-        this.state.cam.y = this.dom.canvas.height / 2 + ((this.config.N - 1) * this.config.tileH / 2) * this.state.cam.scale;
-        this.clampCamera(); 
-        this.state.isInitialLoad = false;
-    } else {
-        this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
-        if(isNaN(this.state.cam.scale)) { 
-             this.state.cam.scale = this.state.minFitScale; 
         }
-        this.clampCamera();
-    }
-   },
+        if (e.touches.length < 2) this.state.touchMode = null;
+      },
 
-  clampCamera() { // ... same as 0.2.7.8 ...
-    const s = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
-    const canvasW = this.dom.canvas.width;
-    const canvasH = this.dom.canvas.height;
-    
-    const mapScreenW = (this.config.N - 1) * this.config.tileW * s;
-    const mapScreenH = (this.config.N - 1) * this.config.tileH * s;
-
-    if (mapScreenW > canvasW) {
-        const minCamX = canvasW - mapScreenW / 2;
-        const maxCamX = mapScreenW / 2;
-        this.state.cam.x = Math.max(minCamX, Math.min(maxCamX, this.state.cam.x));
-    } else {
-        this.state.cam.x = canvasW / 2;
-    }
-
-    if (mapScreenH > canvasH) {
-        const minCamY = canvasH; 
-        const maxCamY = mapScreenH; 
-        this.state.cam.y = Math.max(minCamY, Math.min(maxCamY, this.state.cam.y));
-    } else {
-        this.state.cam.y = canvasH / 2 + mapScreenH / 2;
-    }
-    if(isNaN(this.state.cam.x)) this.state.cam.x = canvasW / 2; 
-    if(isNaN(this.state.cam.y)) this.state.cam.y = canvasH / 2; 
-   },
-
-  changeZoomBy(delta) { // ... same as 0.2.7.8 ...
-    let currentPct = (this.state.cam.scale / this.config.baseScale) * 100;
-    if(isNaN(currentPct)) currentPct = (this.state.minFitScale / this.config.baseScale) * 100;
-
-    const changeAmt = delta > 0 ? currentPct * 0.25 : currentPct * -0.2;
-    let targetScale = ((currentPct + changeAmt) / 100) * this.config.baseScale;
-    targetScale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, targetScale));
-    if(isNaN(targetScale)) targetScale = this.state.cam.scale; 
-
-    const cx = this.dom.canvas.width / 2, cy = this.dom.canvas.height / 2;
-    this.animateZoom(targetScale, cx, cy, 150); 
-   },
-
-  animateZoom(targetScale, anchorX, anchorY, duration=150) { // ... same as 0.2.7.8 ...
-    if (this.state.animationId) {
-        cancelAnimationFrame(this.state.animationId);
-    }
-    const startScale = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
-    const startX = this.state.cam.x, startY = this.state.cam.y;
-    const start = performance.now();
-
-    if (startScale === 0) { 
-        console.error("animateZoom called with startScale 0");
-        this.state.cam.scale = targetScale; 
-        this.clampCamera();
-        return;
-    }
-
-    const wx = (anchorX - startX)/startScale;
-    const wy = (anchorY - startY)/startScale;
-
-    if (isNaN(wx) || isNaN(wy)) { 
-        this.state.cam.scale = targetScale;
-        this.clampCamera();
-        return;
-    }
-
-    const step = (now) => {
-      const t = duration === 0 ? 1 : Math.min(1, (now - start)/duration);
-      const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; 
-      this.state.cam.scale = startScale + (targetScale - startScale)*k;
-      this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale); 
-      if(isNaN(this.state.cam.scale)) this.state.cam.scale = startScale; 
-
-      this.state.cam.x = anchorX - wx * this.state.cam.scale;
-      this.state.cam.y = anchorY - wy * this.state.cam.scale;
-      this.clampCamera();
-      if (t < 1) {
-          this.state.animationId = requestAnimationFrame(step);
-      } else {
-          this.state.animationId = null;
-      }
-    };
-    this.state.animationId = requestAnimationFrame(step);
-   },
-
-  animatePanZoom(targetScale, targetX, targetY, duration=300) { // ... same as 0.2.7.8 ...
-    if (this.state.animationId) {
-        cancelAnimationFrame(this.state.animationId);
-    }
-    const startScale = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
-    const startX = this.state.cam.x, startY = this.state.cam.y;
-    const start = performance.now();
-    const step = (now) => {
-        const t = Math.min(1, (now - start)/duration);
-        const k = t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; 
-        this.state.cam.scale = startScale + (targetScale - startScale)*k;
-        this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
-        if(isNaN(this.state.cam.scale)) this.state.cam.scale = startScale; 
-
-        this.state.cam.x = startX + (targetX - startX)*k;
-        this.state.cam.y = startY + (targetY - startY)*k;
-        this.clampCamera();
-        if (t < 1) {
-            this.state.animationId = requestAnimationFrame(step);
+      /**
+       * Handles window resize events to recalculate canvas dimensions and minimum scale.
+       */
+      resize() {
+        this.dom.canvas.width = window.innerWidth;
+        this.dom.canvas.height = window.innerHeight;
+        if (this.dom.minimapCanvas && this.config.minimap) {
+          const dpr = window.devicePixelRatio || 1;
+          this.dom.minimapCanvas.width = this.config.minimap.width * dpr;
+          this.dom.minimapCanvas.height = this.config.minimap.height * dpr;
+          this.calculateBaseMinimapScale();
+        }
+        const mapTotalWidth = (this.config.N - 1) * this.config.tileW;
+        const mapTotalHeight = (this.config.N - 1) * this.config.tileH;
+        const safeMapTotalWidth = Math.max(1, mapTotalWidth);
+        const safeMapTotalHeight = Math.max(1, mapTotalHeight);
+        const scaleX = this.dom.canvas.width / safeMapTotalWidth;
+        const scaleY = this.dom.canvas.height / safeMapTotalHeight;
+        let calculatedMinFit = Math.min(scaleX, scaleY) * 0.95;
+        this.state.minFitScale = Math.max(0.1, calculatedMinFit);
+        if (isNaN(this.state.minFitScale)) {
+          this.state.minFitScale = 0.1;
+        }
+        if (this.state.isInitialLoad) {
+          this.state.cam.scale = this.state.minFitScale;
+          this.state.cam.x = this.dom.canvas.width / 2;
+          this.state.cam.y = this.dom.canvas.height / 2 + ((this.config.N - 1) * this.config.tileH / 2) * this.state.cam.scale;
+          this.clampCamera();
+          this.state.isInitialLoad = false;
         } else {
-            this.state.animationId = null;
+          this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
+          if (isNaN(this.state.cam.scale)) {
+            this.state.cam.scale = this.state.minFitScale;
+          }
+          this.clampCamera();
         }
-    };
-    this.state.animationId = requestAnimationFrame(step);
-   },
-  
-  updateFloatingZoomLabel() { // ... same as 0.2.7.8 ...
-    if(!this.dom.zoomSlider || !this.dom.floatingZoomLabel) return;
-    const slider = this.dom.zoomSlider;
-    const label = this.dom.floatingZoomLabel;
-    const min = parseInt(slider.min, 10);
-    const max = parseInt(slider.max, 10);
-    const val = parseInt(slider.value, 10);
-
-    if (max === min) { 
-        label.style.display = 'none';
-        return;
-    }
-
-    const percent = (val - min) / (max - min);
-    const thumbHeight = 15;
-    const trackHeight = slider.offsetHeight;
-    const topPos = (1 - percent) * (trackHeight - thumbHeight) + (thumbHeight / 2);
-    label.style.top = `${topPos}px`;
-    label.textContent = `Zoom: ${val}%`;
-    label.style.display = 'block';
-    clearTimeout(this.state.hideLabelTimeout);
-    this.state.hideLabelTimeout = setTimeout(() => { label.style.display = 'none'; }, 1500);
-   },
-
-  handleMinimapClick(e) { // ... same as 0.2.7.8 ...
-    if (!this.dom.minimapCanvas) return;
-    const { minimap, N } = this.config;
-    const dpr = window.devicePixelRatio || 1;
-    const rect = this.dom.minimapCanvas.getBoundingClientRect();
-    const clickX = (e.clientX - rect.left) * dpr; 
-    const clickY = (e.clientY - rect.top) * dpr;
-
-    const padding = minimap.padding * dpr; 
-    const minimapScale = this.state.minimapActualScale;
-
-    if (minimapScale <= 0) { 
-        console.error("Minimap scale is zero or negative, cannot process click.");
-        return;
-    }
-
-    let localClickedWorldX = (clickX - padding) / minimapScale;
-    let localClickedWorldY = (clickY - padding) / minimapScale;
-
-    let worldX = localClickedWorldX + this.state.minimapWorldOffsetX;
-    let worldY = localClickedWorldY + this.state.minimapWorldOffsetY;
-
-    worldX = Math.max(0, Math.min(N - 1, Math.round(worldX)));
-    worldY = Math.max(0, Math.min(N - 1, Math.round(worldY)));
-    
-    const [screenX, screenY] = this.worldToScreen(worldX, worldY);
-    const targetCamX = this.dom.canvas.width/2 - screenX * this.state.cam.scale;
-    const targetCamY = this.dom.canvas.height/2 - screenY * this.state.cam.scale;
-    this.animatePanZoom(this.state.cam.scale, targetCamX, targetCamY, 200);
-   },
-
-  drawMinimap(viewportCorners) { 
-    if (!this.dom.minimapCtx || this.state.baseMinimapScale <= 0 || !this.state.isMinimapVisible || !this.config.minimap) return; 
-
-    const mmCtx = this.dom.minimapCtx;
-    const { minimap, N, biomeRegions, biomeColors, baseScale: mainBaseScale } = this.config;
-    const { cam: mainCam, baseMinimapScale } = this.state;
-    const dpr = window.devicePixelRatio || 1;
-    
-    const canvasWidth = this.dom.minimapCanvas.width; 
-    const canvasHeight = this.dom.minimapCanvas.height;
-    const mPadding = (minimap.padding || 0) * dpr; 
-
-    const mainZoomRatio = mainCam.scale / mainBaseScale; 
-    let currentMinimapZoomFactor = minimap.zoomFactorMin;
-    if (mainZoomRatio > minimap.mainMapZoomThresholdForMinimapZoom) {
-        const maxMainZoomRatio = this.config.maxPct / 100;
-        let progress = (mainZoomRatio - minimap.mainMapZoomThresholdForMinimapZoom) / 
-                       (maxMainZoomRatio - minimap.mainMapZoomThresholdForMinimapZoom);
-        progress = Math.max(0, Math.min(1, progress)); 
-        currentMinimapZoomFactor = minimap.zoomFactorMin + progress * (minimap.zoomFactorMax - minimap.zoomFactorMin);
-    }
-    
-    const mScale = baseMinimapScale * currentMinimapZoomFactor;
-    this.state.minimapActualScale = mScale; 
-
-    mmCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-    mmCtx.fillStyle = minimap.bgColor;
-    mmCtx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-    const [minimapViewCenterX, minimapViewCenterY] = this.screenToWorld(this.dom.canvas.width / 2, this.dom.canvas.height / 2);
-    const minimapWorldWidthVisible = (canvasWidth - 2 * mPadding) / mScale;        
-    const minimapWorldHeightVisible = (canvasHeight - 2 * mPadding) / mScale;
+      },
       
-    const worldOffsetX = minimapViewCenterX - (minimapWorldWidthVisible / 2);
-    const worldOffsetY = minimapViewCenterY - (minimapWorldHeightVisible / 2);
-    
-    this.state.minimapWorldOffsetX = worldOffsetX; 
-    this.state.minimapWorldOffsetY = worldOffsetY; 
+      /**
+       * Pans and zooms the camera to the specified coordinates.
+       */
+      doSearch() {
+        if (!this.dom.inpX || !this.dom.inpY) return;
+        const x = +this.dom.inpX.value,
+          y = +this.dom.inpY.value;
+        if (x >= 0 && y >= 0 && x < this.config.N && y < this.config.N) {
+          this.state.selection = this.getBuildingAt(x, y) || { x, y };
+          if (this.state.selection) this.state.selection.pingStart = performance.now();
+          const targetScale = (150 / 100) * this.config.baseScale;
+          const [screenX, screenY] = this.worldToScreen(x, y);
+          const targetCamX = this.dom.canvas.width / 2 - screenX * targetScale;
+          const targetCamY = this.dom.canvas.height / 2 - screenY * targetScale;
+          this.animatePanZoom(targetScale, targetCamX, targetCamY);
+        }
+      },
+      
+      /**
+       * Updates the floating label for the vertical zoom slider.
+       */
+      updateFloatingZoomLabel() {
+        if (!this.dom.zoomSlider || !this.dom.floatingZoomLabel) return;
+        const slider = this.dom.zoomSlider;
+        const label = this.dom.floatingZoomLabel;
+        const min = parseInt(slider.min, 10);
+        const max = parseInt(slider.max, 10);
+        const val = parseInt(slider.value, 10);
+        if (max === min) {
+          label.style.display = 'none';
+          return;
+        }
+        const percent = (val - min) / (max - min);
+        const thumbHeight = 15;
+        const trackHeight = slider.offsetHeight;
+        const topPos = (1 - percent) * (trackHeight - thumbHeight) + (thumbHeight / 2);
+        label.style.top = `${topPos}px`;
+        label.textContent = `Zoom: ${val}%`;
+        label.style.display = 'block';
+        clearTimeout(this.state.hideLabelTimeout);
+        this.state.hideLabelTimeout = setTimeout(() => {
+          label.style.display = 'none';
+        }, 1500);
+      },
 
-    const biomeDrawOrder = ['badlands', 'plains', 'fertile']; 
-    for (const biomeName of biomeDrawOrder) { 
-        if (biomeRegions[biomeName]) { 
+      // --- RENDER & DRAWING ---
+      /**
+       * Draws the minimap and the viewport indicator on it.
+       */
+      drawMinimap(viewportCorners) {
+        if (!this.dom.minimapCtx || this.state.baseMinimapScale <= 0 || !this.state.isMinimapVisible || !this.config.minimap) return;
+        const mmCtx = this.dom.minimapCtx;
+        const { minimap, N, biomeRegions, biomeColors, baseScale: mainBaseScale } = this.config;
+        const { cam: mainCam, baseMinimapScale } = this.state;
+        const dpr = window.devicePixelRatio || 1;
+        const canvasWidth = this.dom.minimapCanvas.width;
+        const canvasHeight = this.dom.minimapCanvas.height;
+        const mPadding = (minimap.padding || 0) * dpr;
+        const mainZoomRatio = mainCam.scale / mainBaseScale;
+        let currentMinimapZoomFactor = minimap.zoomFactorMin;
+        if (mainZoomRatio > minimap.mainMapZoomThresholdForMinimapZoom) {
+          const maxMainZoomRatio = this.config.maxPct / 100;
+          let progress = (mainZoomRatio - minimap.mainMapZoomThresholdForMinimapZoom) / (maxMainZoomRatio - minimap.mainMapZoomThresholdForMinimapZoom);
+          progress = Math.max(0, Math.min(1, progress));
+          currentMinimapZoomFactor = minimap.zoomFactorMin + progress * (minimap.zoomFactorMax - minimap.zoomFactorMin);
+        }
+        const mScale = baseMinimapScale * currentMinimapZoomFactor;
+        this.state.minimapActualScale = mScale;
+        mmCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+        mmCtx.fillStyle = minimap.bgColor;
+        mmCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+        const [minimapViewCenterX, minimapViewCenterY] = this.screenToWorld(this.dom.canvas.width / 2, this.dom.canvas.height / 2);
+        const minimapWorldWidthVisible = (canvasWidth - 2 * mPadding) / mScale;
+        const minimapWorldHeightVisible = (canvasHeight - 2 * mPadding) / mScale;
+        const worldOffsetX = minimapViewCenterX - (minimapWorldWidthVisible / 2);
+        const worldOffsetY = minimapViewCenterY - (minimapWorldHeightVisible / 2);
+        this.state.minimapWorldOffsetX = worldOffsetX;
+        this.state.minimapWorldOffsetY = worldOffsetY;
+        const biomeDrawOrder = ['badlands', 'plains', 'fertile'];
+        for (const biomeName of biomeDrawOrder) {
+          if (biomeRegions[biomeName]) {
             const region = biomeRegions[biomeName];
             mmCtx.fillStyle = biomeColors[biomeName];
             const x = mPadding + (region.x1 - worldOffsetX) * mScale;
@@ -1414,399 +1618,352 @@ const KingshotPlanner = {
             const w = (region.x2 - region.x1 + 1) * mScale;
             const h = (region.y2 - region.y1 + 1) * mScale;
             mmCtx.fillRect(x, y, w, h);
+          }
         }
-    }
-    
-    (this.state.baseMap.defaultBuildings || []).forEach(b => {
-        let buildingFillStyle = null;
-        if (b.displayName === "King's Castle") {
+        (this.state.baseMap.defaultBuildings || []).forEach(b => {
+          let buildingFillStyle = null;
+          if (b.displayName === "King's Castle") {
             buildingFillStyle = minimap.kingCastleColor;
-        } else if (b.displayName.startsWith("Fortress")) {
-            buildingFillStyle = this.config.ALLIANCE_RSS_STYLES.stone.borderColor; 
-        }
-        
-        if(buildingFillStyle){
+          } else if (b.displayName.startsWith("Fortress")) {
+            buildingFillStyle = minimap.fortressColor;
+          } else if (b.displayName.startsWith("Sanctuary")) {
+            buildingFillStyle = minimap.sanctuaryColor;
+          }
+          if (buildingFillStyle) {
             mmCtx.fillStyle = buildingFillStyle;
             const bx = mPadding + (b.x - worldOffsetX) * mScale;
             const by = mPadding + (b.y - worldOffsetY) * mScale;
-            const bw = Math.max(1 * dpr, b.w * mScale); 
-            const bh = Math.max(1 * dpr, b.h * mScale); 
+            const bw = Math.max(1 * dpr, b.w * mScale);
+            const bh = Math.max(1 * dpr, b.h * mScale);
             mmCtx.fillRect(bx, by, bw, bh);
-        }
-    });
-
-    if (viewportCorners) {
-        const P0 = { x: mPadding + (viewportCorners.tl.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.tl.y - worldOffsetY) * mScale }; // Top-Left
-        const P1 = { x: mPadding + (viewportCorners.tr.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.tr.y - worldOffsetY) * mScale }; // Top-Right
-        const P2 = { x: mPadding + (viewportCorners.br.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.br.y - worldOffsetY) * mScale }; // Bottom-Right
-        const P3 = { x: mPadding + (viewportCorners.bl.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.bl.y - worldOffsetY) * mScale }; // Bottom-Left
-
-        if ([P0,P1,P2,P3].every(p => !isNaN(p.x) && !isNaN(p.y))) {
+          }
+        });
+        if (viewportCorners) {
+          const P0 = { x: mPadding + (viewportCorners.tl.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.tl.y - worldOffsetY) * mScale };
+          const P1 = { x: mPadding + (viewportCorners.tr.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.tr.y - worldOffsetY) * mScale };
+          const P2 = { x: mPadding + (viewportCorners.br.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.br.y - worldOffsetY) * mScale };
+          const P3 = { x: mPadding + (viewportCorners.bl.x - worldOffsetX) * mScale, y: mPadding + (viewportCorners.bl.y - worldOffsetY) * mScale };
+          if ([P0, P1, P2, P3].every(p => !isNaN(p.x) && !isNaN(p.y))) {
             mmCtx.fillStyle = minimap.viewportFillColor;
             mmCtx.strokeStyle = minimap.viewportBorderColor;
-            mmCtx.lineWidth = 1.5 * dpr; 
-
+            mmCtx.lineWidth = 1.5 * dpr;
             mmCtx.beginPath();
-            mmCtx.moveTo(P0.x, P0.y); 
-            mmCtx.lineTo(P1.x, P1.y); 
-            mmCtx.lineTo(P2.x, P2.y); 
-            mmCtx.lineTo(P3.x, P3.y); 
+            mmCtx.moveTo(P0.x, P0.y);
+            mmCtx.lineTo(P1.x, P1.y);
+            mmCtx.lineTo(P2.x, P2.y);
+            mmCtx.lineTo(P3.x, P3.y);
             mmCtx.closePath();
             mmCtx.fill();
             mmCtx.stroke();
-
-            // --- Camera Icon Indicator (Redesigned & Repositioned) ---
-            // Place on the midpoint of the BOTTOM edge (P2-P3)
-            const placePt = { x: (P2.x + P3.x) / 2, y: (P2.y + P3.y) / 2 }; 
-            // Orient UPWARDS, towards the midpoint of the TOP edge (P0-P1)
+            const placePt = { x: (P2.x + P3.x) / 2, y: (P2.y + P3.y) / 2 };
             const targetPt = { x: (P0.x + P1.x) / 2, y: (P0.y + P1.y) / 2 };
-            
             let orientVecX = targetPt.x - placePt.x;
             let orientVecY = targetPt.y - placePt.y;
-            
             const orientMag = Math.sqrt(orientVecX * orientVecX + orientVecY * orientVecY);
-
             if (orientMag > 0.001) {
-                orientVecX /= orientMag; 
-                orientVecY /= orientMag;
-
-                mmCtx.save();
-                mmCtx.fillStyle = minimap.viewportCameraIconColor || 'rgba(30,30,30,0.95)';
-
-                const bodyW = 10 * dpr;
-                const bodyH = 7 * dpr;
-                const lensR = 3 * dpr;
-                const topButtonW = 4 * dpr;
-                const topButtonH = 2 * dpr;
-                const iconGap = 3 * dpr; 
-                
-                const shiftDistance = iconGap + lensR; 
-                
-                const cameraOriginX = placePt.x - orientVecX * shiftDistance;
-                const cameraOriginY = placePt.y - orientVecY * shiftDistance;
-
-                mmCtx.translate(cameraOriginX, cameraOriginY);
-                mmCtx.rotate(Math.atan2(orientVecY, orientVecX));
-                
-                mmCtx.fillRect(-bodyW, -bodyH/2, bodyW, bodyH);
-                mmCtx.beginPath();
-                mmCtx.arc(0, 0, lensR, 0, 2 * Math.PI);
-                mmCtx.fill();
-                mmCtx.fillRect(-bodyW/2 - topButtonW/2, -bodyH/2 - topButtonH, topButtonW, topButtonH);
-                
-                mmCtx.restore();
+              orientVecX /= orientMag;
+              orientVecY /= orientMag;
+              mmCtx.save();
+              mmCtx.fillStyle = minimap.viewportCameraIconColor || 'rgba(30,30,30,0.95)';
+              const bodyW = 10 * dpr, bodyH = 7 * dpr, lensR = 3 * dpr, topButtonW = 4 * dpr, topButtonH = 2 * dpr, iconGap = 3 * dpr;
+              const shiftDistance = iconGap + lensR;
+              const cameraOriginX = placePt.x - orientVecX * shiftDistance;
+              const cameraOriginY = placePt.y - orientVecY * shiftDistance;
+              mmCtx.translate(cameraOriginX, cameraOriginY);
+              mmCtx.rotate(Math.atan2(orientVecY, orientVecX));
+              mmCtx.fillRect(-bodyW, -bodyH / 2, bodyW, bodyH);
+              mmCtx.beginPath();
+              mmCtx.arc(0, 0, lensR, 0, 2 * Math.PI);
+              mmCtx.fill();
+              mmCtx.fillRect(-bodyW / 2 - topButtonW / 2, -bodyH / 2 - topButtonH, topButtonW, topButtonH);
+              mmCtx.restore();
             }
+          }
         }
-    }
-  },
+      },
 
-  drawTile(x, y, drawBorder = true) { // ... same as 0.2.7.8 ...
-    this.state.tileCount++;
-    const [sx,sy] = this.worldToScreen(x,y);
-    const { config } = this;
-    const ctx = this.dom.ctx;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy - config.tileH/2); ctx.lineTo(sx + config.tileW/2, sy);
-    ctx.lineTo(sx, sy + config.tileH/2); ctx.lineTo(sx - config.tileW/2, sy);
-    ctx.closePath();
-
-    ctx.fillStyle = config.biomeColors[this.getBiomeForTile(x, y)];
-    ctx.fill();
-    if (drawBorder) ctx.stroke();
-
-    const building = this.getBuildingAt(x, y);
-    if (building && building.hideCoordinates) return;
-
-    const currentCamScale = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
-    const pct = Math.round((currentCamScale / config.baseScale) * 100);
-    const showCoords = this.dom.coordsToggle ? this.dom.coordsToggle.checked : false;
-    const showThreshold = showCoords ? 80 : 200;
-
-    if (pct <= showThreshold) return;
-    
-    const text = `${x}, ${y}`;
-    let optimalFontSize = Math.min(
-      config.tileH * 0.8 * 0.5,
-      (config.tileW * 0.8 / (text.length || 1)) * 1.8 
-    ) * 0.7;
-    if ((optimalFontSize * currentCamScale) < 5) return;
-
-    ctx.fillStyle = config.textColor;
-    ctx.font = `${optimalFontSize}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, sx, sy);
-   },
-
-  drawChunk(chunk, drawBorder = true) { // ... same as 0.2.7.8 ...
-    this.state.tileCount += chunk.size * chunk.size;
-    const { x, y, size, biome } = chunk;
-    const { config } = this;
-    const ctx = this.dom.ctx;
-    const currentCamScale = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
-    const inflation = drawBorder || currentCamScale === 0 ? 0 : (1 / currentCamScale); 
-    const x0 = x, y0 = y, w = size, h = size;
-    const [sbx, sby] = this.worldToScreen(x0, y0);
-    const [srx, sry] = this.worldToScreen(x0 + w - 1, y0);
-    const [stx, sty] = this.worldToScreen(x0 + w - 1, y0 + h - 1);
-    const [slx, sly] = this.worldToScreen(x0, y0 + h - 1);
-    const p_bottom = { x: sbx, y: sby + config.tileH/2 + inflation };
-    const p_right  = { x: srx + config.tileW/2 + inflation, y: sry };
-    const p_top    = { x: stx, y: sty - config.tileH/2 - inflation };
-    const p_left   = { x: slx - config.tileW/2 - inflation, y: sly };
-    ctx.beginPath();
-    ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x,  p_right.y);
-    ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y);
-    ctx.closePath();
-    ctx.fillStyle = config.biomeColors[biome];
-    ctx.fill();
-    if (drawBorder) ctx.stroke();
-   },
-  
-  drawBuildingFootprint(b, highlightStyle = null, drawBorder = true) { // ... same as 0.2.7.8 ...
-    const { config, state } = this;
-    const ctx = this.dom.ctx;
-    const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
-    const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
-    const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
-    const [sbx, sby] = this.worldToScreen(x0, y0);
-    const [srx, sry] = this.worldToScreen(x0 + w - 1, y0);
-    const [stx, sty] = this.worldToScreen(x0 + w - 1, y0 + h - 1);
-    const [slx, sly] = this.worldToScreen(x0, y0 + h - 1);
-    const p_bottom = { x: sbx, y: sby + config.tileH/2 };
-    const p_right  = { x: srx + config.tileW/2, y: sry };
-    const p_top    = { x: stx, y: sty - config.tileH/2 };
-    const p_left   = { x: slx - config.tileW/2, y: sly };
-    ctx.beginPath();
-    ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x,  p_right.y);
-    ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y);
-    ctx.closePath();
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.strokeStyle = border; 
-    ctx.lineWidth = highlightStyle ? config.strokeW * 2 : config.strokeW;
-    if (drawBorder) ctx.stroke();
-
-    const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
-    if (currentCamScale > 0.4 && b.displayName) {
-      const availableWidth = (p_right.x - p_left.x) * 0.8;
-      const availableHeight = p_bottom.y - p_top.y;
-      if (availableWidth < 10 || availableHeight < 10) return;
-      const hasCoords = b.displayCoordinates;
-      const heightFactor = hasCoords ? 0.5 : 1.0; 
-      const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9;
-      ctx.font = `bold 100px sans-serif`; 
-      const textMetrics = ctx.measureText(b.displayName);
-      const displayNameWidth = textMetrics.width || 1; 
-      const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
-      const optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
-
-      if (optimalFontSize * currentCamScale < 7) return;
-      const centerX = (p_left.x + p_right.x) / 2;
-      const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
-      const centerY = (p_top.y + p_bottom.y) / 2 + yOffset;
-      ctx.fillStyle = config.textColor;
-      ctx.font = `bold ${optimalFontSize}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(b.displayName, centerX, centerY);
-      if (b.displayCoordinates) {
-        const coordFontSize = optimalFontSize * 0.7;
-        ctx.font = `${coordFontSize}px sans-serif`;
-        ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.9);
-      }
-    }
-   },
-
-  mainLoop(now) { // ... same as 0.2.7.8 ...
-    const { dom, state, config } = this;
-    const ctx = dom.ctx; 
-    
-    try {
-        ctx.setTransform(1,0,0,1,0,0);
-        ctx.clearRect(0,0,dom.canvas.width,dom.canvas.height);
-
-        const [centerX, centerY] = this.screenToWorld(dom.canvas.width/2, dom.canvas.height/2);
-        if(dom.centerTileEl) dom.centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
-        
-        const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
+      /**
+       * Draws a single map tile on the main canvas.
+       */
+      drawTile(x, y, drawBorder = true) {
+        this.state.tileCount++;
+        const [sx, sy] = this.worldToScreen(x, y);
+        const { config } = this;
+        const ctx = this.dom.ctx;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - config.tileH / 2);
+        ctx.lineTo(sx + config.tileW / 2, sy);
+        ctx.lineTo(sx, sy + config.tileH / 2);
+        ctx.lineTo(sx - config.tileW / 2, sy);
+        ctx.closePath();
+        ctx.fillStyle = config.biomeColors[this.getBiomeForTile(x, y)];
+        ctx.fill();
+        if (drawBorder) ctx.stroke();
+        const building = this.getBuildingAt(x, y);
+        if (building && building.hideCoordinates) return;
+        const currentCamScale = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
         const pct = Math.round((currentCamScale / config.baseScale) * 100);
+        const showCoords = this.dom.coordsToggle ? this.dom.coordsToggle.checked : false;
+        const showThreshold = showCoords ? 80 : 200;
+        if (pct <= showThreshold) return;
+        const text = `${x}, ${y}`;
+        let optimalFontSize = Math.min(config.tileH * 0.8 * 0.5, (config.tileW * 0.8 / (text.length || 1)) * 1.8) * 0.7;
+        if ((optimalFontSize * currentCamScale) < 5) return;
+        ctx.fillStyle = config.textColor;
+        ctx.font = `${optimalFontSize}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, sx, sy);
+      },
 
-        if(dom.zoomLevelEl) dom.zoomLevelEl.textContent = `Zoom: ${pct}%`;
-        if(dom.zoomSlider) {
-            const sliderMin = parseInt(dom.zoomSlider.min,10);
-            const sliderMax = parseInt(dom.zoomSlider.max,10);
-            if (pct > sliderMax) dom.zoomSlider.max = pct.toString();
-            if (pct < sliderMin && pct < sliderMax) dom.zoomSlider.min = pct.toString(); 
-            else if (sliderMin > sliderMax) dom.zoomSlider.min = sliderMax.toString(); 
+      /**
+       * Draws a pre-calculated chunk of same-colored tiles for performance.
+       */
+      drawChunk(chunk, drawBorder = true, ctx = this.dom.ctx) {
+        this.state.tileCount += chunk.size * chunk.size;
+        const { x, y, size, biome } = chunk;
+        const { config } = this;
+        const currentCamScale = (isNaN(this.state.cam.scale) || this.state.cam.scale === 0) ? this.state.minFitScale : this.state.cam.scale;
+        const inflation = drawBorder || currentCamScale === 0 ? 0 : (1 / currentCamScale);
+        const x0 = x, y0 = y, w = size, h = size;
+        const [sbx, sby] = this.worldToScreen(x0, y0);
+        const [srx, sry] = this.worldToScreen(x0 + w - 1, y0);
+        const [stx, sty] = this.worldToScreen(x0 + w - 1, y0 + h - 1);
+        const [slx, sly] = this.worldToScreen(x0, y0 + h - 1);
+        const p_bottom = { x: sbx, y: sby + config.tileH / 2 + inflation };
+        const p_right = { x: srx + config.tileW / 2 + inflation, y: sry };
+        const p_top = { x: stx, y: sty - config.tileH / 2 - inflation };
+        const p_left = { x: slx - config.tileW / 2 - inflation, y: sly };
+        ctx.beginPath();
+        ctx.moveTo(p_bottom.x, p_bottom.y);
+        ctx.lineTo(p_right.x, p_right.y);
+        ctx.lineTo(p_top.x, p_top.y);
+        ctx.lineTo(p_left.x, p_left.y);
+        ctx.closePath();
+        ctx.fillStyle = config.biomeColors[biome];
+        ctx.fill();
+        if (drawBorder) ctx.stroke();
+      },
 
-            if (pct >= parseInt(dom.zoomSlider.min,10) && pct <= parseInt(dom.zoomSlider.max,10)) {
-                 dom.zoomSlider.value = pct.toString();
-            } else if (pct < parseInt(dom.zoomSlider.min,10)) {
-                 dom.zoomSlider.value = dom.zoomSlider.min;
-            } else {
-                 dom.zoomSlider.value = dom.zoomSlider.max;
-            }
+      /**
+       * Draws the footprint of a building.
+       */
+      drawBuildingFootprint(b, highlightStyle = null, drawBorder = true) {
+        const { config, state } = this;
+        const ctx = this.dom.ctx;
+        const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
+        const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
+        const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
+        const [sbx, sby] = this.worldToScreen(x0, y0);
+        const [srx, sry] = this.worldToScreen(x0 + w - 1, y0);
+        const [stx, sty] = this.worldToScreen(x0 + w - 1, y0 + h - 1);
+        const [slx, sly] = this.worldToScreen(x0, y0 + h - 1);
+        const p_bottom = { x: sbx, y: sby + config.tileH / 2 };
+        const p_right = { x: srx + config.tileW / 2, y: sry };
+        const p_top = { x: stx, y: sty - config.tileH / 2 };
+        const p_left = { x: slx - config.tileW / 2, y: sly };
+        ctx.beginPath();
+        ctx.moveTo(p_bottom.x, p_bottom.y);
+        ctx.lineTo(p_right.x, p_right.y);
+        ctx.lineTo(p_top.x, p_top.y);
+        ctx.lineTo(p_left.x, p_left.y);
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+        ctx.strokeStyle = border;
+        ctx.lineWidth = highlightStyle ? config.strokeW * 2 : config.strokeW;
+        if (drawBorder) ctx.stroke();
+        const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
+        if (currentCamScale > 0.4 && b.displayName) {
+          const availableWidth = (p_right.x - p_left.x) * 0.8;
+          const availableHeight = p_bottom.y - p_top.y;
+          if (availableWidth < 10 || availableHeight < 10) return;
+          const hasCoords = b.displayCoordinates;
+          const heightFactor = hasCoords ? 0.5 : 1.0;
+          const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9;
+          ctx.font = `bold 100px sans-serif`;
+          const textMetrics = ctx.measureText(b.displayName);
+          const displayNameWidth = textMetrics.width || 1;
+          const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
+          const optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
+          if (optimalFontSize * currentCamScale < 7) return;
+          const centerX = (p_left.x + p_right.x) / 2;
+          const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
+          const centerY = (p_top.y + p_bottom.y) / 2 + yOffset;
+          ctx.fillStyle = config.textColor;
+          ctx.font = `bold ${optimalFontSize}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(b.displayName, centerX, centerY);
+          if (b.displayCoordinates) {
+            const coordFontSize = optimalFontSize * 0.7;
+            ctx.font = `${coordFontSize}px sans-serif`;
+            ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.9);
+          }
         }
-        state.tileCount = 0;
-
-        ctx.save();
-        ctx.setTransform(currentCamScale,0,0,currentCamScale,state.cam.x,state.cam.y);
-        ctx.strokeStyle = config.borderColor;
-        ctx.lineWidth = config.strokeW;
-        
-        const [tl_x, tl_y] = this.screenToWorld(0, 0);
-        const [tr_x, tr_y] = this.screenToWorld(dom.canvas.width, 0);
-        const [bl_x, bl_y] = this.screenToWorld(0, dom.canvas.height);
-        const [br_x, br_y] = this.screenToWorld(dom.canvas.width, dom.canvas.height);
-        
-        const viewBounds = { 
-          minX: Math.min(tl_x, tr_x, bl_x, br_x) - 2,
-          maxX: Math.max(tl_x, tr_x, bl_x, br_x) + 2,
-          minY: Math.min(tl_y, tr_y, bl_y, br_y) - 2,
-          maxY: Math.max(tl_y, tr_y, bl_y, br_y) + 2,
-        };
-        const viewportCorners = {
+      },
+      /**
+       * The main render loop, called by requestAnimationFrame.
+       */
+      mainLoop(now) {
+        const { dom, state, config } = this;
+        const ctx = dom.ctx;
+        try {
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.clearRect(0, 0, dom.canvas.width, dom.canvas.height);
+          const [centerX, centerY] = this.screenToWorld(dom.canvas.width / 2, dom.canvas.height / 2);
+          if (dom.centerTileEl) dom.centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
+          const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
+          const pct = Math.round((currentCamScale / config.baseScale) * 100);
+          if (dom.zoomLevelEl) dom.zoomLevelEl.textContent = `Zoom: ${pct}%`;
+          if (dom.zoomSlider) {
+            const sliderMin = parseInt(dom.zoomSlider.min, 10);
+            const sliderMax = parseInt(dom.zoomSlider.max, 10);
+            if (pct > sliderMax) dom.zoomSlider.max = pct.toString();
+            if (pct < sliderMin && pct < sliderMax) dom.zoomSlider.min = pct.toString();
+            else if (sliderMin > sliderMax) dom.zoomSlider.min = sliderMax.toString();
+            if (pct >= parseInt(dom.zoomSlider.min, 10) && pct <= parseInt(dom.zoomSlider.max, 10)) {
+              dom.zoomSlider.value = pct.toString();
+            } else if (pct < parseInt(dom.zoomSlider.min, 10)) {
+              dom.zoomSlider.value = dom.zoomSlider.min;
+            } else {
+              dom.zoomSlider.value = dom.zoomSlider.max;
+            }
+          }
+          state.tileCount = 0;
+          ctx.save();
+          ctx.setTransform(currentCamScale, 0, 0, currentCamScale, state.cam.x, state.cam.y);
+          ctx.strokeStyle = config.borderColor;
+          ctx.lineWidth = config.strokeW;
+          const [tl_x, tl_y] = this.screenToWorld(0, 0);
+          const [tr_x, tr_y] = this.screenToWorld(dom.canvas.width, 0);
+          const [bl_x, bl_y] = this.screenToWorld(0, dom.canvas.height);
+          const [br_x, br_y] = this.screenToWorld(dom.canvas.width, dom.canvas.height);
+          const viewBounds = {
+            minX: Math.min(tl_x, tr_x, bl_x, br_x) - 2,
+            maxX: Math.max(tl_x, tr_x, bl_x, br_x) + 2,
+            minY: Math.min(tl_y, tr_y, bl_y, br_y) - 2,
+            maxY: Math.max(tl_y, tr_y, bl_y, br_y) + 2,
+          };
+          const viewportCorners = {
             tl: { x: tl_x, y: tl_y },
             tr: { x: tr_x, y: tr_y },
             bl: { x: bl_x, y: bl_y },
             br: { x: br_x, y: br_y }
-        };
-
-
-        if (isNaN(viewBounds.minX) || isNaN(viewBounds.maxX) || isNaN(viewBounds.minY) || isNaN(viewBounds.maxY)) {
-            console.error("View bounds are NaN, skipping render cycle. Cam State:", state.cam, "Calculated Bounds:", viewBounds);
+          };
+          if (isNaN(viewBounds.minX) || isNaN(viewBounds.maxX) || isNaN(viewBounds.minY) || isNaN(viewBounds.maxY)) {
             ctx.restore();
-            if (this.state.isMinimapVisible) this.drawMinimap(null); 
+            if (this.state.isMinimapVisible) this.drawMinimap(null);
             requestAnimationFrame(this.mainLoop.bind(this));
             return;
-        }
-
-        const chunkLevel = this.getChunkLevelForZoom(pct);
-        const showGrid = dom.gridlinesToggle ? dom.gridlinesToggle.checked : false;
-        const showRss = dom.allianceRssToggle ? dom.allianceRssToggle.checked : false;
-        const alwaysShowRss = dom.allianceRssAlwaysVisibleToggle ? dom.allianceRssAlwaysVisibleToggle.checked : false;
-
-        if (chunkLevel === -1) {
-          const shouldDrawBorders = showGrid && pct > 50;
-          const minSum = Math.floor(viewBounds.minX + viewBounds.minY);
-          const maxSum = Math.ceil(viewBounds.maxX + viewBounds.maxY);
-          for (let sum = minSum; sum <= maxSum; sum++) {
-            const startXCoord = Math.floor(Math.max(viewBounds.minX, (sum - viewBounds.maxY)));
-            const endXCoord = Math.ceil(Math.min(viewBounds.maxX, (sum - viewBounds.minY)));
-            for (let x = startXCoord; x <= endXCoord; x++) {
+          }
+          const chunkLevel = this.getChunkLevelForZoom(pct);
+          const showGrid = dom.gridlinesToggle ? dom.gridlinesToggle.checked : false;
+          const showRss = dom.allianceRssToggle ? dom.allianceRssToggle.checked : false;
+          const alwaysShowRss = dom.allianceRssAlwaysVisibleToggle ? dom.allianceRssAlwaysVisibleToggle.checked : false;
+          if (chunkLevel === -1) {
+            const shouldDrawBorders = showGrid && pct > 50;
+            const minSum = Math.floor(viewBounds.minX + viewBounds.minY);
+            const maxSum = Math.ceil(viewBounds.maxX + viewBounds.maxY);
+            for (let sum = minSum; sum <= maxSum; sum++) {
+              const startXCoord = Math.floor(Math.max(viewBounds.minX, (sum - viewBounds.maxY)));
+              const endXCoord = Math.ceil(Math.min(viewBounds.maxX, (sum - viewBounds.minY)));
+              for (let x = startXCoord; x <= endXCoord; x++) {
                 const y = sum - x;
                 if (x < 0 || x >= config.N || y < 0 || y >= config.N) continue;
                 if (!this.getBuildingAt(x, y)) this.drawTile(x, y, shouldDrawBorders);
-            }
-          }
-          state.allBuildings
-            .filter(b => 
-              (!b.isRss || showRss) && 
-              !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY)
-            )
-            .forEach(b => this.drawBuildingFootprint(b, null, shouldDrawBorders));
-          ctx.fillStyle = '#444';
-          (state.baseMap.unoccupiableTiles || []).forEach(([x,y])=>{
-            if (this.getBuildingAt(x, y)) return;
-            if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return;
-            const [sx,sy] = this.worldToScreen(x,y);
-            ctx.beginPath();
-            ctx.moveTo(sx, sy - config.tileH/2); ctx.lineTo(sx + config.tileW/2, sy);
-            ctx.lineTo(sx, sy + config.tileH/2); ctx.lineTo(sx - config.tileW/2, sy);
-            ctx.closePath(); ctx.fill();
-          });
-        } else { 
-          if (state.chunkLevels && state.chunkLevels[chunkLevel]) {
-            const chunksToDraw = state.chunkLevels[chunkLevel];
-            const chunkSize = Math.pow(2, chunkLevel + 1);
-            const startChunkX = Math.floor(viewBounds.minX / chunkSize) * chunkSize;
-            const endChunkX = Math.ceil(viewBounds.maxX / chunkSize) * chunkSize;
-            const startChunkY = Math.floor(viewBounds.minY / chunkSize) * chunkSize;
-            const endChunkY = Math.ceil(viewBounds.maxY / chunkSize) * chunkSize;
-            for (let x = startChunkX; x <= endChunkX; x += chunkSize) {
-              for (let y = startChunkY; y <= endChunkY; y += chunkSize) {
-                  const chunk = chunksToDraw.get(`${x},${y}`);
-                  if (chunk) this.drawChunk(chunk, false);
               }
             }
-          }
-          (state.baseMap.defaultBuildings || [])
-            .filter(b => !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
-            .forEach(b => this.drawBuildingFootprint(b, null, false));
-          if (showRss && alwaysShowRss) {
             state.allBuildings
-              .filter(b => 
-                b.isRss && 
-                !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY)
-              )
+              .filter(b => (!b.isRss || showRss) && !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
+              .forEach(b => this.drawBuildingFootprint(b, null, shouldDrawBorders));
+            ctx.fillStyle = '#444';
+            (state.baseMap.unoccupiableTiles || []).forEach(([x, y]) => {
+              if (this.getBuildingAt(x, y)) return;
+              if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return;
+              const [sx, sy] = this.worldToScreen(x, y);
+              ctx.beginPath();
+              ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy);
+              ctx.closePath();
+              ctx.fill();
+            });
+          } else {
+            if (state.chunkLevels && state.chunkLevels[chunkLevel]) {
+              const chunksToDraw = state.chunkLevels[chunkLevel];
+              const chunkSize = Math.pow(2, chunkLevel + 1);
+              const startChunkX = Math.floor(viewBounds.minX / chunkSize) * chunkSize;
+              const endChunkX = Math.ceil(viewBounds.maxX / chunkSize) * chunkSize;
+              const startChunkY = Math.floor(viewBounds.minY / chunkSize) * chunkSize;
+              const endChunkY = Math.ceil(viewBounds.maxY / chunkSize) * chunkSize;
+              for (let x = startChunkX; x <= endChunkX; x += chunkSize) {
+                for (let y = startChunkY; y <= endChunkY; y += chunkSize) {
+                  const chunk = chunksToDraw.get(`${x},${y}`);
+                  if (chunk) this.drawChunk(chunk, false);
+                }
+              }
+            }
+            (state.baseMap.defaultBuildings || [])
+            .filter(b => !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
               .forEach(b => this.drawBuildingFootprint(b, null, false));
-          }
-          if (chunkLevel < 2) {
+            if (showRss && alwaysShowRss) {
+              state.allBuildings
+                .filter(b => b.isRss && !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
+                .forEach(b => this.drawBuildingFootprint(b, null, false));
+            }
+            if (chunkLevel < 2) {
               ctx.fillStyle = '#444';
-              (state.baseMap.unoccupiableTiles || []).forEach(([x,y])=>{
+              (state.baseMap.unoccupiableTiles || []).forEach(([x, y]) => {
                 if (this.getBuildingAt(x, y)) return;
                 if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return;
-                const [sx,sy] = this.worldToScreen(x,y);
+                const [sx, sy] = this.worldToScreen(x, y);
                 ctx.beginPath();
-                ctx.moveTo(sx, sy - config.tileH/2); ctx.lineTo(sx + config.tileW/2, sy);
-                ctx.lineTo(sx, sy + config.tileH/2); ctx.lineTo(sx - config.tileW/2, sy);
-                ctx.closePath(); ctx.fill();
+                ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy);
+                ctx.closePath();
+                ctx.fill();
               });
+            }
           }
-        }
-
-        if (state.selection) { 
+          if (state.selection) {
             let highlightColor = config.selectionColor;
             if (state.selection.pingStart && now - state.selection.pingStart < config.pingDuration) {
-                if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) {
-                    highlightColor = config.pingColor;
-                }
+              if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) {
+                highlightColor = config.pingColor;
+              }
             }
-            if (state.selection.w) { 
+            if (state.selection.w) {
               this.drawBuildingFootprint(state.selection, highlightColor, true);
-            } else { 
+            } else {
               const [sx, sy] = this.worldToScreen(state.selection.x, state.selection.y);
               ctx.beginPath();
-              ctx.moveTo(sx, sy - config.tileH/2); ctx.lineTo(sx + config.tileW/2, sy);
-              ctx.lineTo(sx, sy + config.tileH/2); ctx.lineTo(sx - config.tileW/2, sy);
+              ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy);
               ctx.closePath();
               ctx.strokeStyle = highlightColor;
               ctx.lineWidth = config.strokeW * 1.5;
               ctx.stroke();
             }
+          }
+          ctx.restore();
+          if (this.state.isMinimapVisible) {
+            this.drawMinimap(viewportCorners);
+          }
+          const dt = now - state.lastFrame;
+          state.lastFrame = now;
+          if (dt > 0) {
+            state.lastFPS = Math.round(1000 / dt);
+          }
+          state.lastTiles = state.tileCount;
+          if (now - state.statsUpdateTime > 500) {
+            if (dom.statsFPSEl) dom.statsFPSEl.textContent = `FPS:   ${state.lastFPS}`;
+            if (dom.statsTilesEl) dom.statsTilesEl.textContent = `Tiles: ${state.lastTiles}`;
+            state.statsUpdateTime = now;
+          }
+        } catch (error) {
+          console.error("Error in mainLoop:", error);
         }
-        
-        ctx.restore(); 
-
-        if (this.state.isMinimapVisible) { 
-            this.drawMinimap(viewportCorners); 
-        }
-
-
-        const dt  = now - state.lastFrame;
-        state.lastFrame = now;
-        if (dt > 0) { 
-            state.lastFPS   = Math.round(1000/dt);
-        }
-        state.lastTiles = state.tileCount;
-        
-        if (now - state.statsUpdateTime > 500) { 
-          if(dom.statsFPSEl) dom.statsFPSEl.textContent   = `FPS:   ${state.lastFPS}`;
-          if(dom.statsTilesEl) dom.statsTilesEl.textContent = `Tiles: ${state.lastTiles}`;
-          state.statsUpdateTime = now; 
-        }
-
-    } catch (error) {
-        console.error("Error in mainLoop:", error);
-    }
-    
-    requestAnimationFrame(this.mainLoop.bind(this));
-  }
-};
-
-KingshotPlanner.init();
-
-</script>
+        requestAnimationFrame(this.mainLoop.bind(this));
+      }
+    };
+    KingshotPlanner.init();
+  </script>
 </body>
 </html>
