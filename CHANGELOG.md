@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.2.0] - Major
+
+### Added
+- **Complete Mobile UI Overhaul!** The application now features a dedicated, modern user interface for mobile devices in portrait mode.
+  - A new, ergonomic bottom toolbar provides easy thumb access to all major functions.
+  - Buttons for Zoom, Fit to Screen, Search, Bookmarks, and Settings are now consolidated in the toolbar.
+- **Mobile Modal Panels:** To maximize map visibility, Search, Bookmarks, and Settings now open in clean, full-screen overlay panels instead of cluttering the main view.
+
+### Changed
+- The previous responsive layout, which simply hid desktop elements, has been entirely replaced by the new purpose-built mobile UI for a vastly improved user experience on phones.
+- The desktop layout remains unchanged for large screens.
+- Landscape mode on mobile now uses a simplified horizontal zoom control layout to maximize the view.
+
+### Fixed
+- All features, including settings and multi-pin bookmarks, are now fully accessible on mobile devices.
+
 ## [0.3.1.2] - Patch
 
 ### Changed

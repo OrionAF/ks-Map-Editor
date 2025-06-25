@@ -24,7 +24,7 @@
       cursor: grabbing;
     }
 
-    /* --- LAYOUT CONTAINERS --- */
+    /* --- DESKTOP LAYOUT CONTAINERS --- */
     #statsPanel {
       position: absolute;
       top: 10px;
@@ -104,9 +104,7 @@
       z-index: 10;
     }
 
-    #minimapContainer {
-      width: 100%;
-    }
+    #minimapContainer { width: 100%; }
 
     #versionDisplay {
       position: absolute;
@@ -119,313 +117,101 @@
       z-index: 10;
     }
 
-    /* --- COMPONENT STYLES --- */
-    #settingsBtn {
-      padding: 6px 10px;
-      width: 120px;
-    }
-
+    /* --- DESKTOP COMPONENT STYLES --- */
+    #settingsBtn { padding: 6px 10px; width: 120px; }
     #settingsPanel {
-      color: #fff;
-      font-family: sans-serif;
-      background: rgba(0, 0, 0, 0.6);
-      border-radius: 4px;
-      max-height: 0;
-      padding: 0;
-      overflow: hidden;
+      color: #fff; font-family: sans-serif; background: rgba(0, 0, 0, 0.6); border-radius: 4px;
+      max-height: 0; padding: 0; overflow: hidden;
       transition: max-height 0.3s ease-out, padding 0.3s ease-out;
-      text-align: left;
-      width: 210px;
-      margin-bottom: 5px;
+      text-align: left; width: 210px; margin-bottom: 5px;
     }
-
-    #settingsPanel.open {
-      max-height: 500px;
-      padding: 8px;
-    }
-
-    #settingsPanel input[type="checkbox"],
-    #settingsPanel select {
-      vertical-align: middle;
-    }
-    
-    #settingsPanel>div {
-      margin-top: 4px;
-      text-align: left;
-    }
-
-    #settingsPanel>hr {
-      border: none;
-      border-top: 1px solid #444;
-      margin: 8px 0;
-    }
-
-    #settingsPanel h4 {
-      margin: 6px 0 2px;
-      font-size: 13px;
-      color: #aaa;
-      text-transform: uppercase;
-      text-align: left;
-    }
-
-    #infoBtn {
-      margin-top: 6px;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-
+    #settingsPanel.open { max-height: 500px; padding: 8px; }
+    #settingsPanel input[type="checkbox"], #settingsPanel select { vertical-align: middle; }
+    #settingsPanel>div { margin-top: 4px; text-align: left; }
+    #settingsPanel>hr { border: none; border-top: 1px solid #444; margin: 8px 0; }
+    #settingsPanel h4 { margin: 6px 0 2px; font-size: 13px; color: #aaa; text-transform: uppercase; text-align: left; }
+    #infoBtn { margin-top: 6px; -webkit-user-select: none; user-select: none; }
     #infoPanel {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.3s ease;
-      margin-top: 6px;
-      background: rgba(58, 55, 55, 0.85);
-      padding: 0 6px;
-      border-radius: 4px;
-      font-size: 13px;
-      color: #ddd;
-      text-align: left;
+      max-height: 0; overflow: hidden; transition: max-height 0.3s ease; margin-top: 6px;
+      background: rgba(58, 55, 55, 0.85); padding: 0 6px; border-radius: 4px;
+      font-size: 13px; color: #ddd; text-align: left;
     }
-
-    #infoPanel.open {
-      max-height: 160px;
-    }
-    
-    #statsPanel div {
-      margin: 4px 0;
-      color: #fff;
-    }
-
-    #infoPanel h4 {
-      margin: 6px 0 4px;
-      color: #fff;
-      text-transform: none;
-    }
-
-    #infoPanel ul {
-      padding-left: 16px;
-      margin: 0
-    }
-
-    #infoPanel li {
-      margin-bottom: 4px;
-    }
-
-    #zoomControlsContainer button {
-      -webkit-user-select: none;
-      user-select: none;
-      margin: 0;
-      width: 72px;
-    }
-
-    #zoomPresetSelect {
-      order: 6;
-      width: 72px;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-
+    #infoPanel.open { max-height: 160px; }
+    #statsPanel div { margin: 4px 0; color: #fff; }
+    #infoPanel h4 { margin: 6px 0 4px; color: #fff; text-transform: none; }
+    #infoPanel ul { padding-left: 16px; margin: 0; }
+    #infoPanel li { margin-bottom: 4px; }
+    #zoomControlsContainer button { -webkit-user-select: none; user-select: none; margin: 0; width: 72px; }
+    #zoomPresetSelect { order: 6; width: 72px; -webkit-user-select: none; user-select: none; }
     #zoomControlsContainer #zoomInc10 { order: 1; }
     #zoomControlsContainer #zoomInc { order: 2; }
     #zoomControlsContainer #sliderWrapper { order: 3; position: relative; }
     #zoomControlsContainer #zoomDec { order: 4; }
     #zoomControlsContainer #zoomDec10 { order: 5; }
     #zoomControlsContainer #zoomLevel { order: 7; font-size: 14px; margin-top: 5px; }
-
     #zoomSlider {
-      -webkit-appearance: slider-vertical;
-      appearance: slider-vertical;
-      writing-mode: bt-lr;
-      height: 55vh;
-      max-height: 600px;
-      width: auto;
-      margin: 0;
+      -webkit-appearance: slider-vertical; appearance: slider-vertical;
+      writing-mode: bt-lr; height: 55vh; max-height: 600px; width: auto; margin: 0;
     }
-
     #floatingZoomLabel {
-      position: absolute;
-      display: none;
-      left: 25px;
-      background-color: #0b508f;
-      color: white;
-      padding: 3px 6px;
-      border-radius: 4px;
-      font-size: 13px;
-      pointer-events: none;
-      transform: translateY(-50%);
+      position: absolute; display: none; left: 25px; background-color: #0b508f; color: white;
+      padding: 3px 6px; border-radius: 4px; font-size: 13px; pointer-events: none; transform: translateY(-50%);
     }
-
-    #searchControls h4 {
-      margin: 0 0 4px;
-      font-size: 13px;
-      color: #aaa;
-      text-transform: uppercase;
-      text-align: left;
-    }
-
+    #searchControls h4 { margin: 0 0 4px; font-size: 13px; color: #aaa; text-transform: uppercase; text-align: left; }
     #searchControls>div { text-align: left; }
     #searchControls input { width: 60px; }
     #searchControls button { margin: 2px 0 2px 4px; -webkit-user-select: none; user-select: none; }
     label.coords-label { font-size: 13px; vertical-align: middle; user-select: none; }
-
     #minimapToggleBtn {
-      display: block;
-      width: 100%;
-      padding: 0;
-      line-height: 1.5;
-      background-color: #282828;
-      color: #bbb;
-      border: 1px solid #444;
-      font-family: sans-serif;
-      font-size: 13px;
-      text-align: center;
-      cursor: pointer;
-      box-sizing: border-box;
-      user-select: none;
-      -webkit-user-select: none;
+      display: block; width: 100%; padding: 0; line-height: 1.5; background-color: #282828; color: #bbb;
+      border: 1px solid #444; font-family: sans-serif; font-size: 13px; text-align: center; cursor: pointer;
+      box-sizing: border-box; user-select: none; -webkit-user-select: none;
     }
-
     #minimapCanvas {
-      width: 350px;
-      height: 300px;
-      border: 1px solid #444;
-      border-top: none;
-      background-color: rgba(0, 0, 0, 0.5);
-      display: block;
-      transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
-      max-height: 300px;
-      opacity: 1;
+      width: 350px; height: 300px; border: 1px solid #444; border-top: none; background-color: rgba(0, 0, 0, 0.5);
+      display: block; transition: max-height 0.3s ease-out, opacity 0.3s ease-out; max-height: 300px; opacity: 1;
     }
-
-    #minimapCanvas.hidden {
-      max-height: 0;
-      opacity: 0;
-      border-width: 0;
-      display: block; /* keep it in layout flow for transition */
-    }
-
-    /* --- MULTI-PIN BOOKMARKS STYLES --- */
-    #pinnedBookmarksContainer {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
+    #minimapCanvas.hidden { max-height: 0; opacity: 0; border-width: 0; display: block; }
+    
+    /* --- DESKTOP BOOKMARKS STYLES --- */
+    #pinnedBookmarksContainer { display: flex; flex-direction: column; gap: 3px; }
     .pinned-bookmark-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 5px 8px;
-      background-color: #333;
-      border: 1px solid #555;
-      border-radius: 3px;
-      font-family: sans-serif;
-      font-size: 13px;
-      color: #eee;
+      display: flex; justify-content: space-between; align-items: center; padding: 5px 8px;
+      background-color: #333; border: 1px solid #555; border-radius: 3px; font-family: sans-serif;
+      font-size: 13px; color: #eee;
     }
-    .pinned-bookmark-item > span {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex-grow: 1;
-      padding-right: 10px;
-    }
+    .pinned-bookmark-item>span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; padding-right: 10px; }
     .pinned-bookmark-item .controls button {
-      padding: 2px 6px;
-      font-size: 12px;
-      line-height: 1;
-      background: #444;
-      border: 1px solid #666;
-      color: #eee;
-      margin-left: 5px;
-      cursor: pointer;
+      padding: 2px 6px; font-size: 12px; line-height: 1; background: #444; border: 1px solid #666;
+      color: #eee; margin-left: 5px; cursor: pointer;
     }
-    .pinned-bookmark-item .controls .unpin-btn {
-      color: #fdd;
-      background: #5a3838;
-      border-color: #855;
-    }
-
+    .pinned-bookmark-item .controls .unpin-btn { color: #fdd; background: #5a3838; border-color: #855; }
     #addBookmarksContainer {
-      width: 100%;
-      background-color: #282828;
-      border: 1px solid #444;
-      border-radius: 4px;
-      font-family: sans-serif;
-      font-size: 13px;
-      color: #eee;
+      width: 100%; background-color: #282828; border: 1px solid #444; border-radius: 4px;
+      font-family: sans-serif; font-size: 13px; color: #eee;
     }
-
-    #addBookmarksHeader {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 5px 8px;
-      cursor: pointer;
-    }
-    #addBookmarksToggleBtn {
-      transition: transform 0.2s ease-in-out;
-      padding: 2px 6px;
-      font-size: 14px;
-      line-height: 1;
-    }
-    #addBookmarksToggleBtn.open {
-      transform: rotate(180deg);
-    }
+    #addBookmarksHeader { display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; cursor: pointer; }
+    #addBookmarksToggleBtn { transition: transform 0.2s ease-in-out; padding: 2px 6px; font-size: 14px; line-height: 1; }
+    #addBookmarksToggleBtn.open { transform: rotate(180deg); }
     #addBookmarksList {
-      max-height: 0;
-      overflow: hidden;
-      overflow-y: auto;
-      transition: max-height 0.3s ease-out;
-      border-top: 1px solid #444;
+      max-height: 0; overflow: hidden; overflow-y: auto;
+      transition: max-height 0.3s ease-out; border-top: 1px solid #444;
     }
-    #addBookmarksList.open {
-      max-height: 250px;
-    }
+    #addBookmarksList.open { max-height: 250px; }
     .add-bookmark-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 8px;
+      display: flex; justify-content: space-between; align-items: center; padding: 6px 8px;
       border-bottom: 1px solid #3a3a3a;
     }
-    .add-bookmark-item:last-child {
-      border-bottom: none;
-    }
-    .add-bookmark-item button {
-      padding: 2px 5px;
-      font-size: 12px;
-      margin-left: 5px;
-      cursor: pointer;
-    }
+    .add-bookmark-item:last-child { border-bottom: none; }
+    .add-bookmark-item button { padding: 2px 5px; font-size: 12px; margin-left: 5px; cursor: pointer; }
 
-
-    /* --- MODAL STYLES --- */
-    #modalOverlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.7);
-      z-index: 1001;
-    }
-
+    /* --- GLOBAL MODAL STYLES --- */
+    #modalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 999; }
     #patchNotesModal {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 90%;
-      max-width: 500px;
-      background: #2c2c2c;
-      color: #eee;
-      border-radius: 8px;
-      z-index: 1002;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+      display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 90%; max-width: 500px; background: #2c2c2c; color: #eee; border-radius: 8px;
+      z-index: 1002; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
     }
-
     .patch-notes-header { padding: 15px; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }
     .patch-notes-header h3 { margin: 0; }
     .patch-notes-header .close-btn { background: none; border: none; color: #ccc; font-size: 24px; cursor: pointer; }
@@ -434,142 +220,166 @@
     .patch-notes-body li { margin-bottom: 8px; }
     .patch-notes-footer { padding: 10px 15px; border-top: 1px solid #444; background: #333; border-radius: 0 0 8px 8px; }
     .patch-notes-footer label { user-select: none; font-size: 14px; }
+    .mobile-only { display: none !important; }
 
     /* --- RESPONSIVE STYLES --- */
-    @media (max-width: 768px) {
-      body {
-        overflow: auto;
-        min-width: 320px;
-      }
-
-      #statsPanel,
-      #settingsContainer,
-      #centerTile,
-      #versionDisplay,
-      #searchControls {
-        left: 8px !important;
-        right: 8px !important;
-        width: auto !important;
-        max-width: calc(100vw - 16px) !important;
-        border-radius: 8px;
-        font-size: 14px;
-        box-sizing: border-box;
-        margin: 0 auto 8px auto !important;
-      }
-
-      #statsPanel, #centerTile, #versionDisplay {
-        position: static !important;
-        margin-bottom: 6px !important;
-      }
-
-      #topRightContainer {
-        position: static !important;
-        width: 100vw !important;
-        max-width: 100vw !important;
-        flex-direction: row !important;
-        gap: 6px;
-        overflow-x: auto;
-        padding-bottom: 8px;
-        z-index: 900;
-      }
-
-      #settingsContainer {
-        flex-direction: row !important;
-        align-items: flex-end !important;
-        justify-content: flex-end !important;
-        position: static !important;
-        margin-bottom: 8px;
-      }
-
+    @media (max-width: 768px) and (orientation: landscape) {
+      /* Hide most desktop UI in landscape mobile */
+      #topRightContainer, #settingsContainer, #searchControls, #centerTile, #statsPanel { display: none; }
+      /* Horizontal zoom controls at bottom */
       #zoomControlsContainer {
-        left: 50% !important;
-        top: auto !important;
-        bottom: 8px !important;
-        transform: translateX(-50%) !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        background: rgba(0,0,0,0.7);
-        border-radius: 10px;
-        width: auto !important;
-        gap: 10px !important;
-        padding: 6px 10px;
+        left: 0; right: 0; top: auto; bottom: 0; transform: none; width: 100%; height: 60px;
+        padding: 0 10px; box-sizing: border-box; flex-direction: row; justify-content: space-between;
+        background: rgba(0, 0, 0, 0.7);
       }
-
-      #zoomSlider {
-        height: 60px !important;
-        width: 90px !important;
-        max-height: none !important;
-        margin: 0 10px !important;
+      #sliderWrapper { flex-grow: 1; margin: 0 10px; }
+      #zoomSlider { -webkit-appearance: none; appearance: none; writing-mode: horizontal-tb; height: 25px; width: 100%; max-height: none; }
+      #zoomPresetSelect { flex-direction: row; }
+      #zoomLevel { font-size: 14px; }
+      #versionDisplay { bottom: 65px; left: 10px; right: auto; }
+    }
+    
+    @media (max-width: 768px) and (orientation: portrait) {
+      /* 1. Hide ALL desktop UI elements */
+      #zoomControlsContainer, #searchControls, #topRightContainer,
+      #settingsContainer, #statsPanel, #versionDisplay, #centerTile {
+        display: none;
       }
+      .mobile-only { display: block !important; }
 
-      #minimapContainer, #minimapCanvas {
-        width: 98vw !important;
-        max-width: 100vw !important;
-        height: auto !important;
-        border-radius: 10px !important;
-        min-height: 110px !important;
-        border-width: 2px !important;
-        margin: 8px auto !important;
-      }
-
-      #patchNotesModal {
-        width: 98vw !important;
-        max-width: 96vw !important;
-        min-width: 0 !important;
-        padding: 0 !important;
-        border-radius: 10px !important;
-        left: 50% !important;
-        top: 54% !important;
-        transform: translate(-50%, -50%) !important;
-      }
-
-      /* Bookmarks mobile */
-      #addBookmarksContainer {
-        width: 98vw !important;
-        min-width: 0 !important;
-        font-size: 13px;
-        border-radius: 8px;
+      /* 2. Style the new Mobile Toolbar */
+      #mobileToolbar {
+        display: flex !important;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(10, 10, 10, 0.9);
+        border-top: 1px solid #444;
+        justify-content: space-around;
+        align-items: center;
+        padding: 10px 0;
+        z-index: 1000;
         box-sizing: border-box;
-        margin: 0 auto !important;
       }
-      .pinned-bookmark-item {
-        font-size: 13px !important;
-        padding: 5px 4px !important;
-        border-radius: 6px !important;
+      #mobileToolbar button {
+        background: transparent;
+        border: none;
+        color: #eee;
+        font-size: 24px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        line-height: 1;
+      }
+      #mobileToolbar button:active { background: #444; }
+
+      /* 3. Style the Mobile Modal Overlay and Panels */
+      #mobileModalOverlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.7); z-index: 1999;
+        display: none; /* controlled by JS */
+      }
+      #mobileModalOverlay.open { display: block; }
+      
+      .mobile-panel {
+        display: none; /* controlled by JS */
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 400px;
+        max-height: 80vh;
+        background: #222;
+        border: 1px solid #555;
+        border-radius: 8px;
+        z-index: 2000;
+        color: #eee;
+        font-family: sans-serif;
+        display: none;
+        flex-direction: column;
+      }
+      .mobile-panel.open { display: flex; }
+
+      .mobile-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 15px;
+        border-bottom: 1px solid #444;
+        background: #333;
+        border-radius: 8px 8px 0 0;
+      }
+      .mobile-panel-header h3 { margin: 0; font-size: 18px; }
+      .mobile-panel-header .close-btn {
+        background: none; border: none; color: #ccc; font-size: 28px; cursor: pointer; line-height: 1; padding: 0;
+      }
+      
+      .mobile-panel-body {
+        padding: 15px;
+        overflow-y: auto;
+      }
+
+      /* 4. Specific panel content styling */
+      /* Settings panel just needs to be re-styled, not re-created */
+      #settingsPanel {
+        display: none; flex-direction: column;
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        width: 90%; max-width: 400px; max-height: 80vh; z-index: 2000;
+        padding: 0; margin: 0;
+      }
+      #settingsPanel.open { display: flex; max-height: 80vh; }
+      #settingsPanel .mobile-panel-body { padding: 15px; overflow-y: auto; }
+
+      /* Search Panel */
+      #mobileSearchPanel input[type="number"] {
+        width: 80px; font-size: 16px; padding: 5px;
+      }
+      #mobileSearchPanel #mobileBtnGo {
+        width: 100%; padding: 10px; font-size: 16px; margin-top: 15px;
+      }
+      
+      /* Bookmarks Panel */
+      #mobileBookmarksPanel .section-header {
+        margin: 15px 0 8px 0;
+        font-size: 16px;
+        font-weight: bold;
+        color: #aaa;
+        border-bottom: 1px solid #444;
+        padding-bottom: 5px;
+      }
+      #mobileBookmarksPanel .section-header:first-child { margin-top: 0; }
+      #mobileBookmarksPanel .pinned-bookmark-item, 
+      #mobileBookmarksPanel .add-bookmark-item {
+        font-size: 15px;
+        padding: 10px 5px;
       }
     }
-
   </style>
 </head>
 <body>
-  <!-- TOP LEFT UI -->
+  <!-- DESKTOP UI (will be hidden on mobile portrait) -->
   <div id="statsPanel">
     <div id="statsFPS">FPS: –</div>
     <div id="statsTiles">Tiles: –</div>
   </div>
-
-  <!-- TOP RIGHT UI -->
   <div id="topRightContainer">
     <div id="minimapContainer">
       <button id="minimapToggleBtn" title="Toggle Minimap">Hide Minimap</button>
       <canvas id="minimapCanvas"></canvas>
     </div>
-    <div id="pinnedBookmarksContainer">
-      <!-- Dynamically populated list of pinned bookmarks -->
-    </div>
+    <div id="pinnedBookmarksContainer"></div>
     <div id="addBookmarksContainer">
       <div id="addBookmarksHeader">
         <span>Add Bookmark</span>
         <button id="addBookmarksToggleBtn" title="Show / Hide available landmarks">▼</button>
       </div>
-      <div id="addBookmarksList">
-        <!-- Dynamically populated list of un-pinned landmarks -->
-      </div>
+      <div id="addBookmarksList"></div>
     </div>
   </div>
-
-  <!-- BOTTOM RIGHT UI -->
   <div id="settingsContainer">
+    <button id="settingsBtn">⚙️ Settings</button>
     <div id="settingsPanel">
       <h4>Display</h4>
       <div>
@@ -654,8 +464,51 @@
   <div id="centerTile">Center: X0 Y0</div>
   <div id="versionDisplay"></div>
 
-  <!-- MODALS -->
-  <div id="modalOverlay"></div>
+  <!-- MOBILE UI (hidden by default, shown via media query) -->
+  <div id="mobileToolbar" class="mobile-only">
+    <button id="mobileZoomOutBtn" title="Zoom Out">-</button>
+    <button id="mobileZoomInBtn" title="Zoom In">+</button>
+    <button id="mobileFitBtn" title="Fit to Screen">⛶</button>
+    <button id="mobileSearchBtn" title="Go to Coordinate">🔍</button>
+    <button id="mobileBookmarksBtn" title="Bookmarks">🔖</button>
+    <button id="mobileSettingsBtn" title="Settings">⚙️</button>
+  </div>
+  
+  <div id="mobileModalOverlay" class="mobile-only"></div>
+
+  <div id="mobileSearchPanel" class="mobile-panel mobile-only">
+    <div class="mobile-panel-header">
+      <h3>Go To Coordinate</h3>
+      <button class="close-btn">×</button>
+    </div>
+    <div class="mobile-panel-body">
+      X: <input id="mobileInpX" type="number" min="0" max="1199" value="0">
+      Y: <input id="mobileInpY" type="number" min="0" max="1199" value="0">
+      <button id="mobileBtnGo">Go</button>
+    </div>
+  </div>
+
+  <div id="mobileBookmarksPanel" class="mobile-panel mobile-only">
+    <div class="mobile-panel-header">
+      <h3>Bookmarks</h3>
+      <button class="close-btn">×</button>
+    </div>
+    <div class="mobile-panel-body">
+      <div class="section-header">Pinned</div>
+      <div id="mobilePinnedBookmarksContainer"></div>
+      <div class="section-header">Add New</div>
+      <div id="mobileAddBookmarksList"></div>
+    </div>
+  </div>
+
+  <!-- Re-purposing #settingsPanel for mobile -->
+  <div id="mobileSettingsPanelHeader" class="mobile-panel-header mobile-only">
+      <h3>Settings</h3>
+      <button class="close-btn">×</button>
+  </div>
+
+
+  <!-- GLOBAL MODALS (Patch Notes, etc) -->
   <div id="patchNotesModal">
     <div class="patch-notes-header">
       <h3>What's New?!</h3>
@@ -676,7 +529,7 @@
     const KingshotPlanner = {
       // --- TWEAKABLE SETTINGS ---
       config: {
-        CURRENT_VERSION: '0.3.1.2',
+        CURRENT_VERSION: '0.3.2.0',
         N: 1200,
         tileW: 10,
         tileH: 10,
@@ -759,20 +612,15 @@
         pinnedBookmarks: []
       },
 
-      // --- DOM REFERENCES ---
+      // --- DOM REFERENCES (with new mobile elements) ---
       dom: {
-        canvas: null, ctx: null, inpX: null, inpY: null, btnGo: null,
-        zoomLevelEl: null, zoomDecBtn: null, zoomIncBtn: null,zoomDec10Btn: null, zoomInc10Btn: null, zoomSlider: null,
-        zoomPresetSelect: null, centerTileEl: null, infoBtn: null, infoPanel: null,
-        statsPanel: null, statsFPSEl: null, statsTilesEl: null,
-        coordsToggle: null, floatingZoomLabel: null, versionDisplay: null,
-        patchNotesBtn: null, modalOverlay: null, patchNotesModal: null,
-        patchNotesBody: null, closePatchNotesBtn: null, hidePatchNotesCheckbox: null,
-        tileDetailSelect: null, gridlinesToggle: null, allianceRssToggle: null,
-        allianceRssAlwaysVisibleToggle: null, settingsBtn: null, settingsPanel: null,
-        minimapCanvas: null, minimapCtx: null, minimapContainer: null, minimapToggleBtn: null,
-        pinnedBookmarksContainer: null, addBookmarksContainer: null, addBookmarksHeader: null,
-        addBookmarksToggleBtn: null, addBookmarksList: null
+        canvas: null, ctx: null,
+        // Desktop UI
+        inpX: null, inpY: null, btnGo: null, zoomLevelEl: null, zoomDecBtn: null, zoomIncBtn: null, zoomDec10Btn: null, zoomInc10Btn: null, zoomSlider: null, zoomPresetSelect: null, centerTileEl: null, infoBtn: null, infoPanel: null, statsPanel: null, statsFPSEl: null, statsTilesEl: null, coordsToggle: null, floatingZoomLabel: null, versionDisplay: null, tileDetailSelect: null, gridlinesToggle: null, allianceRssToggle: null, allianceRssAlwaysVisibleToggle: null, settingsBtn: null, settingsPanel: null, minimapCanvas: null, minimapCtx: null, minimapContainer: null, minimapToggleBtn: null, pinnedBookmarksContainer: null, addBookmarksContainer: null, addBookmarksHeader: null, addBookmarksToggleBtn: null, addBookmarksList: null,
+        // Global Modals
+        patchNotesBtn: null, modalOverlay: null, patchNotesModal: null, patchNotesBody: null, closePatchNotesBtn: null, hidePatchNotesCheckbox: null,
+        // Mobile UI
+        mobileToolbar: null, mobileZoomInBtn: null, mobileZoomOutBtn: null, mobileFitBtn: null, mobileSearchBtn: null, mobileBookmarksBtn: null, mobileSettingsBtn: null, mobileModalOverlay: null, mobileSearchPanel: null, mobileBookmarksPanel: null, mobileInpX: null, mobileInpY: null, mobileBtnGo: null, mobilePinnedBookmarksContainer: null, mobileAddBookmarksList: null
       },
 
       // --- CORE INITIALIZATION ---
@@ -782,7 +630,6 @@
         if (!this.dom.canvas) { console.error("Fatal: Canvas element 'map' not found."); return; }
         this.dom.ctx = this.dom.canvas.getContext('2d');
         if (!this.dom.ctx) { console.error("Fatal: Could not get 2D rendering context for canvas."); return; }
-        // ... (all other getElementById calls) ...
         this.dom.inpX = document.getElementById('inpX');
         this.dom.inpY = document.getElementById('inpY');
         this.dom.btnGo = document.getElementById('btnGo');
@@ -822,29 +669,40 @@
         this.dom.addBookmarksHeader = document.getElementById('addBookmarksHeader');
         this.dom.addBookmarksToggleBtn = document.getElementById('addBookmarksToggleBtn');
         this.dom.addBookmarksList = document.getElementById('addBookmarksList');
-        if (this.dom.minimapCanvas) {
-          this.dom.minimapCanvas.width = this.config.minimap.width * (window.devicePixelRatio || 1);
-          this.dom.minimapCanvas.height = this.config.minimap.height * (window.devicePixelRatio || 1);
-          this.dom.minimapCtx = this.dom.minimapCanvas.getContext('2d');
-        } else { console.warn("Minimap canvas element not found."); }
+        // Populate DOM references
         for (const key in this.dom) {
-          if (this.dom[key] === null && !['ctx', 'canvas', 'minimapCtx', 'minimapCanvas'].includes(key) && this.dom.hasOwnProperty(key)) {
-            console.warn(`DOM element for '${key}' not found.`);
-          }
+            if (key !== 'canvas' && key !== 'ctx' && key !== 'minimapCtx') {
+                this.dom[key] = document.getElementById(key);
+            }
         }
+        
+        // Special handling for elements that are re-created or don't exist in one layout
+        if (this.dom.minimapCanvas) {
+            this.dom.minimapCanvas.width = this.config.minimap.width * (window.devicePixelRatio || 1);
+            this.dom.minimapCanvas.height = this.config.minimap.height * (window.devicePixelRatio || 1);
+            this.dom.minimapCtx = this.dom.minimapCanvas.getContext('2d');
+        }
+
+        // Fix settings panel for mobile - it needs a header prepended
+        if (this.dom.settingsPanel) {
+            const mobileHeader = document.getElementById('mobileSettingsPanelHeader');
+            if(mobileHeader) this.dom.settingsPanel.prepend(mobileHeader);
+        }
+
+        // Fetch data and start
         this.state.lastFrame = performance.now();
         Promise.all([
             fetch('baseMap.json').then(r => r.ok ? r.json() : Promise.resolve({ unoccupiableTiles: [], defaultBuildings: [] })),
             fetch('CHANGELOG.md').then(r => r.ok ? r.text() : Promise.resolve(''))
           ])
           .then(([baseMapData, changelogText]) => {
-            Object.assign(self.state.baseMap, baseMapData);
-            self.state.patchNotes = changelogText;
-            self.preProcessBuildings();
-            self.preCalculateChunks();
-            self.initializeUI();
-            self.resize();
-            requestAnimationFrame(self.mainLoop.bind(self));
+            Object.assign(this.state.baseMap, baseMapData);
+            this.state.patchNotes = changelogText;
+            this.preProcessBuildings();
+            this.preCalculateChunks();
+            this.initializeUI();
+            this.resize();
+            requestAnimationFrame(this.mainLoop.bind(this));
           })
           .catch(e => {
             console.error("Error during application initialization:", e);
@@ -853,86 +711,73 @@
       },
 
       initializeUI() {
-        if (this.dom.infoBtn && this.dom.infoPanel) this.dom.infoBtn.addEventListener('click', () => this.dom.infoPanel.classList.toggle('open'));
-        if (this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
-        if (this.dom.patchNotesBtn) this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
-        if (this.dom.closePatchNotesBtn) this.dom.closePatchNotesBtn.addEventListener('click', this.hidePatchNotes.bind(this));
-        if (this.dom.modalOverlay) this.dom.modalOverlay.addEventListener('click', this.hidePatchNotes.bind(this));
         const lastSeenVersion = localStorage.getItem('lastSeenVersion');
         if (lastSeenVersion !== this.config.CURRENT_VERSION) { this.showPatchNotes(); }
-        // ... (all other toggle/select setup) ...
-        if (this.dom.tileDetailSelect) {
-          const savedDetail = localStorage.getItem('mapTileDetail') || '49';
-          this.dom.tileDetailSelect.value = savedDetail;
-          this.state.currentTileDetailThreshold = parseInt(this.dom.tileDetailSelect.value, 10);
-          this.dom.tileDetailSelect.addEventListener('change', () => {
-            localStorage.setItem('mapTileDetail', this.dom.tileDetailSelect.value);
-            this.state.currentTileDetailThreshold = parseInt(this.dom.tileDetailSelect.value, 10);
-          });
-        }
-        if (this.dom.allianceRssAlwaysVisibleToggle) {
-          const savedAlwaysVisible = localStorage.getItem('mapAlwaysShowRss') === 'true';
-          this.dom.allianceRssAlwaysVisibleToggle.checked = savedAlwaysVisible;
-          this.dom.allianceRssAlwaysVisibleToggle.addEventListener('change', () => localStorage.setItem('mapAlwaysShowRss', this.dom.allianceRssAlwaysVisibleToggle.checked));
-        }
-        if (this.dom.gridlinesToggle) {
-          const savedGridlines = localStorage.getItem('mapShowGridlines') !== 'false';
-          this.dom.gridlinesToggle.checked = savedGridlines;
-          this.dom.gridlinesToggle.addEventListener('change', () => localStorage.setItem('mapShowGridlines', this.dom.gridlinesToggle.checked));
-        }
-        if (this.dom.allianceRssToggle) {
-          const savedAllianceRss = localStorage.getItem('mapShowAllianceRss') !== 'false';
-          this.dom.allianceRssToggle.checked = savedAllianceRss;
-          this.dom.allianceRssToggle.addEventListener('change', () => localStorage.setItem('mapShowAllianceRss', this.dom.allianceRssToggle.checked));
-        }
-        if (this.dom.coordsToggle) {
-          const savedCoords = localStorage.getItem('mapShowCoords') === 'true';
-          this.dom.coordsToggle.checked = savedCoords;
-          this.dom.coordsToggle.addEventListener('change', () => localStorage.setItem('mapShowCoords', this.dom.coordsToggle.checked));
-        }
-        
-        // Initialize Bookmarks
-        this.loadPinnedBookmarks();
-        this.renderAllBookmarkUI();
-        if(this.dom.addBookmarksHeader) this.dom.addBookmarksHeader.addEventListener('click', this.toggleAddBookmarksList.bind(this));
-        
-        // ... (all other event listeners) ...
+
+        // --- Desktop Listeners ---
+        if (this.dom.infoBtn) this.dom.infoBtn.addEventListener('click', () => this.dom.infoPanel.classList.toggle('open'));
+        if (this.dom.settingsBtn) this.dom.settingsBtn.addEventListener('click', () => this.dom.settingsPanel.classList.toggle('open'));
+        if (this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
         if (this.dom.btnGo) this.dom.btnGo.addEventListener('click', this.doSearch.bind(this));
-        if (this.dom.inpX && this.dom.inpY)[this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') this.doSearch(); }));
+        if (this.dom.inpX && this.dom.inpY) [this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') this.doSearch(); }));
         if (this.dom.zoomDecBtn) this.dom.zoomDecBtn.addEventListener('click', () => this.changeZoomBy(-1));
-        if (this.dom.zoomIncBtn) this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(+1));
+        if (this.dom.zoomIncBtn) this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(1));
         if (this.dom.zoomDec10Btn) this.dom.zoomDec10Btn.addEventListener('click', () => this.changeZoomBy(-10));
-        if (this.dom.zoomInc10Btn) this.dom.zoomInc10Btn.addEventListener('click', () => this.changeZoomBy(+10));
-        if (this.dom.zoomPresetSelect) {
-            this.dom.zoomPresetSelect.addEventListener('change', (e) => {
-                const value = e.target.value;
-                if (value === 'Fit') { this.zoomToFit(); } 
-                else {
-                    const zoomVal = Number(value);
-                    if (!isNaN(zoomVal)) {
-                        const targetScale = (zoomVal / 100) * this.config.baseScale;
-                        this.animateZoom(targetScale, this.dom.canvas.width / 2, this.dom.canvas.height / 2, 200);
-                    }
-                }
-                e.target.selectedIndex = 0;
-            });
-        }
-        if (this.dom.settingsBtn && this.dom.settingsPanel) {
-          this.dom.settingsBtn.addEventListener('click', () => {
-            this.dom.settingsPanel.classList.toggle('open');
-          });
-        }
-        if (this.dom.minimapToggleBtn && this.dom.minimapCanvas) {
-          this.dom.minimapToggleBtn.addEventListener('click', () => {
-            this.state.isMinimapVisible = !this.state.isMinimapVisible;
-            this.dom.minimapCanvas.classList.toggle('hidden', !this.state.isMinimapVisible);
-            this.dom.minimapToggleBtn.textContent = this.state.isMinimapVisible ? 'Hide Minimap' : 'Show Minimap';
-          });
-        }
+        if (this.dom.zoomInc10Btn) this.dom.zoomInc10Btn.addEventListener('click', () => this.changeZoomBy(10));
         if (this.dom.zoomSlider) {
           this.dom.zoomSlider.addEventListener('input', this.handleZoomSlider.bind(this));
           this.dom.zoomSlider.addEventListener('mousedown', () => { clearTimeout(this.state.hideLabelTimeout); this.updateFloatingZoomLabel(); });
         }
+        if (this.dom.minimapToggleBtn) this.dom.minimapToggleBtn.addEventListener('click', () => {
+          this.state.isMinimapVisible = !this.state.isMinimapVisible;
+          this.dom.minimapCanvas.classList.toggle('hidden', !this.state.isMinimapVisible);
+          this.dom.minimapToggleBtn.textContent = this.state.isMinimapVisible ? 'Hide Minimap' : 'Show Minimap';
+        });
+        if (this.dom.addBookmarksHeader) this.dom.addBookmarksHeader.addEventListener('click', this.toggleAddBookmarksList.bind(this));
+
+        // --- Mobile Listeners ---
+        if (this.dom.mobileZoomInBtn) this.dom.mobileZoomInBtn.addEventListener('click', () => this.changeZoomBy(10));
+        if (this.dom.mobileZoomOutBtn) this.dom.mobileZoomOutBtn.addEventListener('click', () => this.changeZoomBy(-10));
+        if (this.dom.mobileFitBtn) this.dom.mobileFitBtn.addEventListener('click', this.zoomToFit.bind(this));
+        if (this.dom.mobileBtnGo) this.dom.mobileBtnGo.addEventListener('click', () => this.doSearch(true));
+        
+        // Panel Toggles
+        if (this.dom.mobileSearchBtn) this.dom.mobileSearchBtn.addEventListener('click', () => this.openMobilePanel(this.dom.mobileSearchPanel));
+        if (this.dom.mobileBookmarksBtn) this.dom.mobileBookmarksBtn.addEventListener('click', () => this.openMobilePanel(this.dom.mobileBookmarksPanel));
+        if (this.dom.mobileSettingsBtn) this.dom.mobileSettingsBtn.addEventListener('click', () => this.openMobilePanel(this.dom.settingsPanel));
+        
+        // Add listeners to all close buttons on mobile panels
+        document.querySelectorAll('.mobile-panel .close-btn').forEach(btn => btn.addEventListener('click', this.closeAllMobilePanels.bind(this)));
+        if(this.dom.mobileModalOverlay) this.dom.mobileModalOverlay.addEventListener('click', this.closeAllMobilePanels.bind(this));
+
+        // --- Universal Listeners & Setup ---
+        // Patch Notes
+        if (this.dom.patchNotesBtn) this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
+        if (this.dom.closePatchNotesBtn) this.dom.closePatchNotesBtn.addEventListener('click', this.hidePatchNotes.bind(this));
+        if (this.dom.modalOverlay) this.dom.modalOverlay.addEventListener('click', this.hidePatchNotes.bind(this));
+        
+        // Toggles
+        if (this.dom.tileDetailSelect) {
+          this.dom.tileDetailSelect.value = localStorage.getItem('mapTileDetail') || '49';
+          this.dom.tileDetailSelect.dispatchEvent(new Event('change')); // Trigger initial state
+          this.dom.tileDetailSelect.addEventListener('change', (e) => {
+            localStorage.setItem('mapTileDetail', e.target.value);
+            this.state.currentTileDetailThreshold = parseInt(e.target.value, 10);
+          });
+        }
+        ['gridlinesToggle', 'coordsToggle', 'allianceRssToggle', 'allianceRssAlwaysVisibleToggle'].forEach(id => {
+            if(this.dom[id]) {
+                const storageKey = 'map' + id.replace('Toggle', '').charAt(0).toUpperCase() + id.slice(1).replace('Toggle', '');
+                this.dom[id].checked = localStorage.getItem(storageKey) !== 'false';
+                this.dom[id].addEventListener('change', (e) => localStorage.setItem(storageKey, e.target.checked));
+            }
+        });
+        
+        // Bookmarks
+        this.loadPinnedBookmarks();
+        this.renderAllBookmarkUI();
+
+        // Canvas / Window
         window.addEventListener('resize', this.resize.bind(this));
         window.addEventListener('mousemove', this.handleMouseMove.bind(this));
         window.addEventListener('mouseup', () => { this.state.dragging = false; });
@@ -951,6 +796,19 @@
           this.dom.minimapCanvas.addEventListener('mouseleave', this.handleMinimapMouseUp.bind(this));
           window.addEventListener('mouseup', this.handleMinimapMouseUp.bind(this));
         }
+      },
+      
+      // --- MOBILE UI HANDLERS ---
+      openMobilePanel(panel) {
+        if (!panel) return;
+        this.closeAllMobilePanels();
+        panel.classList.add('open');
+        if (this.dom.mobileModalOverlay) this.dom.mobileModalOverlay.classList.add('open');
+      },
+
+      closeAllMobilePanels() {
+        document.querySelectorAll('.mobile-panel.open').forEach(p => p.classList.remove('open'));
+        if (this.dom.mobileModalOverlay) this.dom.mobileModalOverlay.classList.remove('open');
       },
 
       // --- BOOKMARK LOGIC ---
@@ -992,81 +850,59 @@
         this.renderPinnedBookmarks();
         this.renderAddBookmarksList();
       },
-
+      
       renderPinnedBookmarks() {
-        if (!this.dom.pinnedBookmarksContainer) return;
-        this.dom.pinnedBookmarksContainer.innerHTML = ''; // Clear
-
-        this.state.pinnedBookmarks.forEach(p => {
-          const item = document.createElement('div');
-          item.className = 'pinned-bookmark-item';
-          
-          const nameSpan = document.createElement('span');
-          nameSpan.textContent = p.displayName;
-          
-          const controlsDiv = document.createElement('div');
-          controlsDiv.className = 'controls';
-
-          const goBtn = document.createElement('button');
-          goBtn.textContent = 'Go';
-          goBtn.onclick = () => this.goToBookmark(p.x, p.y);
-
-          const unpinBtn = document.createElement('button');
-          unpinBtn.textContent = '×';
-          unpinBtn.className = 'unpin-btn';
-          unpinBtn.title = `Unpin ${p.displayName}`;
-          unpinBtn.onclick = () => this.unpinBookmark(p.x, p.y);
-
-          controlsDiv.append(goBtn, unpinBtn);
-          item.append(nameSpan, controlsDiv);
-          this.dom.pinnedBookmarksContainer.appendChild(item);
+        const containers = [this.dom.pinnedBookmarksContainer, this.dom.mobilePinnedBookmarksContainer].filter(Boolean);
+        containers.forEach(container => {
+            container.innerHTML = '';
+            this.state.pinnedBookmarks.forEach(p => {
+              const item = document.createElement('div');
+              item.className = 'pinned-bookmark-item';
+              item.innerHTML = `
+                <span>${p.displayName}</span>
+                <div class="controls">
+                  <button class="go-btn">Go</button>
+                  <button class="unpin-btn" title="Unpin ${p.displayName}">×</button>
+                </div>`;
+              item.querySelector('.go-btn').onclick = () => {
+                  this.goToBookmark(p.x, p.y);
+                  this.closeAllMobilePanels();
+              };
+              item.querySelector('.unpin-btn').onclick = () => this.unpinBookmark(p.x, p.y);
+              container.appendChild(item);
+            });
         });
       },
 
       renderAddBookmarksList() {
-        if (!this.dom.addBookmarksList || !this.state.baseMap.defaultBuildings) return;
-        this.dom.addBookmarksList.innerHTML = ''; // Clear
-
+        const containers = [this.dom.addBookmarksList, this.dom.mobileAddBookmarksList].filter(Boolean);
+        // ... (logic for getting and sorting unpinnedLandmarks is the same)
         const allLandmarks = this.state.baseMap.defaultBuildings.filter(b => 
             b.displayName && (b.displayName.includes("King's Castle") || b.displayName.includes("Fortress") || b.displayName.includes("Sanctuary"))
         );
-
         const unpinnedLandmarks = allLandmarks.filter(landmark => 
             !this.state.pinnedBookmarks.some(p => p.x === landmark.x && p.y === landmark.y)
         );
+        unpinnedLandmarks.sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { numeric: true }));
 
-        unpinnedLandmarks.sort((a, b) => {
-            const getSortOrder = (name) => {
-                if (name.includes("King's Castle")) return 0;
-                if (name.includes("Fortress")) return 1;
-                if (name.includes("Sanctuary")) return 2;
-                return 3;
-            };
-            const orderA = getSortOrder(a.displayName);
-            const orderB = getSortOrder(b.displayName);
-            if (orderA !== orderB) return orderA - orderB;
-            return a.displayName.localeCompare(b.displayName, undefined, { numeric: true });
-        });
-
-        unpinnedLandmarks.forEach(b => {
-            const item = document.createElement('div');
-            item.className = 'add-bookmark-item';
-            const nameSpan = document.createElement('span');
-            nameSpan.textContent = b.displayName;
-            const pinBtn = document.createElement('button');
-            pinBtn.textContent = 'Pin 📌';
-            pinBtn.onclick = (e) => {
-                e.stopPropagation();
-                this.pinBookmark(b);
-            };
-            item.append(nameSpan, pinBtn);
-            this.dom.addBookmarksList.appendChild(item);
+        containers.forEach(container => {
+            container.innerHTML = '';
+            unpinnedLandmarks.forEach(b => {
+                const item = document.createElement('div');
+                item.className = 'add-bookmark-item';
+                item.innerHTML = `<span>${b.displayName}</span><button>Pin 📌</button>`;
+                item.querySelector('button').onclick = (e) => {
+                    e.stopPropagation();
+                    this.pinBookmark(b);
+                };
+                container.appendChild(item);
+            });
         });
       },
 
       toggleAddBookmarksList() {
-        this.dom.addBookmarksList.classList.toggle('open');
-        this.dom.addBookmarksToggleBtn.classList.toggle('open');
+        if (this.dom.addBookmarksList) this.dom.addBookmarksList.classList.toggle('open');
+        if (this.dom.addBookmarksToggleBtn) this.dom.addBookmarksToggleBtn.classList.toggle('open');
       },
 
       goToBookmark(x, y) {
@@ -1419,9 +1255,11 @@
         }
       },
       
-      doSearch() {
-        if (!this.dom.inpX || !this.dom.inpY) return;
-        const x = +this.dom.inpX.value; const y = +this.dom.inpY.value;
+      doSearch(isMobile = false) {
+        const xEl = isMobile ? this.dom.mobileInpX : this.dom.inpX;
+        const yEl = isMobile ? this.dom.mobileInpY : this.dom.inpY;
+        if (!xEl || !yEl) return;
+        const x = +xEl.value; const y = +yEl.value;
         if (x >= 0 && y >= 0 && x < this.config.N && y < this.config.N) {
           this.state.selection = this.getBuildingAt(x, y) || { x, y };
           if (this.state.selection) this.state.selection.pingStart = performance.now();
@@ -1430,6 +1268,7 @@
           const targetCamX = this.dom.canvas.width / 2 - screenX * targetScale;
           const targetCamY = this.dom.canvas.height / 2 - screenY * targetScale;
           this.animatePanZoom(targetScale, targetCamX, targetCamY);
+          if (isMobile) this.closeAllMobilePanels();
         }
       },
       
@@ -1718,6 +1557,27 @@
         requestAnimationFrame(this.mainLoop.bind(this));
       }
     };
+
+    // A little polyfill for Element.prepend() for older browsers if needed
+    (function (arr) {
+      arr.forEach(function (item) {
+        if (item.hasOwnProperty('prepend')) { return; }
+        Object.defineProperty(item, 'prepend', {
+          configurable: true, enumerable: true, writable: true,
+          value: function prepend() {
+            var argArr = Array.prototype.slice.call(arguments),
+              docFrag = document.createDocumentFragment();
+            argArr.forEach(function (argItem) {
+              var isNode = argItem instanceof Node;
+              docFrag.appendChild(isNode ? argItem : document.createTextNode(String(argItem)));
+            });
+            this.insertBefore(docFrag, this.firstChild);
+          }
+        });
+      });
+    })([Element.prototype, Document.prototype, DocumentFragment.prototype]);
+
+    // Kick off the application
     KingshotPlanner.init();
   </script>
 </body>
