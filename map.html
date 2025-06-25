@@ -15,6 +15,10 @@
 	--text-color: #e0e0e0;
 	--highlight-color: #2a9fd6;
 	--border-color: #444;
+	/* -- NEW COLORS -- */
+	--build-mode-bg: rgba(214, 102, 43, 0.9);
+	--success-color: #28a745;
+	--danger-color: #dc3545;
 }
 
 body {
@@ -34,6 +38,26 @@ canvas#map {
 
 canvas#map:active {
 	cursor: grabbing;
+}
+canvas#map.build-cursor {
+	cursor: crosshair;
+}
+
+/* --- NEW BUILD MODE BANNER --- */
+#buildModeBanner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--build-mode-bg);
+    color: white;
+    text-align: center;
+    padding: 8px 0;
+    font-size: 14px;
+    font-weight: bold;
+    z-index: 1001; /* Above toolbar */
+    display: none; /* Toggled by JS */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 
 #versionDisplay {
@@ -136,6 +160,11 @@ canvas#map:active {
 	background-color: var(--highlight-color);
 	color: white;
 }
+/* -- NEW -- */
+#bottomToolbar button#buildModeToggleBtn.active {
+	background-color: var(--build-mode-bg);
+}
+
 
 #bottomToolbar #zoomLevel {
 	font-size: 14px;
@@ -193,6 +222,8 @@ canvas#map:active {
 	transform: translateY(10px);
 	transition: opacity 0.2s ease-out, transform 0.2s ease-out;
 	width: 320px;
+    max-height: calc(100vh - 80px - var(--toolbar-height));
+    overflow-y: auto;
 	box-sizing: border-box;
 }
 
@@ -218,6 +249,42 @@ canvas#map:active {
 
 .panel-section:last-child {
 	margin-bottom: 0;
+}
+/* General button style inside panels */
+.panel-section button, .toolbar-panel button {
+    background-color: #4f5358;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.panel-section button:hover, .toolbar-panel button:hover {
+    background-color: #5f6368;
+}
+.panel-section button.primary, .toolbar-panel button.primary {
+    background-color: var(--highlight-color);
+}
+.panel-section button.danger, .toolbar-panel button.danger {
+    background-color: var(--danger-color);
+}
+.panel-section button:disabled {
+    background-color: #333;
+    color: #888;
+    cursor: not-allowed;
+}
+
+/* General input style */
+.panel-section input[type="text"],
+.panel-section input[type="number"],
+.panel-section input[type="color"] {
+    background-color: #222;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 6px;
+    border-radius: 4px;
+    box-sizing: border-box;
 }
 
 .bookmarks-list {
@@ -305,15 +372,6 @@ canvas#map:active {
 	align-items: center;
 }
 
-#navPanel input[type="number"] {
-	width: 60px;
-	padding: 5px;
-}
-
-#navPanel button {
-	padding: 6px 12px;
-}
-
 /* Settings Panel */
 #settingsPanel {
 	right: 10px;
@@ -334,8 +392,12 @@ canvas#map:active {
 	gap: 10px;
 	margin-top: 10px;
 }
+#settingsPanel .plan-buttons {
+    display: flex;
+    gap: 10px;
+}
 
-#settingsPanel .info-buttons button {
+#settingsPanel .info-buttons button, #settingsPanel .plan-buttons button {
 	flex: 1;
 	cursor: pointer;
 }
@@ -353,13 +415,119 @@ canvas#map:active {
 	gap: 4px;
 }
 
-#zoomPresetsPanel button {
-	width: 100%;
-	text-align: center;
-	padding: 8px;
-	font-size: 14px;
-	cursor: pointer;
+/* --- NEW FLOATING BUTTON & PALETTE --- */
+#floatingBuildingsBtn {
+    position: fixed;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 998;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    padding: 15px 8px;
+    border-radius: 8px 0 0 8px;
+    background-color: var(--panel-bg);
+    display: none; /* Toggled by JS */
 }
+
+#buildingPalettePanel {
+    right: 65px; /* Position next to the floating button */
+}
+
+#buildPanel {
+    right: 120px; /* Adjust position */
+}
+#buildPanel .form-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+#buildPanel .form-grid input[type="color"] {
+    padding: 0;
+    height: 30px;
+    width: 50px;
+}
+#buildPanel #createAllianceBtn {
+    width: 100%;
+    margin-top: 5px;
+}
+#buildPanel .alliance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-height: 150px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+}
+#buildPanel .alliance-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 4px;
+    border-left: 5px solid transparent; /* Set by JS */
+}
+#buildPanel .alliance-item.selected {
+    background: rgba(42, 159, 214, 0.2);
+    border-left-color: var(--highlight-color);
+}
+#buildPanel .alliance-item .color-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+#buildPanel .alliance-item .name {
+    flex-grow: 1;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#buildPanel .alliance-item .tag {
+    font-weight: bold;
+    font-size: 13px;
+    background: #555;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+#buildPanel .alliance-item .controls {
+    display: flex;
+    gap: 4px;
+}
+#buildPanel .alliance-item .controls button {
+    font-size: 12px;
+    padding: 3px 6px;
+}
+#buildPanel #buildingMenu {
+    display: none; /* Shown by JS when an alliance is selected */
+}
+#buildPanel .building-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+}
+#buildPanel .building-list button {
+    padding: 8px;
+    text-align: left;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+}
+#buildPanel .building-list button span {
+    font-size: 11px;
+    opacity: 0.7;
+}
+#buildPanel .building-list button.selected {
+    background-color: var(--highlight-color);
+}
+#buildPanel .building-list button:disabled {
+    opacity: 0.5;
+}
+
 
 /* --- OTHER UI ELEMENTS --- */
 #statsPanel {
@@ -497,7 +665,8 @@ canvas#map:active {
 	#pinnedBookmarksPanel,
 	#navPanel,
 	#settingsPanel,
-	#zoomPresetsPanel {
+	#zoomPresetsPanel,
+    #buildPanel {
 		left: 10px;
 		right: 10px;
 		width: auto;
@@ -545,6 +714,9 @@ canvas#map:active {
     <div id="statsFPS">FPS: –</div>
     <div id="statsTiles">Tiles: –</div>
   </div>
+  
+  <!-- NEW BUILD MODE BANNER -->
+  <div id="buildModeBanner">Build Mode Enabled</div>
 
   <div id="minimapContainer">
       <canvas id="minimapCanvas"></canvas>
@@ -555,6 +727,16 @@ canvas#map:active {
   
   <!-- MAIN CANVAS -->
   <canvas id="map"></canvas>
+
+  <!-- NEW FLOATING BUILDINGS BUTTON & PALETTE -->
+  <button id="floatingBuildingsBtn">Buildings</button>
+
+  <div id="buildingPalettePanel" class="toolbar-panel">
+      <h4>Buildings</h4>
+      <div id="buildingPaletteList" class="building-list">
+          <!-- Populated by JS -->
+      </div>
+  </div>
 
   <!-- NEW BOTTOM TOOLBAR & PANELS -->
   <div id="bottomToolbar">
@@ -572,6 +754,7 @@ canvas#map:active {
     
     <div class="toolbar-group right">
       <button id="zoomPresetsToggleBtn" title="Zoom Presets">🎯</button>
+      <button id="buildModeToggleBtn" title="Build Mode">🛠️</button> <!-- NEW -->
       <button id="minimapToggleBtn" title="Toggle Minimap">🗺️</button>
       <button id="settingsToggleBtn" title="Settings">⚙️</button>
     </div>
@@ -612,6 +795,10 @@ canvas#map:active {
       <div><input type="checkbox" id="allianceRssAlwaysVisibleToggle"><label for="allianceRssAlwaysVisibleToggle"> Always Show RSS</label></div>
     </div>
     <div class="panel-section">
+      <h4>Build Overlays</h4>
+      <div><input type="checkbox" id="alwaysShowClaimedToggle"><label for="alwaysShowClaimedToggle"> Always Show Claimed Area</label></div>
+    </div>
+    <div class="panel-section">
       <h4>Performance</h4>
       <label for="tileDetailSelect">Merge tiles at zoom:</label>
       <select id="tileDetailSelect">
@@ -622,6 +809,16 @@ canvas#map:active {
         <option value="69">70% (Low)</option>
         <option value="79">80% (Very Low)</option>
       </select>
+    </div>
+    <!-- NEW: Plan Import/Export -->
+    <div class="panel-section">
+        <h4>Build Plan</h4>
+        <div class="plan-buttons">
+            <button id="importPlanBtn">Import</button>
+            <button id="exportPlanBtn">Export</button>
+            <button id="clearPlanBtn" class="danger">Clear Plan</button> 
+            <input type="file" id="planFileInput" accept=".json" style="display: none;">
+        </div>
     </div>
     <div class="panel-section info-buttons">
         <button id="infoBtn">Controls</button>
@@ -636,12 +833,38 @@ canvas#map:active {
       </div>
   </div>
 
+  <!-- NEW BUILD PANEL -->
+  <div id="buildPanel" class="toolbar-panel">
+    <div class="panel-section">
+        <h4>Create Alliance</h4>
+        <div class="form-grid">
+            <label for="allianceName">Name:</label>
+            <input type="text" id="allianceName" placeholder="AlphabetSoup" maxlength="20">
+            <label for="allianceTag">Tag:</label>
+            <input type="text" id="allianceTag" placeholder="ABC" maxlength="3">
+            <label for="allianceColor">Color:</label>
+            <input type="color" id="allianceColor" value="#d6662b">
+        </div>
+        <button id="createAllianceBtn" class="primary">Create Alliance</button>
+    </div>
+    <div class="panel-section">
+        <h4>Alliances</h4>
+        <div id="allianceList" class="alliance-list">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+    <div class="panel-section">
+        <button id="toggleBuildModeActualBtn" class="primary">Enter Build Mode</button>
+    </div>
+  </div>
+
+
   <!-- MODALS (unchanged structure, but triggered from new buttons) -->
   <div id="modalOverlay" class="modal-overlay"></div>
   <div id="patchNotesModal" class="modal">
     <div class="modal-header"><h3>What's New?!</h3><button id="closePatchNotesBtn" class="close-btn">×</button></div>
     <div class="modal-body" id="patchNotesBody"></div>
-    <div class="modal-footer"><input type="checkbox" id="hidePatchNotesCheckbox"><label for="hidePatchNotesCheckbox"> Do not show this again.</label></div>
+    <div class="modal-footer"><input type="checkbox" id="hidePatchNotesCheckbox"><label for="hidePatchNotesCheckbox"> Hide this window until the next update.</label></div>
   </div>
   <div id="controlsModal" class="modal">
       <div class="modal-header"><h3>Controls</h3><button id="closeControlsBtn" class="close-btn">×</button></div>
@@ -653,16 +876,18 @@ canvas#map:active {
             <li><strong>Quick Zoom</strong>: Double-click to zoom in</li>
             <li><strong>Keyboard Pan</strong>: Use Arrow Keys</li>
             <li><strong>Select</strong>: Click or tap on any tile</li>
+            <li><strong>Place Building (Build Mode)</strong>: Select a building from the menu and click on the map.</li>
+            <li><strong>Cancel Placement (Build Mode)</strong>: Right-click or press Escape key.</li>
+            <li><strong>Delete Building (Build Mode)</strong>: Right-click on a placed building.</li>
           </ul>
       </div>
   </div>
 
   <script>
-    // Unchanged config and state objects...
     const KingshotPlanner = {
       // --- TWEAKABLE SETTINGS ---
       config: {
-        CURRENT_VERSION: '6.1.1.0',
+        CURRENT_VERSION: '7.0.0.0', 
         N: 1200,
         tileW: 10,
         tileH: 10,
@@ -705,6 +930,17 @@ canvas#map:active {
           mainMapZoomThresholdForMinimapZoom: 0.03
         }
       },
+      // --- BUILDING CATALOG ---
+      BUILDING_CATALOG: {
+        'alliance_tower': { name: 'Alliance Tower', w: 1, h: 1, coverage: 7, text: 'tag', rule: 'any' },
+        'hq_badlands': { name: 'Badlands HQ', w: 3, h: 3, coverage: 15, text: 'tag+HQ', rule: 'badlands' },
+        'hq_plains': { name: 'Plains HQ', w: 3, h: 3, coverage: 15, text: 'tag+HQ', rule: 'plains' },
+        'hq_fertile': { name: 'Fertile Lands HQ', w: 3, h: 3, coverage: 15, text: 'tag+HQ', rule: 'fertile' },
+        'pitfall': { name: 'Pitfall', w: 3, h: 3, coverage: 0, text: 'tag+Bear', rule: 'claimed' },
+        'statue1': { name: 'Prestige Statue 1', w: 2, h: 2, coverage: 0, text: 'tag+Statue 1', rule: 'claimed' },
+        'statue2': { name: 'Prestige Statue 2', w: 2, h: 2, coverage: 0, text: 'tag+Statue 2', rule: 'claimed' },
+        'statue3': { name: 'Prestige Statue 3', w: 2, h: 2, coverage: 0, text: 'tag+Statue 3', rule: 'claimed' },
+      },
       state: {
         baseMap: { unoccupiableTiles: [], defaultBuildings: [] },
         patchNotes: '',
@@ -740,6 +976,14 @@ canvas#map:active {
         animationId: null,
         pinnedBookmarks: [],
         openPanel: null,
+        isBuildMode: false,
+        alliances: [],
+        activeAllianceId: null,
+        buildModeBuildings: [],
+        selectedBuildingType: null,
+        claimedTerritory: new Map(), // allianceId -> Set of 'x,y' strings
+        globallyClaimedTiles: new Map(), // NEW: 'x,y' -> allianceId
+        mouseWorldPos: { x: 0, y: 0 },
       },
       dom: {}, // Will be populated in init()
 
@@ -789,6 +1033,24 @@ canvas#map:active {
           navPanelToggleBtn: document.getElementById('navPanelToggleBtn'),
           navPanel: document.getElementById('navPanel'),
           addBookmarksList: document.getElementById('addBookmarksList'),
+          // --- NEW BUILD MODE DOM REFS ---
+          buildModeBanner: document.getElementById('buildModeBanner'),
+          buildModeToggleBtn: document.getElementById('buildModeToggleBtn'),
+          buildPanel: document.getElementById('buildPanel'),
+          allianceNameInput: document.getElementById('allianceName'),
+          allianceTagInput: document.getElementById('allianceTag'),
+          allianceColorInput: document.getElementById('allianceColor'),
+          createAllianceBtn: document.getElementById('createAllianceBtn'),
+          allianceList: document.getElementById('allianceList'),
+          toggleBuildModeActualBtn: document.getElementById('toggleBuildModeActualBtn'),
+          floatingBuildingsBtn: document.getElementById('floatingBuildingsBtn'),
+          buildingPalettePanel: document.getElementById('buildingPalettePanel'),
+          buildingPaletteList: document.getElementById('buildingPaletteList'),
+          alwaysShowClaimedToggle: document.getElementById('alwaysShowClaimedToggle'),
+          importPlanBtn: document.getElementById('importPlanBtn'),
+          exportPlanBtn: document.getElementById('exportPlanBtn'),
+          planFileInput: document.getElementById('planFileInput'),
+          clearPlanBtn: document.getElementById('clearPlanBtn'),
         };
 
         this.dom.ctx = this.dom.canvas.getContext('2d');
@@ -810,6 +1072,7 @@ canvas#map:active {
           this.state.patchNotes = changelogText;
           this.preProcessBuildings();
           this.preCalculateChunks();
+          this.loadPlanFromLocalStorage();
           this.initializeUI();
           this.resize();
           requestAnimationFrame(this.mainLoop.bind(this));
@@ -823,41 +1086,71 @@ canvas#map:active {
             'settings': { btn: this.dom.settingsToggleBtn, panel: this.dom.settingsPanel },
             'nav': { btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel },
             'zoomPresets': { btn: this.dom.zoomPresetsToggleBtn, panel: this.dom.zoomPresetsPanel },
-            'pinnedBookmarks': { btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel }
+            'pinnedBookmarks': { btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel },
+            'build': { btn: this.dom.buildModeToggleBtn, panel: this.dom.buildPanel },
         };
         
         const togglePanel = (panelName) => {
-            if (this.state.openPanel === panelName) { // Close currently open panel
-                panelMap[panelName].panel.classList.remove('open');
-                panelMap[panelName].btn.classList.remove('active');
-                this.state.openPanel = null;
-            } else { // Open a new panel
-                // Close any other open panel first
-                if (this.state.openPanel && panelMap[this.state.openPanel]) {
-                    panelMap[this.state.openPanel].panel.classList.remove('open');
-                    panelMap[this.state.openPanel].btn.classList.remove('active');
-                }
-                // Open the new one
-                panelMap[panelName].panel.classList.add('open');
-                panelMap[panelName].btn.classList.add('active');
-                this.state.openPanel = panelName;
+        if (this.state.openPanel === panelName) { // Close currently open panel
+            panelMap[panelName].panel.classList.remove('open');
+            panelMap[panelName].btn.classList.remove('active');
+            this.state.openPanel = null;
+        } else { // Open a new panel
+            // Close any other open panel first
+            if (this.state.openPanel && panelMap[this.state.openPanel]) {
+                panelMap[this.state.openPanel].panel.classList.remove('open');
+                panelMap[this.state.openPanel].btn.classList.remove('active');
             }
+            // If build mode is on, turn it off before opening another panel
+            if (this.state.isBuildMode) {
+                this.setBuildModeActive(); // This will correctly exit build mode
+            }
+            // Open the new one
+            panelMap[panelName].panel.classList.add('open');
+            panelMap[panelName].btn.classList.add('active');
+            this.state.openPanel = panelName;
+        }
         };
 
         // Close panels when clicking outside
         document.addEventListener('click', (e) => {
             if (!this.state.openPanel) return;
             const current = panelMap[this.state.openPanel];
-            if (!current.panel.contains(e.target) && !current.btn.contains(e.target)) { togglePanel(this.state.openPanel); }
-        });
+            // Check if the click is outside the currently open panel and its toggle button
+            if (!current.panel.contains(e.target) && !current.btn.contains(e.target)) {
+                // If the build panel is open, we need special handling
+                if (this.state.openPanel === 'build') {
+                    // If we are in active build mode, exit it first
+                    if (this.state.isBuildMode) {
+                        this.setBuildModeActive(); // This toggles it off
+                    }
+                    // Now, close the build management panel itself
+                    current.panel.classList.remove('open');
+                    current.btn.classList.remove('active');
+                    this.state.openPanel = null;
+                } else {
+                    // For any other panel, just toggle it closed
+                    togglePanel(this.state.openPanel);
+                }
+            }
+          });
 
         // Attach toggle events
-        Object.keys(panelMap).forEach(key => 
-            panelMap[key].btn.addEventListener('click', (e) => { 
-                e.stopPropagation(); 
-                togglePanel(key); 
-          }));
-
+        Object.keys(panelMap).forEach(key => {
+            if (key === 'build') {
+                panelMap[key].btn.addEventListener('click', (e) => { 
+                    e.stopPropagation(); 
+                    this.renderAlliancePanel();
+                    togglePanel(key); 
+                });
+            } else {
+                panelMap[key].btn.addEventListener('click', (e) => { 
+                    e.stopPropagation(); 
+                    togglePanel(key); 
+                });
+            }
+        });
+        
         // Nav Panel Tab logic
         this.dom.navPanel.querySelectorAll('.tab-button').forEach(button => {
             button.addEventListener('click', (e) => {
@@ -922,12 +1215,24 @@ canvas#map:active {
             this.dom.minimapContainer.classList.toggle('visible');
             this.dom.minimapToggleBtn.classList.toggle('active', this.dom.minimapContainer.classList.contains('visible'));
           });
-          // Set minimap initial state based on screen size
           const isDesktop = window.innerWidth > 768;
           this.dom.minimapContainer.classList.toggle('visible', isDesktop);
           this.dom.minimapToggleBtn.classList.toggle('active', isDesktop);
         }
         
+        // --- BUILD MODE UI LISTENERS ---
+        if (this.dom.buildModeToggleBtn) this.dom.buildModeToggleBtn.title = "Manage Plan / Alliances"; // Rename tooltip
+        if (this.dom.toggleBuildModeActualBtn) this.dom.toggleBuildModeActualBtn.addEventListener('click', this.setBuildModeActive.bind(this));
+        if (this.dom.floatingBuildingsBtn) this.dom.floatingBuildingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.dom.buildingPalettePanel.classList.toggle('open');
+        });
+        if (this.dom.createAllianceBtn) this.dom.createAllianceBtn.addEventListener('click', this.createAlliance.bind(this));
+        if (this.dom.exportPlanBtn) this.dom.exportPlanBtn.addEventListener('click', this.exportPlan.bind(this));
+        if (this.dom.importPlanBtn) this.dom.importPlanBtn.addEventListener('click', () => this.dom.planFileInput.click());
+        if (this.dom.planFileInput) this.dom.planFileInput.addEventListener('change', this.importPlan.bind(this));
+        if (this.dom.clearPlanBtn) this.dom.clearPlanBtn.addEventListener('click', this.clearPlan.bind(this));
+
         // Global Event Listeners
         window.addEventListener('resize', this.resize.bind(this));
         window.addEventListener('mousemove', this.handleMouseMove.bind(this));
@@ -937,7 +1242,7 @@ canvas#map:active {
         this.dom.canvas.addEventListener('click', this.handleCanvasClick.bind(this));
         this.dom.canvas.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
         this.dom.canvas.addEventListener('dblclick', this.handleDblClick.bind(this));
-        this.dom.canvas.addEventListener('contextmenu', e => e.preventDefault());
+        this.dom.canvas.addEventListener('contextmenu', this.handleRightClick.bind(this));
         this.dom.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
         this.dom.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
         this.dom.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
@@ -947,6 +1252,393 @@ canvas#map:active {
           this.dom.minimapCanvas.addEventListener('mouseleave', this.handleMinimapMouseUp.bind(this));
           window.addEventListener('mouseup', this.handleMinimapMouseUp.bind(this));
         }
+      },
+      
+      setBuildModeActive() {
+          this.state.isBuildMode = !this.state.isBuildMode;
+          const isActive = this.state.isBuildMode;
+
+          // Close any other open panel first
+          const panelMap = {
+              'settings': { btn: this.dom.settingsToggleBtn, panel: this.dom.settingsPanel },
+              'nav': { btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel },
+              'zoomPresets': { btn: this.dom.zoomPresetsToggleBtn, panel: this.dom.zoomPresetsPanel },
+              'pinnedBookmarks': { btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel },
+          };
+          if (this.state.openPanel && this.state.openPanel !== 'build') {
+              panelMap[this.state.openPanel].panel.classList.remove('open');
+              panelMap[this.state.openPanel].btn.classList.remove('active');
+              this.state.openPanel = null;
+          }
+
+          this.dom.buildModeBanner.style.display = isActive ? 'block' : 'none';
+          this.dom.floatingBuildingsBtn.style.display = isActive ? 'block' : 'none';
+          this.dom.toggleBuildModeActualBtn.textContent = isActive ? 'Exit Build Mode' : 'Enter Build Mode';
+          this.dom.toggleBuildModeActualBtn.classList.toggle('danger', isActive);
+          
+          // --- NEW LOGIC ---
+          if (isActive && this.state.activeAllianceId) {
+              const alliance = this.state.alliances.find(a => a.id === this.state.activeAllianceId);
+              if (alliance) {
+                  this.dom.buildModeBanner.textContent = `Building as [${alliance.tag}] ${alliance.name}`;
+                  this.dom.buildModeBanner.style.backgroundColor = alliance.color;
+              }
+          } else {
+              // Reset to default when not active or no alliance selected
+              this.dom.buildModeBanner.textContent = "Build Mode Enabled";
+              this.dom.buildModeBanner.style.backgroundColor = 'var(--build-mode-bg)';
+          }
+          // --- END NEW LOGIC ---
+
+          if (!isActive) {
+              this.dom.buildingPalettePanel.classList.remove('open');
+              this.state.selectedBuildingType = null;
+              this.dom.canvas.classList.remove('build-cursor');
+          }
+      },
+
+      createAlliance() {
+        const name = this.dom.allianceNameInput.value.trim();
+        const tag = this.dom.allianceTagInput.value.trim().toUpperCase();
+        const color = this.dom.allianceColorInput.value;
+
+        if (!name || !tag || tag.length === 0 || tag.length > 3) {
+            alert("Please provide a valid alliance name and a 3 character tag.");
+            return;
+        }
+
+        const newAlliance = {
+            id: Date.now(),
+            name,
+            tag,
+            color
+        };
+
+        this.state.alliances.push(newAlliance);
+        this.savePlanToLocalStorage();
+        this.dom.allianceNameInput.value = '';
+        this.dom.allianceTagInput.value = '';
+        this.renderAlliancePanel();
+      },
+
+      selectAlliance(id) {
+          const isDeselecting = this.state.activeAllianceId === id;
+          this.state.activeAllianceId = isDeselecting ? null : id;
+
+          // Update the UI without a full re-render
+          this.dom.allianceList.querySelectorAll('.alliance-item').forEach(item => {
+              const itemId = parseInt(item.dataset.allianceId, 10);
+              const selectBtn = item.querySelector('.select-btn');
+              if (itemId === this.state.activeAllianceId) {
+                  item.classList.add('selected');
+                  selectBtn.textContent = 'Selected';
+              } else {
+                  item.classList.remove('selected');
+                  selectBtn.textContent = 'Select';
+              }
+          });
+          
+          // Show/hide and render the building palette
+          this.dom.floatingBuildingsBtn.style.color = this.state.activeAllianceId ? this.state.alliances.find(a=>a.id === this.state.activeAllianceId).color : 'var(--text-color)';
+          this.renderBuildingPalette();
+        },
+      
+      deleteAlliance(id) {
+          if (!confirm("Are you sure you want to delete this alliance and all its buildings? This cannot be undone.")) {
+              return;
+          }
+          this.state.alliances = this.state.alliances.filter(a => a.id !== id);
+          this.state.buildModeBuildings = this.state.buildModeBuildings.filter(b => b.allianceId !== id);
+          if (this.state.activeAllianceId === id) {
+              this.state.activeAllianceId = null;
+              this.dom.buildModeBanner.textContent = "Build Mode Enabled";
+          }
+          this.recalculateAllClaimedTerritory();
+          this.savePlanToLocalStorage();
+          this.renderAlliancePanel();
+      },
+
+      renderAlliancePanel() {
+        this.dom.allianceList.innerHTML = '';
+        this.state.alliances.forEach(alliance => {
+            const item = document.createElement('div');
+            item.className = 'alliance-item';
+            item.dataset.allianceId = alliance.id;
+            if (alliance.id === this.state.activeAllianceId) {
+                item.classList.add('selected');
+            }
+            item.style.borderLeftColor = alliance.color;
+            item.innerHTML = `
+                <div class="color-swatch" style="background-color: ${alliance.color};"></div>
+                <div class="name">${alliance.name}</div>
+                <div class="tag">${alliance.tag}</div>
+                <div class="controls">
+                    <button class="select-btn primary">${alliance.id === this.state.activeAllianceId ? 'Selected' : 'Select'}</button>
+                    <button class="delete-btn danger">Del</button>
+                </div>
+            `;
+            item.querySelector('.select-btn').onclick = () => this.selectAlliance(alliance.id);
+            item.querySelector('.delete-btn').onclick = () => this.deleteAlliance(alliance.id);
+            this.dom.allianceList.appendChild(item);
+        });
+      },
+
+      renderBuildingPalette() {
+          if (!this.dom.buildingPaletteList) return;
+          this.dom.buildingPaletteList.innerHTML = '';
+          const alliance = this.state.alliances.find(a => a.id === this.state.activeAllianceId);
+          
+          if (!alliance) return; // Don't render if no alliance is active
+
+          for (const [type, def] of Object.entries(this.BUILDING_CATALOG)) {
+              const btn = document.createElement('button');
+              btn.dataset.type = type;
+              btn.innerHTML = `${def.name}<span>S: ${def.w}x${def.h} | R: ${def.coverage}x${def.coverage}</span>`;
+              if (this.state.selectedBuildingType === type) {
+                  btn.classList.add('selected');
+              }
+              btn.onclick = () => this.selectBuildingToPlace(type);
+              this.dom.buildingPaletteList.appendChild(btn);
+          }
+      },
+      
+      selectBuildingToPlace(type) {
+          const isDeselecting = this.state.selectedBuildingType === type;
+          this.state.selectedBuildingType = isDeselecting ? null : type;
+
+          this.dom.canvas.classList.toggle('build-cursor', !!this.state.selectedBuildingType);
+
+          // Update the selection state on the buttons in the palette
+          this.dom.buildingPaletteList.querySelectorAll('button').forEach(btn => {
+              btn.classList.toggle('selected', btn.dataset.type === this.state.selectedBuildingType);
+          });
+      },
+
+      placeBuilding(type, x, y) {
+          if (!this.state.activeAllianceId) return;
+          const def = this.BUILDING_CATALOG[type];
+          if (!def) return;
+
+          const { canPlace, message } = this.checkPlacementValidity(type, x, y);
+          if (!canPlace) {
+              console.warn(`Cannot place building: ${message}`);
+              return;
+          }
+
+          const alliance = this.state.alliances.find(a => a.id === this.state.activeAllianceId);
+          let text = def.text.replace('tag', alliance.tag);
+
+          const newBuilding = {
+              id: Date.now(),
+              type, x, y,
+              w: def.w, h: def.h,
+              allianceId: this.state.activeAllianceId,
+              displayText: text
+          };
+          
+          this.state.buildModeBuildings.push(newBuilding);
+          this.recalculateAllClaimedTerritory();
+          this.savePlanToLocalStorage();
+      },
+
+      deleteBuildModeBuilding(buildingId) {
+          this.state.buildModeBuildings = this.state.buildModeBuildings.filter(b => b.id !== buildingId);
+          this.recalculateAllClaimedTerritory();
+          this.savePlanToLocalStorage();
+      },
+
+      // --- IMPORT / EXPORT / LOCAL STORAGE ---
+      savePlanToLocalStorage() {
+          try {
+              const planData = {
+                  alliances: this.state.alliances,
+                  buildings: this.state.buildModeBuildings
+              };
+              localStorage.setItem('kingshot_build_plan', JSON.stringify(planData));
+          } catch(e) {
+              console.error("Could not save plan to local storage:", e);
+          }
+      },
+
+      loadPlanFromLocalStorage() {
+          try {
+              const savedPlan = localStorage.getItem('kingshot_build_plan');
+              if (savedPlan) {
+                  const data = JSON.parse(savedPlan);
+                  if (data && Array.isArray(data.alliances) && Array.isArray(data.buildings)) {
+                      this.state.alliances = data.alliances;
+                      this.state.buildModeBuildings = data.buildings;
+                      this.recalculateAllClaimedTerritory();
+                      console.log("Backup plan loaded from browser storage.");
+                  }
+              }
+          } catch (e) {
+              console.error("Could not load plan from local storage:", e);
+              localStorage.removeItem('kingshot_build_plan');
+          }
+      },
+
+      clearPlan() {
+          if (confirm("Are you sure you want to clear the entire plan? This will delete all alliances and buildings and cannot be undone.")) {
+              this.state.alliances = [];
+              this.state.buildModeBuildings = [];
+              this.state.activeAllianceId = null;
+              
+              if(this.state.isBuildMode) {
+                  this.setBuildModeActive(); // This will turn it off and clean up UI
+              }
+              
+              this.recalculateAllClaimedTerritory();
+              localStorage.removeItem('kingshot_build_plan');
+              
+              if(this.dom.buildPanel.classList.contains('open')) {
+                this.renderAlliancePanel();
+              }
+              
+              alert("Plan cleared.");
+          }
+      },
+
+      exportPlan() {
+          if (this.state.alliances.length === 0 && this.state.buildModeBuildings.length === 0) {
+              alert("Nothing to export. Create some alliances or buildings first.");
+              return;
+          }
+          const planData = {
+              version: 1,
+              alliances: this.state.alliances,
+              buildings: this.state.buildModeBuildings
+          };
+          const jsonString = JSON.stringify(planData, null, 2);
+          const blob = new Blob([jsonString], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `kingshot-plan-${new Date().toISOString().slice(0,10)}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+      },
+
+      importPlan(event) {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (e) => {
+              try {
+                  const data = JSON.parse(e.target.result);
+                  if (data && data.version === 1 && Array.isArray(data.alliances) && Array.isArray(data.buildings)) {
+                      if (!confirm("This will overwrite your current plan. Are you sure?")) {
+                          this.dom.planFileInput.value = ''; // Reset file input
+                          return;
+                      }
+                      this.state.alliances = data.alliances;
+                      this.state.buildModeBuildings = data.buildings;
+                      this.recalculateAllClaimedTerritory();
+                      this.savePlanToLocalStorage();
+                      if(this.state.isBuildMode) {
+                        this.renderAlliancePanel();
+                      }
+                      alert("Plan imported successfully!");
+                  } else {
+                      throw new Error("Invalid or unsupported plan file format.");
+                  }
+              } catch (error) {
+                  alert(`Error importing plan: ${error.message}`);
+                  console.error(error);
+              } finally {
+                this.dom.planFileInput.value = ''; // Reset file input
+              }
+          };
+          reader.readAsText(file);
+      },
+
+
+      recalculateAllClaimedTerritory() {
+          this.state.globallyClaimedTiles.clear();
+          this.state.claimedTerritory.clear();
+          this.state.alliances.forEach(a => this.state.claimedTerritory.set(a.id, new Set()));
+
+          // Iterate through buildings in the order they were placed
+          for (const b of this.state.buildModeBuildings) {
+              const def = this.BUILDING_CATALOG[b.type];
+              if (!def || def.coverage <= 0) continue;
+
+              const allianceTerritory = this.state.claimedTerritory.get(b.allianceId);
+              if (!allianceTerritory) continue;
+              
+              const radius = Math.floor(def.coverage / 2);
+              const centerX = b.x + Math.floor(def.w / 2);
+              const centerY = b.y + Math.floor(def.h / 2);
+
+              for (let dx = -radius; dx <= radius; dx++) {
+                  for (let dy = -radius; dy <= radius; dy++) {
+                      const tileX = centerX + dx;
+                      const tileY = centerY + dy;
+                      const coordStr = `${tileX},${tileY}`;
+
+                      // Only claim the tile if it's not already globally claimed
+                      if (!this.state.globallyClaimedTiles.has(coordStr)) {
+                          this.state.globallyClaimedTiles.set(coordStr, b.allianceId);
+                          allianceTerritory.add(coordStr);
+                      }
+                  }
+              }
+          }
+        },
+
+      isTileClaimedBy(x, y, allianceId) {
+          const territory = this.state.claimedTerritory.get(allianceId);
+          return territory ? territory.has(`${x},${y}`) : false;
+      },
+      
+      getBuildingAtCoords(x, y) {
+        const defaultBuilding = this.getBuildingAt(x, y);
+        if (defaultBuilding) return defaultBuilding;
+        
+        for (const b of this.state.buildModeBuildings) {
+            if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) {
+                return b;
+            }
+        }
+        return null;
+      },
+
+      checkPlacementValidity(type, x, y) {
+          const def = this.BUILDING_CATALOG[type];
+          const allianceId = this.state.activeAllianceId;
+          if (!def || !allianceId) return { canPlace: false, message: "No building type or alliance selected." };
+  
+          for (let dx = 0; dx < def.w; dx++) {
+              for (let dy = 0; dy < def.h; dy++) {
+                  if (this.getBuildingAtCoords(x + dx, y + dy)) {
+                      return { canPlace: false, message: "Collision with another building." };
+                  }
+              }
+          }
+          
+          if (def.rule === 'claimed') {
+              let isClaimed = false;
+              for (let dx = 0; dx < def.w; dx++) {
+                  for (let dy = 0; dy < def.h; dy++) {
+                      if (this.isTileClaimedBy(x + dx, y + dy, allianceId)) {
+                           isClaimed = true;
+                           break;
+                      }
+                  }
+                  if(isClaimed) break;
+              }
+              if (!isClaimed) return { canPlace: false, message: "Must be placed on own alliance territory." };
+          } else if (def.rule !== 'any') {
+              const biome = this.getBiomeForTile(x, y);
+              if (biome !== def.rule) {
+                  return { canPlace: false, message: `Must be placed in ${def.rule} biome.` };
+              }
+          }
+  
+          return { canPlace: true, message: "OK" };
       },
 
       renderZoomPresets() {
@@ -961,18 +1653,21 @@ canvas#map:active {
                     const targetScale = (zoomVal / 100) * this.config.baseScale;
                     this.animateZoom(targetScale, this.dom.canvas.width / 2, this.dom.canvas.height / 2, 200);
                 }
+                if (this.state.isBuildMode) this.toggleBuildMode();
                 if (this.state.openPanel) {
-                    const current = { btn: this.dom.zoomPresetsToggleBtn, panel: this.dom.zoomPresetsPanel };
-                    current.panel.classList.remove('open'); 
-                    current.btn.classList.remove('active');
-                    this.state.openPanel = null;
+                    const panelMap = { 'zoomPresets': { btn: this.dom.zoomPresetsToggleBtn, panel: this.dom.zoomPresetsPanel }};
+                    const current = panelMap[this.state.openPanel];
+                    if(current) {
+                        current.panel.classList.remove('open');
+                        current.btn.classList.remove('active');
+                        this.state.openPanel = null;
+                    }
                 }
             };
             this.dom.zoomPresetsList.appendChild(btn);
         });
       },
 
-      // --- BOOKMARK LOGIC (Updated to target new elements) ---
       loadPinnedBookmarks() { 
         if (localStorage.getItem('pinnedBookmarks')) { 
             try { 
@@ -1065,17 +1760,18 @@ canvas#map:active {
           unpinned.forEach(b => this.dom.addBookmarksList.appendChild(this.createBookmarkItem(b, false)));
       },
         goToBookmark(x, y) {
+            if (this.state.isBuildMode) this.toggleBuildMode();
             if (this.state.openPanel) {
-                const panelMap = { 'nav': this.dom.navPanel, 'pinnedBookmarks': this.dom.pinnedBookmarksPanel };
-                const btnMap = { 'nav': this.dom.navPanelToggleBtn, 'pinnedBookmarks': this.dom.pinnedBookmarksToggleBtn };
-                if (panelMap[this.state.openPanel]) {
-                    panelMap[this.state.openPanel].classList.remove('open');
-                    btnMap[this.state.openPanel].classList.remove('active');
+                const panelMap = { 'nav': {btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel}, 'pinnedBookmarks': {btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel} };
+                const current = panelMap[this.state.openPanel];
+                if(current) {
+                    current.panel.classList.remove('open');
+                    current.btn.classList.remove('active');
                     this.state.openPanel = null;
                 }
             }
             if (x >= 0 && y >= 0) {
-                this.state.selection = this.getBuildingAt(x, y) || { x, y };
+                this.state.selection = this.getBuildingAtCoords(x, y) || { x, y };
                 if (this.state.selection) this.state.selection.pingStart = performance.now();
                 const targetScale = this.config.baseScale;
                 const [screenX, screenY] = this.worldToScreen(x, y);
@@ -1086,19 +1782,17 @@ canvas#map:active {
       showPatchNotes() {
         if (!this.dom.modalOverlay || !this.dom.patchNotesModal) return;
 
-        // Render the raw markdown
         if (typeof marked !== 'undefined') { marked.setOptions({ gfm: true, breaks: true, sanitize: false }); } 
         let text = this.state.patchNotes || '';
         const idx = text.indexOf('## ['); 
         if (idx !== -1) { text = text.substring(idx); } 
         this.dom.patchNotesBody.innerHTML = marked.parse(text || 'No changelog available.');
         
-        // Post-process the rendered HTML to create collapsible sections
         const headers = this.dom.patchNotesBody.querySelectorAll('h2');
         headers.forEach((header, index) => {
             const details = document.createElement('details');
             if (index === 0) {
-                details.open = true; // Open the first (latest) version by default
+                details.open = true;
             }
 
             const summary = document.createElement('summary');
@@ -1108,7 +1802,7 @@ canvas#map:active {
             let sibling = header.nextElementSibling;
             while(sibling && sibling.tagName !== 'H2') {
                 const nextSibling = sibling.nextElementSibling;
-                details.appendChild(sibling); // Move the sibling into the details element
+                details.appendChild(sibling); 
                 sibling = nextSibling;
             }
             
@@ -1312,11 +2006,8 @@ canvas#map:active {
         if (!this.state.isMinimapDragging) return;
         this.state.isMinimapDragging = false;
         
-        // Check if the action was a click (not a long drag)
         const dist = Math.hypot(e.clientX - this.state.minimapClickStartPos.x, e.clientY - this.state.minimapClickStartPos.y);
         if (dist < 5) {
-          // It's a click, so we calculate the final position and jump there.
-          // This avoids the jitter caused by animating a move that already happened.
           const rect = this.dom.minimapCanvas.getBoundingClientRect(); 
           const minimapCam = this.state.minimapCam;
           const clickScreenX = (e.clientX - rect.left); 
@@ -1334,7 +2025,6 @@ canvas#map:active {
           
           const [targetScreenX, targetScreenY] = this.worldToScreen(world_x, world_y);
           
-          // Set camera position directly instead of animating
           this.state.cam.x = this.dom.canvas.width / 2 - targetScreenX * this.state.cam.scale; 
           this.state.cam.y = this.dom.canvas.height / 2 - targetScreenY * this.state.cam.scale;
           this.clampCamera();
@@ -1342,6 +2032,9 @@ canvas#map:active {
       },
 
       handleMouseDown(e) { 
+        // In build mode, left click is for placing, not panning
+        if (this.state.isBuildMode && e.button === 0) return;
+
         if (e.button === 0) { this.state.dragging = true; 
           this.state.lastX = e.clientX; 
           this.state.lastY = e.clientY; 
@@ -1351,6 +2044,9 @@ canvas#map:active {
       },
 
       handleMouseMove(e) { 
+        const [wx, wy] = this.screenToWorld(e.offsetX, e.offsetY);
+        this.state.mouseWorldPos = {x: wx, y: wy};
+
         if (!this.state.dragging) return; 
         this.state.cam.x += e.clientX - this.state.lastX; 
         this.state.cam.y += e.clientY - this.state.lastY; 
@@ -1361,14 +2057,44 @@ canvas#map:active {
 
       handleCanvasClick(e) {
         const dist = Math.hypot(e.clientX - this.state.clickStartX, e.clientY - this.state.clickStartY);
-        if (dist > 5) return; 
+        if (dist > 5 && !this.state.isBuildMode) return; 
         const [worldX, worldY] = this.screenToWorld(e.offsetX, e.offsetY);
+
+        if (this.state.isBuildMode) {
+            if (this.state.selectedBuildingType) {
+                this.placeBuilding(this.state.selectedBuildingType, worldX, worldY);
+            }
+            return; // Don't do normal selection in build mode
+        }
+
         if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
-          const building = this.getBuildingAt(worldX, worldY); this.state.selection = building || { x: worldX, y: worldY };
+          const building = this.getBuildingAtCoords(worldX, worldY);
+          this.state.selection = building || { x: worldX, y: worldY };
           if (this.state.selection) this.state.selection.pingStart = performance.now();
           if (this.dom.inpX && this.state.selection) this.dom.inpX.value = this.state.selection.x;
           if (this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
         }
+      },
+
+      handleRightClick(e) {
+          e.preventDefault();
+          if (this.state.isBuildMode) {
+              if (this.state.selectedBuildingType) {
+                  // Cancel placement
+                  this.state.selectedBuildingType = null;
+                  this.dom.canvas.classList.remove('build-cursor');
+                  this.renderBuildingPalette();
+              } else {
+                  // Try to delete a building
+                  const [worldX, worldY] = this.screenToWorld(e.offsetX, e.offsetY);
+                  const building = this.getBuildingAtCoords(worldX, worldY);
+                  if (building && building.allianceId) { // Check if it's a build-mode building
+                      if(confirm(`Delete ${building.displayText}?`)) {
+                          this.deleteBuildModeBuilding(building.id);
+                      }
+                  }
+              }
+          }
       },
 
       handleWheel(e) { 
@@ -1403,6 +2129,13 @@ canvas#map:active {
           case 'ArrowDown':   this.state.cam.y -= this.config.tileW * 5; this.clampCamera(); break;
           case 'ArrowLeft':   this.state.cam.x += this.config.tileW * 5; this.clampCamera(); break;
           case 'ArrowRight':  this.state.cam.x -= this.config.tileW * 5; this.clampCamera(); break;
+          case 'Escape':
+            if (this.state.isBuildMode && this.state.selectedBuildingType) {
+                this.state.selectedBuildingType = null;
+                this.dom.canvas.classList.remove('build-cursor');
+                this.renderBuildingPalette();
+            }
+            break;
         }
       },
 
@@ -1445,8 +2178,15 @@ canvas#map:active {
           const duration = performance.now() - this.state.touchStartTime;
           if (duration < 200 && dist < 10) {
             const [worldX, worldY] = this.screenToWorld(t.clientX, t.clientY);
+            
+            if (this.state.isBuildMode && this.state.selectedBuildingType) {
+                this.placeBuilding(this.state.selectedBuildingType, worldX, worldY);
+                return;
+            }
+
             if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
-              const building = this.getBuildingAt(worldX, worldY); this.state.selection = building || { x: worldX, y: worldY };
+              const building = this.getBuildingAtCoords(worldX, worldY); 
+              this.state.selection = building || { x: worldX, y: worldY };
               if (this.state.selection) this.state.selection.pingStart = performance.now();
               if (this.dom.inpX && this.state.selection) this.dom.inpX.value = this.state.selection.x;
               if (this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
@@ -1557,41 +2297,109 @@ canvas#map:active {
       },
 
       drawBuildingFootprint(b, highlightStyle = null, drawBorder = true, overrideCtx = null) {
-        const { config, state } = this; const ctx = overrideCtx || this.dom.ctx;
-        const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
-        const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
-        const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
-        const [sbx, sby] = this.worldToScreen(x0, y0); const [srx, sry] = this.worldToScreen(x0 + w - 1, y0);
-        const [stx, sty] = this.worldToScreen(x0 + w - 1, y0 + h - 1); const [slx, sly] = this.worldToScreen(x0, y0 + h - 1);
-        const p_bottom = { x: sbx, y: sby + config.tileH / 2 }; const p_right = { x: srx + config.tileW / 2, y: sry };
-        const p_top = { x: stx, y: sty - config.tileH / 2 }; const p_left = { x: slx - config.tileW / 2, y: sly };
-        ctx.beginPath(); ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x, p_right.y);
-        ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y); ctx.closePath();
-        ctx.fillStyle = fill; ctx.fill();
-        if(drawBorder) {
-            ctx.strokeStyle = border; const currentScale = overrideCtx ? this.state.minimapCam.scale : this.state.cam.scale;
-            ctx.lineWidth = (highlightStyle ? config.strokeW * 2 : config.strokeW) / (overrideCtx ? currentScale : 1); ctx.stroke();
-        }
-        if (overrideCtx || highlightStyle) return;
-        const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
-        if (currentCamScale > 0.4 && b.displayName) {
-          const availableWidth = (p_right.x - p_left.x) * 0.8; const availableHeight = p_bottom.y - p_top.y;
-          if (availableWidth < 10 || availableHeight < 10) return;
-          const hasCoords = b.displayCoordinates; const heightFactor = hasCoords ? 0.5 : 1.0;
-          const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9;
-          ctx.font = `bold 100px sans-serif`; const textMetrics = ctx.measureText(b.displayName);
-          const displayNameWidth = textMetrics.width || 1; const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
-          const optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
-          if (optimalFontSize * currentCamScale < 7) return;
-          const centerX = (p_left.x + p_right.x) / 2; const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
-          const centerY = (p_top.y + p_bottom.y) / 2 + yOffset;
-          ctx.fillStyle = config.textColor; ctx.font = `bold ${optimalFontSize}px sans-serif`;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(b.displayName, centerX, centerY);
-          if (b.displayCoordinates) {
-            const coordFontSize = optimalFontSize * 0.7; ctx.font = `${coordFontSize}px sans-serif`;
-            ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.9);
+          const { config, state } = this; const ctx = overrideCtx || this.dom.ctx;
+          
+          let buildingDisplayName = b.displayName;
+          let isBuildModeBuilding = !!b.allianceId;
+          
+          if (isBuildModeBuilding) {
+              const alliance = state.alliances.find(a => a.id === b.allianceId);
+              if (!alliance) return; // Don't draw if alliance is gone
+              b.fillColor = alliance.color;
+              b.borderColor = alliance.color;
+              buildingDisplayName = b.displayText;
           }
-        }
+
+          const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
+          const border = highlightStyle || b.borderColor || 'rgba(0,255,0,0.3)';
+          const x0 = b.x, y0 = b.y, w = b.w, h = b.h;
+          const [sbx, sby] = this.worldToScreen(x0, y0); const [srx, sry] = this.worldToScreen(x0 + w - 1, y0);
+          const [stx, sty] = this.worldToScreen(x0 + w - 1, y0 + h - 1); const [slx, sly] = this.worldToScreen(x0, y0 + h - 1);
+          const p_bottom = { x: sbx, y: sby + config.tileH / 2 }; const p_right = { x: srx + config.tileW / 2, y: sry };
+          const p_top = { x: stx, y: sty - config.tileH / 2 }; const p_left = { x: slx - config.tileW / 2, y: sly };
+          ctx.beginPath(); ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x, p_right.y);
+          ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y); ctx.closePath();
+          ctx.fillStyle = fill;
+          ctx.globalAlpha = isBuildModeBuilding ? 0.3 : 1.0;
+          ctx.fill();
+          ctx.globalAlpha = 1.0;
+
+          if(drawBorder) {
+              ctx.strokeStyle = border; const currentScale = overrideCtx ? this.state.minimapCam.scale : this.state.cam.scale;
+              ctx.lineWidth = (highlightStyle ? config.strokeW * 2 : config.strokeW) / (overrideCtx ? currentScale : 1); ctx.stroke();
+          }
+          if (overrideCtx || highlightStyle) return;
+          const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
+          if (currentCamScale > 0.4 && buildingDisplayName) {
+            const availableWidth = (p_right.x - p_left.x) * 0.8; const availableHeight = p_bottom.y - p_top.y;
+            if (availableWidth < 1 || availableHeight < 1) return; // Loosened condition
+            const isSmallBuilding = b.w <= 1 && b.h <= 1;
+            const hasCoords = b.displayCoordinates; const heightFactor = hasCoords ? 0.5 : 1.0;
+            const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9;
+            ctx.font = `bold 100px sans-serif`; const textMetrics = ctx.measureText(buildingDisplayName);
+            const displayNameWidth = textMetrics.width || 1; const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
+            let optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
+            if(isSmallBuilding && optimalFontSize * currentCamScale < 10) optimalFontSize = 10 / currentCamScale; // Enforce minimum for small buildings
+
+            if (optimalFontSize * currentCamScale < 7 && !isSmallBuilding) return;
+
+            const centerX = (p_left.x + p_right.x) / 2; const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
+            const centerY = (p_top.y + p_bottom.y) / 2 + yOffset;
+            ctx.fillStyle = config.textColor; ctx.font = `bold ${optimalFontSize}px sans-serif`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(buildingDisplayName, centerX, centerY);
+            if (b.displayCoordinates) {
+              const coordFontSize = optimalFontSize * 0.7; ctx.font = `${coordFontSize}px sans-serif`;
+              ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.9);
+            }
+          }
+      },
+      
+      drawBuildModeOverlays(viewBounds) {
+          const showOverlays = this.state.isBuildMode || (this.dom.alwaysShowClaimedToggle && this.dom.alwaysShowClaimedToggle.checked);
+          if (!showOverlays) return;
+          
+          const ctx = this.dom.ctx;
+          
+          // 1. Draw claimed territory
+          ctx.globalAlpha = 0.15;
+          for (const [allianceId, territorySet] of this.state.claimedTerritory.entries()) {
+              const alliance = this.state.alliances.find(a => a.id === allianceId);
+              if (alliance) {
+                  ctx.fillStyle = alliance.color;
+                  territorySet.forEach(coordStr => {
+                      const [x, y] = coordStr.split(',').map(Number);
+                      if (x >= viewBounds.minX && x <= viewBounds.maxX && y >= viewBounds.minY && y <= viewBounds.maxY) {
+                          const [sx, sy] = this.worldToScreen(x, y);
+                          ctx.beginPath();
+                          ctx.moveTo(sx, sy - this.config.tileH / 2);
+                          ctx.lineTo(sx + this.config.tileW / 2, sy);
+                          ctx.lineTo(sx, sy + this.config.tileH / 2);
+                          ctx.lineTo(sx - this.config.tileW / 2, sy);
+                          ctx.closePath();
+                          ctx.fill();
+                      }
+                  });
+              }
+          }
+          ctx.globalAlpha = 1.0;
+
+          // 2. Draw building placement ghost (only in actual build mode)
+          if (this.state.isBuildMode && this.state.selectedBuildingType) {
+              const def = this.BUILDING_CATALOG[this.state.selectedBuildingType];
+              const { canPlace } = this.checkPlacementValidity(this.state.selectedBuildingType, this.state.mouseWorldPos.x, this.state.mouseWorldPos.y);
+              
+              if (def) {
+                  const ghostBuilding = {
+                      x: this.state.mouseWorldPos.x, y: this.state.mouseWorldPos.y,
+                      w: def.w, h: def.h,
+                      fillColor: canPlace ? 'rgba(40, 167, 69, 0.7)' : 'rgba(220, 53, 69, 0.7)',
+                      borderColor: canPlace ? '#28a745' : '#dc3545'
+                  };
+                  ctx.globalAlpha = 0.7;
+                  this.drawBuildingFootprint(ghostBuilding, null, true);
+                  ctx.globalAlpha = 1.0;
+              }
+          }
       },
 
       mainLoop(now) {
@@ -1626,15 +2434,17 @@ canvas#map:active {
           const showGrid = dom.gridlinesToggle ? dom.gridlinesToggle.checked : false;
           const showRss = dom.allianceRssToggle ? dom.allianceRssToggle.checked : false;
           const alwaysShowRss = dom.allianceRssAlwaysVisibleToggle ? dom.allianceRssAlwaysVisibleToggle.checked : false;
+
+          // --- Drawing Base Layer ---
           if (chunkLevel === -1) {
             const shouldDrawBorders = showGrid && pct > 50; const minSum = Math.floor(viewBounds.minX + viewBounds.minY); const maxSum = Math.ceil(viewBounds.maxX + viewBounds.maxY);
             for (let sum = minSum; sum <= maxSum; sum++) {
               const startXCoord = Math.floor(Math.max(viewBounds.minX, (sum - viewBounds.maxY))); const endXCoord = Math.ceil(Math.min(viewBounds.maxX, (sum - viewBounds.minY)));
-              for (let x = startXCoord; x <= endXCoord; x++) { const y = sum - x; if (x < 0 || x >= config.N || y < 0 || y >= config.N) continue; if (!this.getBuildingAt(x, y)) this.drawTile(x, y, shouldDrawBorders); }
+              for (let x = startXCoord; x <= endXCoord; x++) { const y = sum - x; if (x < 0 || x >= config.N || y < 0 || y >= config.N) continue; if (!this.getBuildingAtCoords(x, y)) this.drawTile(x, y, shouldDrawBorders); }
             }
             state.allBuildings.filter(b => (!b.isRss || showRss) && !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY)).forEach(b => this.drawBuildingFootprint(b, null, shouldDrawBorders));
             ctx.fillStyle = '#444';
-            (state.baseMap.unoccupiableTiles || []).forEach(([x, y]) => { if (this.getBuildingAt(x, y)) return; if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return; const [sx, sy] = this.worldToScreen(x, y); ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy); ctx.closePath(); ctx.fill(); });
+            (state.baseMap.unoccupiableTiles || []).forEach(([x, y]) => { if (this.getBuildingAtCoords(x, y)) return; if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return; const [sx, sy] = this.worldToScreen(x, y); ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy); ctx.closePath(); ctx.fill(); });
           } else {
             if (state.chunkLevels && state.chunkLevels[chunkLevel]) {
               const chunksToDraw = state.chunkLevels[chunkLevel]; const chunkSize = Math.pow(2, chunkLevel + 1);
@@ -1642,22 +2452,25 @@ canvas#map:active {
               const startChunkY = Math.floor(viewBounds.minY / chunkSize) * chunkSize; const endChunkY = Math.ceil(viewBounds.maxY / chunkSize) * chunkSize;
               for (let x = startChunkX; x <= endChunkX; x += chunkSize) { for (let y = startChunkY; y <= endChunkY; y += chunkSize) { const chunk = chunksToDraw.get(`${x},${y}`); if (chunk) this.drawChunk(chunk, false); } }
             }
-            
-            // Draw all non-RSS buildings (default and user-added) that are in view
             state.allBuildings.filter(b => !b.isRss && !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY)).forEach(b => this.drawBuildingFootprint(b, null, false));
-
-            // Conditionally draw all RSS buildings that are in view
             if (showRss && alwaysShowRss) {
-                // CORRECTED: b.h is used instead of h
                 state.allBuildings.filter(b => b.isRss && !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY)).forEach(b => this.drawBuildingFootprint(b, null, false));
             }
-            
             if (chunkLevel < 2) {
               ctx.fillStyle = '#444';
-              (state.baseMap.unoccupiableTiles || []).forEach(([x, y]) => { if (this.getBuildingAt(x, y)) return; if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return; const [sx, sy] = this.worldToScreen(x, y); ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy); ctx.closePath(); ctx.fill(); });
+              (state.baseMap.unoccupiableTiles || []).forEach(([x, y]) => { if (this.getBuildingAtCoords(x, y)) return; if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return; const [sx, sy] = this.worldToScreen(x, y); ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy); ctx.closePath(); ctx.fill(); });
             }
           }
-          if (state.selection) {
+          
+          // --- Draw Build Mode Content ---
+          this.drawBuildModeOverlays(viewBounds); // This now handles claimed area toggle
+          state.buildModeBuildings
+            .filter(b => !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
+            .forEach(b => this.drawBuildingFootprint(b, null, true));
+
+
+          // --- Draw Selection ---
+          if (state.selection && !state.isBuildMode) {
             let highlightColor = config.selectionColor;
             if (state.selection.pingStart && now - state.selection.pingStart < config.pingDuration) { if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) { highlightColor = config.pingColor; } }
             if (state.selection.w) { this.drawBuildingFootprint(state.selection, highlightColor, true); } 

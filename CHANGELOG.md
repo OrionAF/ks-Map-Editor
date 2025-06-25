@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [7.0.0.0] - Major
+
+### Added
+- **Introducing Build Mode!**
+*A comprehensive new system for planning alliance territory and building layouts.*
+  - **Alliance Creation:** Create and manage multiple alliances, each with a unique name, 3-character tag, and color.
+  - **Building Placement:** Place 8 different types of alliance buildings, including Towers, HQs for each biome, and prestige statues.
+  - **Claimed Territory:** Towers and HQs automatically project a colored **Claimed Area** on the map. The system uses the same "first-come, first-served" hierarchy as in game, preventing territory from being claimed by more than one alliance.
+- **Save & Share Your Plans!**
+  - **Import/Export:** You can now save your complete build plans (alliances and buildings) to a `.json` file and import them later to share with others or continue your work.
+  - **Automatic Browser Backups:** Your current plan is automatically saved in your browser, preventing data loss if you accidentally close the tab.
+  - **Clear Plan:** A new "Clear Plan" button has been added to the Settings panel to easily start a new design from scratch.
+- **UI for Building:**
+  - A floating "Buildings" palette appears on the right side of the screen when in Build Mode for rapid placement of structures.
+  - A "Always Show Claimed Area" toggle has been added to the Settings panel, allowing you to see territory overlays even when not in Build Mode.
+  - The 🛠️ "Build" button opens a dedicated management panel. A separate "Enter/Exit Build Mode" button within this panel provides more intentional control.
+  - The top "Build Mode" banner changes color to match the currently selected alliance.
+
 ## [6.1.1.0] - Patch
 
 ### Added
