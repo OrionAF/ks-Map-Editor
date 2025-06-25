@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0.0] - Major
+
+### Added
+- **New Feature: Bookmarks!** 
+A new dropdown menu has been added to the Settings panel, allowing you to instantly jump to any Fortress, Sanctuary or the King's Castle.
+- Added new `+10%` and `-10%` buttons to the zoom controls for faster, larger zoom adjustments.
+
+### Changed
+- The "Go To" and "Bookmark" navigation functions now zoom to a standard 100% level, providing a more consistent experience.
+- The layout of the left-side zoom controls has been adjusted to accommodate the new buttons.
+- The "Presets" dropdown now resets to a placeholder after a selection is made, allowing you to select a value, zoom in/out, and select the same value again.
+
 ## [0.2.9.2] - Patch
 
 ### Fixed
