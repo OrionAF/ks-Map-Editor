@@ -361,7 +361,19 @@ canvas#map:active {
 	cursor: pointer;
 }
 
-/* --- MODAL STYLES --- */
+/* --- OTHER UI ELEMENTS --- */
+#statsPanel {
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	z-index: 100;
+	background: rgba(0, 0, 0, 0.6);
+	padding: 6px 10px;
+	border-radius: 4px;
+	font-size: 13px;
+}
+
+/* MODAL STYLES (Unchanged) */
 .modal-overlay {
 	display: none;
 	position: fixed;
@@ -525,7 +537,6 @@ canvas#map:active {
 		display: none;
 	}
 }
-
 </style>
 </head>
 <body>
