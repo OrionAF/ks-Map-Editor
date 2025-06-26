@@ -428,10 +428,40 @@ canvas#map.build-cursor {
     border-radius: 8px 0 0 8px;
     background-color: var(--panel-bg);
     display: none; /* Toggled by JS */
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+#floatingBuildingsBtn.open {
+    background-color: var(--highlight-color);
 }
 
 #buildingPalettePanel {
-    right: 65px; /* Position next to the floating button */
+    top: 0;
+    right: 0;
+    bottom: unset; /* Override default panel position */
+    height: 100vh;
+    transform: translateX(100%); /* Hidden off-screen */
+    border-radius: 8px 0 0 8px;
+    border-right: none;
+    transition: transform 0.3s ease-in-out;
+    width: 280px; /* Make it a bit smaller */
+    max-height: 100vh; /* Allow full height */
+}
+
+#buildingPalettePanel.open {
+    transform: translateX(0); /* Slide into view */
+    opacity: 1; /* Ensure it's visible */
+}
+
+/* --- ADD these new rules for the palette's internal layout --- */
+#buildingPalettePanel .building-list {
+    grid-template-columns: 1fr 1fr;
+}
+
+#buildingPalettePanel .building-list button {
+    text-align: center;
 }
 
 #buildPanel {
@@ -882,12 +912,31 @@ canvas#map.build-cursor {
           </ul>
       </div>
   </div>
+  <div id="editAllianceModal" class="modal">
+    <div class="modal-header">
+        <h3>Edit Alliance</h3><button class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+        <input type="hidden" id="editAllianceId">
+        <div class="form-grid">
+            <label for="editAllianceName">Name:</label>
+            <input type="text" id="editAllianceName" placeholder="Alliance Name" maxlength="20">
+            <label for="editAllianceTag">Tag:</label>
+            <input type="text" id="editAllianceTag" placeholder="TAG" maxlength="3">
+            <label for="editAllianceColor">Color:</label>
+            <input type="color" id="editAllianceColor">
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button id="saveAllianceChangesBtn" class="primary">Save Changes</button>
+    </div>
+</div>
 
   <script>
     const KingshotPlanner = {
       // --- TWEAKABLE SETTINGS ---
       config: {
-        CURRENT_VERSION: '7.0.0.0', 
+        CURRENT_VERSION: '7.0.1.0', 
         N: 1200,
         tileW: 10,
         tileH: 10,
@@ -1047,6 +1096,12 @@ canvas#map.build-cursor {
           buildingPalettePanel: document.getElementById('buildingPalettePanel'),
           buildingPaletteList: document.getElementById('buildingPaletteList'),
           alwaysShowClaimedToggle: document.getElementById('alwaysShowClaimedToggle'),
+          editAllianceModal: document.getElementById('editAllianceModal'),
+          editAllianceIdInput: document.getElementById('editAllianceId'),
+          editAllianceNameInput: document.getElementById('editAllianceName'),
+          editAllianceTagInput: document.getElementById('editAllianceTag'),
+          editAllianceColorInput: document.getElementById('editAllianceColor'),
+          saveAllianceChangesBtn: document.getElementById('saveAllianceChangesBtn'),
           importPlanBtn: document.getElementById('importPlanBtn'),
           exportPlanBtn: document.getElementById('exportPlanBtn'),
           planFileInput: document.getElementById('planFileInput'),
@@ -1080,204 +1135,176 @@ canvas#map.build-cursor {
         .catch(e => console.error("Error during initialization:", e));
       },
 
-      initializeUI() {
-        // --- PANEL TOGGLING LOGIC ---
-        const panelMap = {
-            'settings': { btn: this.dom.settingsToggleBtn, panel: this.dom.settingsPanel },
-            'nav': { btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel },
-            'zoomPresets': { btn: this.dom.zoomPresetsToggleBtn, panel: this.dom.zoomPresetsPanel },
-            'pinnedBookmarks': { btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel },
-            'build': { btn: this.dom.buildModeToggleBtn, panel: this.dom.buildPanel },
-        };
-        
-        const togglePanel = (panelName) => {
-        if (this.state.openPanel === panelName) { // Close currently open panel
-            panelMap[panelName].panel.classList.remove('open');
-            panelMap[panelName].btn.classList.remove('active');
+// Location: replace the entire initializeUI function
+
+initializeUI() {
+    // --- PANEL TOGGLING LOGIC ---
+    const panelMap = {
+        'settings': { btn: this.dom.settingsToggleBtn, panel: this.dom.settingsPanel },
+        'nav': { btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel },
+        'zoomPresets': { btn: this.dom.zoomPresetsToggleBtn, panel: this.dom.zoomPresetsPanel },
+        'pinnedBookmarks': { btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel },
+        'build': { btn: this.dom.buildModeToggleBtn, panel: this.dom.buildPanel },
+        'buildingPalette': { btn: this.dom.floatingBuildingsBtn, panel: this.dom.buildingPalettePanel }
+    };
+    
+    const togglePanel = (panelName) => {
+        const panelInfo = panelMap[panelName];
+        if (!panelInfo) return;
+
+        if (panelInfo.panel.classList.contains('open')) {
+            panelInfo.panel.classList.remove('open');
+            panelInfo.btn.classList.remove('active');
             this.state.openPanel = null;
-        } else { // Open a new panel
-            // Close any other open panel first
+        } else {
+            if (this.state.isBuildMode) {
+                this.setBuildModeActive(); // Turn off build mode
+            }
             if (this.state.openPanel && panelMap[this.state.openPanel]) {
                 panelMap[this.state.openPanel].panel.classList.remove('open');
                 panelMap[this.state.openPanel].btn.classList.remove('active');
             }
-            // If build mode is on, turn it off before opening another panel
-            if (this.state.isBuildMode) {
-                this.setBuildModeActive(); // This will correctly exit build mode
-            }
-            // Open the new one
-            panelMap[panelName].panel.classList.add('open');
-            panelMap[panelName].btn.classList.add('active');
+            panelInfo.panel.classList.add('open');
+            panelInfo.btn.classList.add('active');
             this.state.openPanel = panelName;
         }
-        };
+    };
 
-        // Close panels when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!this.state.openPanel) return;
-            const current = panelMap[this.state.openPanel];
-            // Check if the click is outside the currently open panel and its toggle button
-            if (!current.panel.contains(e.target) && !current.btn.contains(e.target)) {
-                // If the build panel is open, we need special handling
-                if (this.state.openPanel === 'build') {
-                    // If we are in active build mode, exit it first
-                    if (this.state.isBuildMode) {
-                        this.setBuildModeActive(); // This toggles it off
-                    }
-                    // Now, close the build management panel itself
-                    current.panel.classList.remove('open');
-                    current.btn.classList.remove('active');
-                    this.state.openPanel = null;
-                } else {
-                    // For any other panel, just toggle it closed
-                    togglePanel(this.state.openPanel);
-                }
-            }
-          });
+    // Close panels when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!this.state.openPanel) return;
 
-        // Attach toggle events
-        Object.keys(panelMap).forEach(key => {
+        const current = panelMap[this.state.openPanel];
+        // If click is outside the open panel AND its toggle button
+        if (!current.panel.contains(e.target) && !current.btn.contains(e.target)) {
+            togglePanel(this.state.openPanel);
+        }
+    });
+
+    // Attach toggle events
+    Object.keys(panelMap).forEach(key => {
+        panelMap[key].btn.addEventListener('click', (e) => { 
+            e.stopPropagation(); 
             if (key === 'build') {
-                panelMap[key].btn.addEventListener('click', (e) => { 
-                    e.stopPropagation(); 
-                    this.renderAlliancePanel();
-                    togglePanel(key); 
-                });
-            } else {
-                panelMap[key].btn.addEventListener('click', (e) => { 
-                    e.stopPropagation(); 
-                    togglePanel(key); 
-                });
+                this.renderAlliancePanel();
             }
+            togglePanel(key); 
         });
-        
-        // Nav Panel Tab logic
-        this.dom.navPanel.querySelectorAll('.tab-button').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const tabId = e.target.dataset.tab;
-                this.dom.navPanel.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-                this.dom.navPanel.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                e.target.classList.add('active');
-                document.getElementById(tabId).classList.add('active');
-            });
+    });
+    
+    // MODAL and other event listeners...
+    if (this.dom.infoBtn) this.dom.infoBtn.addEventListener('click', this.showControlsModal.bind(this));
+    if (this.dom.patchNotesBtn) this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
+    
+    // Close modal logic for all modals
+    document.querySelectorAll('.modal .close-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            this.hideAllModals();
         });
-        
-        // Modals
-        if (this.dom.infoBtn) this.dom.infoBtn.addEventListener('click', this.showControlsModal.bind(this));
-        if (this.dom.patchNotesBtn) this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
-        [this.dom.closeControlsBtn, this.dom.closePatchNotesBtn, this.dom.modalOverlay].forEach(el => {
-            if (el) el.addEventListener('click', () => { this.hidePatchNotes(); this.hideControlsModal(); });
-        });
-        const lastSeenVersion = localStorage.getItem('lastSeenVersion');
-        if (lastSeenVersion !== this.config.CURRENT_VERSION) { this.showPatchNotes(); }
-        
-        // LocalStorage Settings
-        const settingsToPersist = {
-            'mapTileDetail': { el: this.dom.tileDetailSelect, default: '49', prop: 'value' },
-            'mapAlwaysShowRss': { el: this.dom.allianceRssAlwaysVisibleToggle, default: 'false', prop: 'checked' },
-            'mapShowGridlines': { el: this.dom.gridlinesToggle, default: 'true', prop: 'checked' },
-            'mapShowAllianceRss': { el: this.dom.allianceRssToggle, default: 'true', prop: 'checked' },
-            'mapShowCoords': { el: this.dom.coordsToggle, default: 'true', prop: 'checked' },
-        };
-        Object.entries(settingsToPersist).forEach(([key, conf]) => {
-            if (conf.el) {
-                const saved = localStorage.getItem(key) ?? conf.default;
-                conf.el[conf.prop] = conf.prop === 'checked' ? (saved === 'true') : saved;
-                conf.el.addEventListener('change', () => {
-                    localStorage.setItem(key, String(conf.el[conf.prop]));
-                    if(key === 'mapTileDetail') this.state.currentTileDetailThreshold = parseInt(conf.el.value, 10);
-                });
+    });
+    if (this.dom.modalOverlay) this.dom.modalOverlay.addEventListener('click', () => this.hideAllModals());
+
+    const lastSeenVersion = localStorage.getItem('lastSeenVersion');
+    if (lastSeenVersion !== this.config.CURRENT_VERSION) { this.showPatchNotes(); }
+    
+    const settingsToPersist = {
+        'mapTileDetail': { el: this.dom.tileDetailSelect, default: '49', prop: 'value' },
+        'mapAlwaysShowRss': { el: this.dom.allianceRssAlwaysVisibleToggle, default: 'false', prop: 'checked' },
+        'mapShowGridlines': { el: this.dom.gridlinesToggle, default: 'true', prop: 'checked' },
+        'mapShowAllianceRss': { el: this.dom.allianceRssToggle, default: 'true', prop: 'checked' },
+        'mapShowCoords': { el: this.dom.coordsToggle, default: 'true', prop: 'checked' },
+        'mapAlwaysShowClaimed': { el: this.dom.alwaysShowClaimedToggle, default: 'false', prop: 'checked'},
+    };
+    Object.entries(settingsToPersist).forEach(([key, conf]) => {
+        if (conf.el) {
+            const saved = localStorage.getItem(key) ?? conf.default;
+            conf.el[conf.prop] = conf.prop === 'checked' ? (saved === 'true') : saved;
+            conf.el.addEventListener('change', () => {
+                localStorage.setItem(key, String(conf.el[conf.prop]));
                 if(key === 'mapTileDetail') this.state.currentTileDetailThreshold = parseInt(conf.el.value, 10);
-            }
-        });
-        
-        // Bookmarks & Version Display
-        this.loadPinnedBookmarks();
-        this.renderAllBookmarkUI();
-        if (this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
-        
-        // Go To
-        if (this.dom.btnGo) this.dom.btnGo.addEventListener('click', this.doSearch.bind(this));
-        if (this.dom.inpX && this.dom.inpY) [this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') this.doSearch(); }));
-        
-        // Zoom Controls
-        if (this.dom.zoomDecBtn) this.dom.zoomDecBtn.addEventListener('click', () => this.changeZoomBy(-5));
-        if (this.dom.zoomIncBtn) this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(+5));
-        if (this.dom.zoomSlider) this.dom.zoomSlider.addEventListener('input', this.handleZoomSlider.bind(this));
-
-        // Zoom Presets
-        this.renderZoomPresets();
-
-        // Minimap
-        if (this.dom.minimapToggleBtn && this.dom.minimapContainer) {
-          this.dom.minimapToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.dom.minimapContainer.classList.toggle('visible');
-            this.dom.minimapToggleBtn.classList.toggle('active', this.dom.minimapContainer.classList.contains('visible'));
-          });
-          const isDesktop = window.innerWidth > 768;
-          this.dom.minimapContainer.classList.toggle('visible', isDesktop);
-          this.dom.minimapToggleBtn.classList.toggle('active', isDesktop);
+            });
+            if(key === 'mapTileDetail') this.state.currentTileDetailThreshold = parseInt(conf.el.value, 10);
         }
-        
-        // --- BUILD MODE UI LISTENERS ---
-        if (this.dom.buildModeToggleBtn) this.dom.buildModeToggleBtn.title = "Manage Plan / Alliances"; // Rename tooltip
-        if (this.dom.toggleBuildModeActualBtn) this.dom.toggleBuildModeActualBtn.addEventListener('click', this.setBuildModeActive.bind(this));
-        if (this.dom.floatingBuildingsBtn) this.dom.floatingBuildingsBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.dom.buildingPalettePanel.classList.toggle('open');
-        });
-        if (this.dom.createAllianceBtn) this.dom.createAllianceBtn.addEventListener('click', this.createAlliance.bind(this));
-        if (this.dom.exportPlanBtn) this.dom.exportPlanBtn.addEventListener('click', this.exportPlan.bind(this));
-        if (this.dom.importPlanBtn) this.dom.importPlanBtn.addEventListener('click', () => this.dom.planFileInput.click());
-        if (this.dom.planFileInput) this.dom.planFileInput.addEventListener('change', this.importPlan.bind(this));
-        if (this.dom.clearPlanBtn) this.dom.clearPlanBtn.addEventListener('click', this.clearPlan.bind(this));
+    });
+    
+    this.loadPinnedBookmarks();
+    this.renderAllBookmarkUI();
+    if (this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
+    
+    if (this.dom.btnGo) this.dom.btnGo.addEventListener('click', this.doSearch.bind(this));
+    if (this.dom.inpX && this.dom.inpY) [this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') this.doSearch(); }));
+    
+    if (this.dom.zoomDecBtn) this.dom.zoomDecBtn.addEventListener('click', () => this.changeZoomBy(-5));
+    if (this.dom.zoomIncBtn) this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(+5));
+    if (this.dom.zoomSlider) this.dom.zoomSlider.addEventListener('input', this.handleZoomSlider.bind(this));
 
-        // Global Event Listeners
-        window.addEventListener('resize', this.resize.bind(this));
-        window.addEventListener('mousemove', this.handleMouseMove.bind(this));
-        window.addEventListener('mouseup', () => { this.state.dragging = false; });
-        window.addEventListener('keydown', this.handleKeyDown.bind(this));
-        this.dom.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        this.dom.canvas.addEventListener('click', this.handleCanvasClick.bind(this));
-        this.dom.canvas.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
-        this.dom.canvas.addEventListener('dblclick', this.handleDblClick.bind(this));
-        this.dom.canvas.addEventListener('contextmenu', this.handleRightClick.bind(this));
-        this.dom.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
-        this.dom.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
-        this.dom.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
-        if (this.dom.minimapCanvas) {
-          this.dom.minimapCanvas.addEventListener('mousedown', this.handleMinimapMouseDown.bind(this));
-          this.dom.minimapCanvas.addEventListener('mousemove', this.handleMinimapMouseMove.bind(this));
-          this.dom.minimapCanvas.addEventListener('mouseleave', this.handleMinimapMouseUp.bind(this));
-          window.addEventListener('mouseup', this.handleMinimapMouseUp.bind(this));
-        }
-      },
+    this.renderZoomPresets();
+
+    if (this.dom.minimapToggleBtn && this.dom.minimapContainer) {
+      this.dom.minimapToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.dom.minimapContainer.classList.toggle('visible');
+        this.dom.minimapToggleBtn.classList.toggle('active', this.dom.minimapContainer.classList.contains('visible'));
+      });
+      const isDesktop = window.innerWidth > 768;
+      this.dom.minimapContainer.classList.toggle('visible', isDesktop);
+      this.dom.minimapToggleBtn.classList.toggle('active', isDesktop);
+    }
+    
+    // --- BUILD MODE UI LISTENERS ---
+    if (this.dom.buildModeToggleBtn) this.dom.buildModeToggleBtn.title = "Manage Plan / Alliances";
+    if (this.dom.toggleBuildModeActualBtn) this.dom.toggleBuildModeActualBtn.addEventListener('click', this.setBuildModeActive.bind(this));
+    if (this.dom.createAllianceBtn) this.dom.createAllianceBtn.addEventListener('click', this.createAlliance.bind(this));
+    if (this.dom.exportPlanBtn) this.dom.exportPlanBtn.addEventListener('click', this.exportPlan.bind(this));
+    if (this.dom.importPlanBtn) this.dom.importPlanBtn.addEventListener('click', () => this.dom.planFileInput.click());
+    if (this.dom.planFileInput) this.dom.planFileInput.addEventListener('change', this.importPlan.bind(this));
+    if (this.dom.clearPlanBtn) this.dom.clearPlanBtn.addEventListener('click', this.clearPlan.bind(this));
+    if (this.dom.saveAllianceChangesBtn) this.dom.saveAllianceChangesBtn.addEventListener('click', this.saveAllianceChanges.bind(this));
+
+    window.addEventListener('resize', this.resize.bind(this));
+    window.addEventListener('mousemove', this.handleMouseMove.bind(this));
+    window.addEventListener('mouseup', () => { this.state.dragging = false; });
+    window.addEventListener('keydown', this.handleKeyDown.bind(this));
+    this.dom.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+    this.dom.canvas.addEventListener('click', this.handleCanvasClick.bind(this));
+    this.dom.canvas.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
+    this.dom.canvas.addEventListener('dblclick', this.handleDblClick.bind(this));
+    this.dom.canvas.addEventListener('contextmenu', this.handleRightClick.bind(this));
+    this.dom.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
+    this.dom.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+    this.dom.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
+    if (this.dom.minimapCanvas) {
+      this.dom.minimapCanvas.addEventListener('mousedown', this.handleMinimapMouseDown.bind(this));
+      this.dom.minimapCanvas.addEventListener('mousemove', this.handleMinimapMouseMove.bind(this));
+      this.dom.minimapCanvas.addEventListener('mouseleave', this.handleMinimapMouseUp.bind(this));
+      window.addEventListener('mouseup', this.handleMinimapMouseUp.bind(this));
+    }
+},
       
       setBuildModeActive() {
           this.state.isBuildMode = !this.state.isBuildMode;
           const isActive = this.state.isBuildMode;
 
-          // Close any other open panel first
-          const panelMap = {
-              'settings': { btn: this.dom.settingsToggleBtn, panel: this.dom.settingsPanel },
-              'nav': { btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel },
-              'zoomPresets': { btn: this.dom.zoomPresetsToggleBtn, panel: this.dom.zoomPresetsPanel },
-              'pinnedBookmarks': { btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel },
-          };
-          if (this.state.openPanel && this.state.openPanel !== 'build') {
-              panelMap[this.state.openPanel].panel.classList.remove('open');
-              panelMap[this.state.openPanel].btn.classList.remove('active');
-              this.state.openPanel = null;
-          }
-
-          this.dom.buildModeBanner.style.display = isActive ? 'block' : 'none';
           this.dom.floatingBuildingsBtn.style.display = isActive ? 'block' : 'none';
           this.dom.toggleBuildModeActualBtn.textContent = isActive ? 'Exit Build Mode' : 'Enter Build Mode';
           this.dom.toggleBuildModeActualBtn.classList.toggle('danger', isActive);
           
-          // --- NEW LOGIC ---
-          if (isActive && this.state.activeAllianceId) {
+          this.dom.buildModeBanner.style.display = isActive ? 'block' : 'none';
+          if (isActive) {
+              this.updateBanner(); // Update banner when entering build mode
+          }
+
+          if (!isActive) {
+              this.dom.buildingPalettePanel.classList.remove('open');
+              this.dom.floatingBuildingsBtn.classList.remove('open');
+              this.state.selectedBuildingType = null;
+              this.dom.canvas.classList.remove('build-cursor');
+          }
+        },
+
+      // --- ADD this new function to handle banner updates ---
+      updateBanner() {
+          if (this.state.isBuildMode && this.state.activeAllianceId) {
               const alliance = this.state.alliances.find(a => a.id === this.state.activeAllianceId);
               if (alliance) {
                   this.dom.buildModeBanner.textContent = `Building as [${alliance.tag}] ${alliance.name}`;
@@ -1288,14 +1315,7 @@ canvas#map.build-cursor {
               this.dom.buildModeBanner.textContent = "Build Mode Enabled";
               this.dom.buildModeBanner.style.backgroundColor = 'var(--build-mode-bg)';
           }
-          // --- END NEW LOGIC ---
-
-          if (!isActive) {
-              this.dom.buildingPalettePanel.classList.remove('open');
-              this.state.selectedBuildingType = null;
-              this.dom.canvas.classList.remove('build-cursor');
-          }
-      },
+        },
 
       createAlliance() {
         const name = this.dom.allianceNameInput.value.trim();
@@ -1324,6 +1344,8 @@ canvas#map.build-cursor {
       selectAlliance(id) {
           const isDeselecting = this.state.activeAllianceId === id;
           this.state.activeAllianceId = isDeselecting ? null : id;
+          
+          this.updateBanner(); // Use the new centralized function
 
           // Update the UI without a full re-render
           this.dom.allianceList.querySelectorAll('.alliance-item').forEach(item => {
@@ -1341,7 +1363,7 @@ canvas#map.build-cursor {
           // Show/hide and render the building palette
           this.dom.floatingBuildingsBtn.style.color = this.state.activeAllianceId ? this.state.alliances.find(a=>a.id === this.state.activeAllianceId).color : 'var(--text-color)';
           this.renderBuildingPalette();
-        },
+      },
       
       deleteAlliance(id) {
           if (!confirm("Are you sure you want to delete this alliance and all its buildings? This cannot be undone.")) {
@@ -1359,28 +1381,74 @@ canvas#map.build-cursor {
       },
 
       renderAlliancePanel() {
-        this.dom.allianceList.innerHTML = '';
-        this.state.alliances.forEach(alliance => {
-            const item = document.createElement('div');
-            item.className = 'alliance-item';
-            item.dataset.allianceId = alliance.id;
-            if (alliance.id === this.state.activeAllianceId) {
-                item.classList.add('selected');
-            }
-            item.style.borderLeftColor = alliance.color;
-            item.innerHTML = `
-                <div class="color-swatch" style="background-color: ${alliance.color};"></div>
-                <div class="name">${alliance.name}</div>
-                <div class="tag">${alliance.tag}</div>
-                <div class="controls">
-                    <button class="select-btn primary">${alliance.id === this.state.activeAllianceId ? 'Selected' : 'Select'}</button>
-                    <button class="delete-btn danger">Del</button>
-                </div>
-            `;
-            item.querySelector('.select-btn').onclick = () => this.selectAlliance(alliance.id);
-            item.querySelector('.delete-btn').onclick = () => this.deleteAlliance(alliance.id);
-            this.dom.allianceList.appendChild(item);
-        });
+          this.dom.allianceList.innerHTML = '';
+          this.state.alliances.forEach(alliance => {
+              const item = document.createElement('div');
+              item.className = 'alliance-item';
+              item.dataset.allianceId = alliance.id;
+              if (alliance.id === this.state.activeAllianceId) {
+                  item.classList.add('selected');
+              }
+              item.style.borderLeftColor = alliance.color;
+              item.innerHTML = `
+                  <div class="color-swatch" style="background-color: ${alliance.color};"></div>
+                  <div class="name">${alliance.name}</div>
+                  <div class="tag">${alliance.tag}</div>
+                  <div class="controls">
+                      <button class="edit-btn">Edit</button>
+                      <button class="select-btn primary">${alliance.id === this.state.activeAllianceId ? 'Selected' : 'Select'}</button>
+                      <button class="delete-btn danger">Del</button>
+                  </div>
+              `;
+              item.querySelector('.edit-btn').onclick = () => this.showEditAllianceModal(alliance.id);
+              item.querySelector('.select-btn').onclick = () => this.selectAlliance(alliance.id);
+              item.querySelector('.delete-btn').onclick = () => this.deleteAlliance(alliance.id);
+              this.dom.allianceList.appendChild(item);
+          });
+      },
+
+      // --- ADD these new functions for the Edit Alliance modal ---
+      showEditAllianceModal(allianceId) {
+          const alliance = this.state.alliances.find(a => a.id === allianceId);
+          if (!alliance) return;
+
+          this.dom.editAllianceIdInput.value = alliance.id;
+          this.dom.editAllianceNameInput.value = alliance.name;
+          this.dom.editAllianceTagInput.value = alliance.tag;
+          this.dom.editAllianceColorInput.value = alliance.color;
+
+          this.dom.modalOverlay.style.display = 'block';
+          this.dom.editAllianceModal.style.display = 'block';
+      },
+
+      saveAllianceChanges() {
+          const id = parseInt(this.dom.editAllianceIdInput.value, 10);
+          const alliance = this.state.alliances.find(a => a.id === id);
+          if (!alliance) return;
+
+          const newName = this.dom.editAllianceNameInput.value.trim();
+          const newTag = this.dom.editAllianceTagInput.value.trim().toUpperCase();
+
+          if (!newName || !newTag || newTag.length === 0 || newTag.length > 3) {
+              alert("Please provide a valid alliance name and a 3 character tag.");
+              return;
+          }
+
+          alliance.name = newName;
+          alliance.tag = newTag;
+          alliance.color = this.dom.editAllianceColorInput.value;
+
+          this.savePlanToLocalStorage();
+          this.renderAlliancePanel();
+          this.updateBanner();
+          this.hideAllModals();
+      },
+
+      hideAllModals() {
+          this.dom.modalOverlay.style.display = 'none';
+          this.dom.patchNotesModal.style.display = 'none';
+          this.dom.controlsModal.style.display = 'none';
+          this.dom.editAllianceModal.style.display = 'none';
       },
 
       renderBuildingPalette() {
@@ -1393,7 +1461,7 @@ canvas#map.build-cursor {
           for (const [type, def] of Object.entries(this.BUILDING_CATALOG)) {
               const btn = document.createElement('button');
               btn.dataset.type = type;
-              btn.innerHTML = `${def.name}<span>S: ${def.w}x${def.h} | R: ${def.coverage}x${def.coverage}</span>`;
+              btn.innerHTML = `${def.name}<br><span>S: ${def.w}x${def.h} | R: ${def.coverage}x${def.coverage}</span>`;
               if (this.state.selectedBuildingType === type) {
                   btn.classList.add('selected');
               }
@@ -1561,7 +1629,14 @@ canvas#map.build-cursor {
           this.state.claimedTerritory.clear();
           this.state.alliances.forEach(a => this.state.claimedTerritory.set(a.id, new Set()));
 
-          // Iterate through buildings in the order they were placed
+          // Pass 1: Claim territory for default non-RSS buildings first (highest priority)
+          this.state.allBuildings.forEach(b => {
+              if (!b.isRss && b.coverage) { // Assuming default buildings might have coverage property
+                  // Logic to claim for default buildings if needed in future
+              }
+          });
+          
+          // Pass 2: Iterate through user-placed buildings in the order they were placed
           for (const b of this.state.buildModeBuildings) {
               const def = this.BUILDING_CATALOG[b.type];
               if (!def || def.coverage <= 0) continue;
@@ -1579,6 +1654,12 @@ canvas#map.build-cursor {
                       const tileY = centerY + dy;
                       const coordStr = `${tileX},${tileY}`;
 
+                      // Check against default, non-RSS buildings
+                      const defaultBuilding = this.getBuildingAt(tileX, tileY);
+                      if (defaultBuilding && !defaultBuilding.isRss) {
+                          continue; // Skip tiles occupied by important default buildings
+                      }
+
                       // Only claim the tile if it's not already globally claimed
                       if (!this.state.globallyClaimedTiles.has(coordStr)) {
                           this.state.globallyClaimedTiles.set(coordStr, b.allianceId);
@@ -1587,7 +1668,7 @@ canvas#map.build-cursor {
                   }
               }
           }
-        },
+      },
 
       isTileClaimedBy(x, y, allianceId) {
           const territory = this.state.claimedTerritory.get(allianceId);
@@ -1610,7 +1691,7 @@ canvas#map.build-cursor {
           const def = this.BUILDING_CATALOG[type];
           const allianceId = this.state.activeAllianceId;
           if (!def || !allianceId) return { canPlace: false, message: "No building type or alliance selected." };
-  
+
           for (let dx = 0; dx < def.w; dx++) {
               for (let dy = 0; dy < def.h; dy++) {
                   if (this.getBuildingAtCoords(x + dx, y + dy)) {
@@ -1619,13 +1700,21 @@ canvas#map.build-cursor {
               }
           }
           
+          // Rule for Alliance Towers: Cannot be placed in another alliance's territory.
+          if (type === 'alliance_tower') {
+              const claimedBy = this.state.globallyClaimedTiles.get(`${x},${y}`);
+              if (claimedBy && claimedBy !== allianceId) {
+                  return { canPlace: false, message: "Cannot place a tower in another alliance's territory." };
+              }
+          }
+
           if (def.rule === 'claimed') {
               let isClaimed = false;
               for (let dx = 0; dx < def.w; dx++) {
                   for (let dy = 0; dy < def.h; dy++) {
                       if (this.isTileClaimedBy(x + dx, y + dy, allianceId)) {
-                           isClaimed = true;
-                           break;
+                          isClaimed = true;
+                          break;
                       }
                   }
                   if(isClaimed) break;
@@ -1637,7 +1726,7 @@ canvas#map.build-cursor {
                   return { canPlace: false, message: `Must be placed in ${def.rule} biome.` };
               }
           }
-  
+
           return { canPlace: true, message: "OK" };
       },
 
@@ -2330,16 +2419,17 @@ canvas#map.build-cursor {
           }
           if (overrideCtx || highlightStyle) return;
           const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
-          if (currentCamScale > 0.4 && buildingDisplayName) {
+          const pct = Math.round((currentCamScale / config.baseScale) * 100);
+          if ((isBuildModeBuilding && pct > 30) || (!isBuildModeBuilding && currentCamScale > 0.4 && buildingDisplayName)) {
             const availableWidth = (p_right.x - p_left.x) * 0.8; const availableHeight = p_bottom.y - p_top.y;
-            if (availableWidth < 1 || availableHeight < 1) return; // Loosened condition
+            if (availableWidth < 1 || availableHeight < 1) return; 
             const isSmallBuilding = b.w <= 1 && b.h <= 1;
             const hasCoords = b.displayCoordinates; const heightFactor = hasCoords ? 0.5 : 1.0;
             const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9;
             ctx.font = `bold 100px sans-serif`; const textMetrics = ctx.measureText(buildingDisplayName);
             const displayNameWidth = textMetrics.width || 1; const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
             let optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
-            if(isSmallBuilding && optimalFontSize * currentCamScale < 10) optimalFontSize = 10 / currentCamScale; // Enforce minimum for small buildings
+            if(isSmallBuilding && optimalFontSize * currentCamScale < 10) optimalFontSize = 10 / currentCamScale;
 
             if (optimalFontSize * currentCamScale < 7 && !isSmallBuilding) return;
 

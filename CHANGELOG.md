@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [7.0.1.0] - Patch
+
+### Changed
+- **Redesigned Building Palette:** The floating "Buildings" button now toggles a compact, two-column palette that slides in from the right, improving usability and screen real estate. Button text is now centered for a cleaner look.
+
+### Fixed
+- Fixed a critical bug that prevented the map from loading on startup.
+- Fixed an issue where the list of alliances would not populate from browser backups when opening the 'Manage Plan' panel.
+- Alliance Tags on user-placed buildings will now correctly appear only when zoomed in beyond 30%.
+- Fixed a logic error that prevented the creation of alliances with 3-character tags.
+- The "Building as..." banner now correctly updates its color immediately after selecting a new alliance.
+- Opening and closing the 'Manage Plan / Alliances' panel no longer incorrectly exits Build Mode.
+
 ## [7.0.0.0] - Major
 
 ### Added
