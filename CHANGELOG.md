@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [7.1.0.0] - Minor
+
+### Added
+- **Building Limits:** A new rule system has been implemented. All buildings except for Alliance Towers are now limited to one per alliance, preventing the placement of duplicates. The "Buildings" palette now intelligently disables buttons for buildings that have reached their limit.
+- **Coverage Preview:** When selecting a building with a coverage area (like a Tower or HQ), a semi-transparent preview of its territory range is now shown at the mouse cursor, allowing for precise placement before clicking.
+- **Default Buildings Additions:** Added a few Outposts and unoccupiable tiles to the map.
+
+### Changed
+- **Optimized Territory Borders:** The rendering of alliance territory has been significantly improved. Instead of drawing a border around every individual tile, the system now draws a single, clean outline around the entire territory, improving both performance and visual clarity.
+- **Enhanced Minimap Responsiveness:** The minimap's panning and zooming logic has been drastically improved. It now immediately and aggressively centers on your viewport as you zoom, ensuring the viewport indicator remains visible and useful at all zoom levels.
+- **Redesigned Building Palette:** The floating "Buildings" button now toggles a compact, two-column palette that slides in from the right, improving usability and screen real estate. Button text is now centered for a cleaner look.
+
+### Fixed
+- Fixed a critical bug that prevented the map from being dragged while in Build Mode. Panning now works correctly, except when a building is actively selected for placement.
+- Corrected a text rendering issue where building names with multiple lines (e.g., "Lv.2 Arsenal") were not centered properly within their footprint.
+- Fixed a bug that prevented the 'Landmarks' tab in the Navigation panel from being clickable.
+- Fixed an issue where opening other panels (like Settings or the Buildings palette) would incorrectly exit Build Mode.
+- Fixed a bug where the building palette would not correctly update its disabled buttons (for limited-quantity buildings) unless it was already open when a building was placed or deleted.
+- Corrected display text for user-placed buildings to include a space between the alliance tag and the building name (e.g., "ABS PlainsHQ" instead of "ABSPlainsHQ").
+
 ## [7.0.1.0] - Patch
 
 ### Changed

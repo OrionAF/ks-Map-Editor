@@ -432,32 +432,42 @@ canvas#map.build-cursor {
     border-top: 1px solid var(--border-color);
     border-right: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
+    /* Add transition for smooth movement */
+    transition: transform 0.3s ease-in-out, background-color 0.2s;
 }
-#floatingBuildingsBtn.open {
+
+#floatingBuildingsBtn.active { /* Changed from .open to match JS */
     background-color: var(--highlight-color);
+    /* Move left by the width of the panel to look attached */
+    transform: translate(-280px, -50%);
 }
 
 #buildingPalettePanel {
-    top: 0;
+    top: 50%; /* Center vertically */
     right: 0;
     bottom: unset; /* Override default panel position */
-    height: 100vh;
-    transform: translateX(100%); /* Hidden off-screen */
+    height: auto; /* Let height be determined by content */
+    /* Hide off-screen to the right and center vertically */
+    transform: translate(100%, -50%);
     border-radius: 8px 0 0 8px;
     border-right: none;
     transition: transform 0.3s ease-in-out;
     width: 280px; /* Make it a bit smaller */
-    max-height: 100vh; /* Allow full height */
+    max-height: calc(100vh - 40px); /* Add some viewport padding */
+    overflow-y: auto;
 }
 
 #buildingPalettePanel.open {
-    transform: translateX(0); /* Slide into view */
+    /* Slide into view and stay centered */
+    transform: translate(0, -50%);
     opacity: 1; /* Ensure it's visible */
 }
 
 /* --- ADD these new rules for the palette's internal layout --- */
 #buildingPalettePanel .building-list {
+    display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: 8px;
 }
 
 #buildingPalettePanel .building-list button {
@@ -932,11 +942,11 @@ canvas#map.build-cursor {
     </div>
 </div>
 
-  <script>
+<script>
     const KingshotPlanner = {
       // --- TWEAKABLE SETTINGS ---
       config: {
-        CURRENT_VERSION: '7.0.1.0', 
+        CURRENT_VERSION: '7.1.0.0', 
         N: 1200,
         tileW: 10,
         tileH: 10,
@@ -974,21 +984,59 @@ canvas#map.build-cursor {
           kingCastleColor: 'rgba(255,215,0,0.9)',
           fortressColor: 'rgba(178,34,34,1)',
           sanctuaryColor: 'rgba(65,105,225,1)',
-          zoomFactorMin: 1.0, 
-          zoomFactorMax: 12.0,
+          buildersGuildOutpostColor: 'rgba(0, 206, 209, 1)',
+          foragerGroveOutpostColor: 'rgba(50, 205, 50, 1)',
+          harvestAltarOutpostColor: 'rgba(255, 0, 255, 1)',
+          scholarsTowerOutpostColor: 'rgba(138, 43, 226, 1)',
+          arsenalOutpostColor: 'rgba(255, 0, 0, 1)',
+          armoryOutpostColor: 'rgba(0, 128, 128, 1)',
+          drillCampOutpostColor: 'rgba(135, 206, 235, 1)',
+          frontierLodgeOutpostColor: 'rgba(128, 128, 0, 1)',
+          zoomFactorMin: 1.5, 
+          zoomFactorMax: 15.0,
           mainMapZoomThresholdForMinimapZoom: 0.03
         }
       },
+
+      // --- NEW HELPER FUNCTIONS ---
+      darkenColor(hex, percent) {
+        if (!hex.startsWith('#')) return hex;
+        let R = parseInt(hex.substring(1, 3), 16);
+        let G = parseInt(hex.substring(3, 5), 16);
+        let B = parseInt(hex.substring(5, 7), 16);
+
+        R = parseInt(R * (100 - percent) / 100);
+        G = parseInt(G * (100 - percent) / 100);
+        B = parseInt(B * (100 - percent) / 100);
+
+        R = (R < 255) ? R : 255;
+        G = (G < 255) ? G : 255;
+        B = (B < 255) ? B : 255;
+
+        const RR = ((R.toString(16).length === 1) ? "0" + R.toString(16) : R.toString(16));
+        const GG = ((G.toString(16).length === 1) ? "0" + G.toString(16) : G.toString(16));
+        const BB = ((B.toString(16).length === 1) ? "0" + B.toString(16) : B.toString(16));
+
+        return "#" + RR + GG + BB;
+      },
+      hexToRgba(hex, alpha = 1) {
+        if (!hex.startsWith('#')) return `rgba(0,0,0,${alpha})`;
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      },
+
       // --- BUILDING CATALOG ---
       BUILDING_CATALOG: {
         'alliance_tower': { name: 'Alliance Tower', w: 1, h: 1, coverage: 7, text: 'tag', rule: 'any' },
-        'hq_badlands': { name: 'Badlands HQ', w: 3, h: 3, coverage: 15, text: 'tag+HQ', rule: 'badlands' },
-        'hq_plains': { name: 'Plains HQ', w: 3, h: 3, coverage: 15, text: 'tag+HQ', rule: 'plains' },
-        'hq_fertile': { name: 'Fertile Lands HQ', w: 3, h: 3, coverage: 15, text: 'tag+HQ', rule: 'fertile' },
-        'pitfall': { name: 'Pitfall', w: 3, h: 3, coverage: 0, text: 'tag+Bear', rule: 'claimed' },
-        'statue1': { name: 'Prestige Statue 1', w: 2, h: 2, coverage: 0, text: 'tag+Statue 1', rule: 'claimed' },
-        'statue2': { name: 'Prestige Statue 2', w: 2, h: 2, coverage: 0, text: 'tag+Statue 2', rule: 'claimed' },
-        'statue3': { name: 'Prestige Statue 3', w: 2, h: 2, coverage: 0, text: 'tag+Statue 3', rule: 'claimed' },
+        'hq_badlands': { name: 'Badlands HQ', w: 3, h: 3, coverage: 15, text: 'tag BadlandsHQ', rule: 'badlands', limit: 1 },
+        'hq_plains': { name: 'Plains HQ', w: 3, h: 3, coverage: 15, text: 'tag PlainsHQ', rule: 'plains', limit: 1 },
+        'hq_fertile': { name: 'Fertile Lands HQ', w: 3, h: 3, coverage: 15, text: 'tag FertileHQ', rule: 'fertile', limit: 1 },
+        'pitfall': { name: 'Pitfall', w: 3, h: 3, coverage: 0, text: 'tag Bear', rule: 'claimed', limit: 1 },
+        'statue1': { name: 'Prestige Statue 1', w: 2, h: 2, coverage: 0, text: 'tag Statue 1', rule: 'claimed', limit: 1 },
+        'statue2': { name: 'Prestige Statue 2', w: 2, h: 2, coverage: 0, text: 'tag Statue 2', rule: 'claimed', limit: 1 },
+        'statue3': { name: 'Prestige Statue 3', w: 2, h: 2, coverage: 0, text: 'tag Statue 3', rule: 'claimed', limit: 1 },
       },
       state: {
         baseMap: { unoccupiableTiles: [], defaultBuildings: [] },
@@ -1030,8 +1078,8 @@ canvas#map.build-cursor {
         activeAllianceId: null,
         buildModeBuildings: [],
         selectedBuildingType: null,
-        claimedTerritory: new Map(), // allianceId -> Set of 'x,y' strings
-        globallyClaimedTiles: new Map(), // NEW: 'x,y' -> allianceId
+        claimedTerritory: new Map(), 
+        globallyClaimedTiles: new Map(), 
         mouseWorldPos: { x: 0, y: 0 },
       },
       dom: {}, // Will be populated in init()
@@ -1082,7 +1130,6 @@ canvas#map.build-cursor {
           navPanelToggleBtn: document.getElementById('navPanelToggleBtn'),
           navPanel: document.getElementById('navPanel'),
           addBookmarksList: document.getElementById('addBookmarksList'),
-          // --- NEW BUILD MODE DOM REFS ---
           buildModeBanner: document.getElementById('buildModeBanner'),
           buildModeToggleBtn: document.getElementById('buildModeToggleBtn'),
           buildPanel: document.getElementById('buildPanel'),
@@ -1135,151 +1182,155 @@ canvas#map.build-cursor {
         .catch(e => console.error("Error during initialization:", e));
       },
 
-// Location: replace the entire initializeUI function
+      initializeUI() {
+          // --- PANEL TOGGLING LOGIC ---
+          const panelMap = {
+              'settings': { btn: this.dom.settingsToggleBtn, panel: this.dom.settingsPanel },
+              'nav': { btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel },
+              'zoomPresets': { btn: this.dom.zoomPresetsToggleBtn, panel: this.dom.zoomPresetsPanel },
+              'pinnedBookmarks': { btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel },
+              'build': { btn: this.dom.buildModeToggleBtn, panel: this.dom.buildPanel },
+              'buildingPalette': { btn: this.dom.floatingBuildingsBtn, panel: this.dom.buildingPalettePanel }
+          };
+          
+          const togglePanel = (panelName) => {
+                  const panelInfo = panelMap[panelName];
+                  if (!panelInfo) return;
 
-initializeUI() {
-    // --- PANEL TOGGLING LOGIC ---
-    const panelMap = {
-        'settings': { btn: this.dom.settingsToggleBtn, panel: this.dom.settingsPanel },
-        'nav': { btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel },
-        'zoomPresets': { btn: this.dom.zoomPresetsToggleBtn, panel: this.dom.zoomPresetsPanel },
-        'pinnedBookmarks': { btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel },
-        'build': { btn: this.dom.buildModeToggleBtn, panel: this.dom.buildPanel },
-        'buildingPalette': { btn: this.dom.floatingBuildingsBtn, panel: this.dom.buildingPalettePanel }
-    };
-    
-    const togglePanel = (panelName) => {
-        const panelInfo = panelMap[panelName];
-        if (!panelInfo) return;
+                  if (panelInfo.panel.classList.contains('open')) {
+                      panelInfo.panel.classList.remove('open');
+                      panelInfo.btn.classList.remove('active');
+                      this.state.openPanel = null;
+                  } else {
+                      if (this.state.openPanel && panelMap[this.state.openPanel]) {
+                          panelMap[this.state.openPanel].panel.classList.remove('open');
+                          panelMap[this.state.openPanel].btn.classList.remove('active');
+                      }
+                      panelInfo.panel.classList.add('open');
+                      panelInfo.btn.classList.add('active');
+                      this.state.openPanel = panelName;
+                  }
+              };
 
-        if (panelInfo.panel.classList.contains('open')) {
-            panelInfo.panel.classList.remove('open');
-            panelInfo.btn.classList.remove('active');
-            this.state.openPanel = null;
-        } else {
-            if (this.state.isBuildMode) {
-                this.setBuildModeActive(); // Turn off build mode
-            }
-            if (this.state.openPanel && panelMap[this.state.openPanel]) {
-                panelMap[this.state.openPanel].panel.classList.remove('open');
-                panelMap[this.state.openPanel].btn.classList.remove('active');
-            }
-            panelInfo.panel.classList.add('open');
-            panelInfo.btn.classList.add('active');
-            this.state.openPanel = panelName;
-        }
-    };
+          // Close panels when clicking outside
+          document.addEventListener('click', (e) => {
+              if (!this.state.openPanel) return;
+              const current = panelMap[this.state.openPanel];
+              if (!current.panel.contains(e.target) && !current.btn.contains(e.target)) {
+                  togglePanel(this.state.openPanel);
+              }
+          });
 
-    // Close panels when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!this.state.openPanel) return;
+          // Attach toggle events
+          Object.keys(panelMap).forEach(key => {
+              panelMap[key].btn.addEventListener('click', (e) => { 
+                  e.stopPropagation(); 
+                  if (key === 'build') {
+                      this.renderAlliancePanel();
+                  }
+                  togglePanel(key); 
+              });
+          });
 
-        const current = panelMap[this.state.openPanel];
-        // If click is outside the open panel AND its toggle button
-        if (!current.panel.contains(e.target) && !current.btn.contains(e.target)) {
-            togglePanel(this.state.openPanel);
-        }
-    });
+          // --- FIX: Navigation Panel Tab Logic ---
+          const navPanel = this.dom.navPanel;
+          if (navPanel) {
+              navPanel.addEventListener('click', (e) => {
+                  if (e.target.classList.contains('tab-button')) {
+                      const tabId = e.target.dataset.tab;
+                      if (!tabId) return;
+                      navPanel.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                      navPanel.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                      e.target.classList.add('active');
+                      const activeContent = document.getElementById(tabId);
+                      if(activeContent) activeContent.classList.add('active');
+                  }
+              });
+          }
+          
+          // MODAL and other event listeners...
+          if (this.dom.infoBtn) this.dom.infoBtn.addEventListener('click', this.showControlsModal.bind(this));
+          if (this.dom.patchNotesBtn) this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
+          
+          document.querySelectorAll('.modal .close-btn').forEach(btn => btn.addEventListener('click', () => this.hideAllModals()));
+          if (this.dom.modalOverlay) this.dom.modalOverlay.addEventListener('click', () => this.hideAllModals());
 
-    // Attach toggle events
-    Object.keys(panelMap).forEach(key => {
-        panelMap[key].btn.addEventListener('click', (e) => { 
-            e.stopPropagation(); 
-            if (key === 'build') {
-                this.renderAlliancePanel();
-            }
-            togglePanel(key); 
-        });
-    });
-    
-    // MODAL and other event listeners...
-    if (this.dom.infoBtn) this.dom.infoBtn.addEventListener('click', this.showControlsModal.bind(this));
-    if (this.dom.patchNotesBtn) this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
-    
-    // Close modal logic for all modals
-    document.querySelectorAll('.modal .close-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            this.hideAllModals();
-        });
-    });
-    if (this.dom.modalOverlay) this.dom.modalOverlay.addEventListener('click', () => this.hideAllModals());
+          const lastSeenVersion = localStorage.getItem('lastSeenVersion');
+          if (lastSeenVersion !== this.config.CURRENT_VERSION) { this.showPatchNotes(); }
+          
+          const settingsToPersist = {
+              'mapTileDetail': { el: this.dom.tileDetailSelect, default: '49', prop: 'value' },
+              'mapAlwaysShowRss': { el: this.dom.allianceRssAlwaysVisibleToggle, default: 'false', prop: 'checked' },
+              'mapShowGridlines': { el: this.dom.gridlinesToggle, default: 'true', prop: 'checked' },
+              'mapShowAllianceRss': { el: this.dom.allianceRssToggle, default: 'true', prop: 'checked' },
+              'mapShowCoords': { el: this.dom.coordsToggle, default: 'true', prop: 'checked' },
+              'mapAlwaysShowClaimed': { el: this.dom.alwaysShowClaimedToggle, default: 'false', prop: 'checked'},
+          };
+          Object.entries(settingsToPersist).forEach(([key, conf]) => {
+              if (conf.el) {
+                  const saved = localStorage.getItem(key) ?? conf.default;
+                  conf.el[conf.prop] = conf.prop === 'checked' ? (saved === 'true') : saved;
+                  conf.el.addEventListener('change', () => {
+                      localStorage.setItem(key, String(conf.el[conf.prop]));
+                      if(key === 'mapTileDetail') this.state.currentTileDetailThreshold = parseInt(conf.el.value, 10);
+                  });
+                  if(key === 'mapTileDetail') this.state.currentTileDetailThreshold = parseInt(conf.el.value, 10);
+              }
+          });
+          
+          this.loadPinnedBookmarks();
+          this.renderAllBookmarkUI();
+          if (this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
+          
+          if (this.dom.btnGo) this.dom.btnGo.addEventListener('click', this.doSearch.bind(this));
+          if (this.dom.inpX && this.dom.inpY) [this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') this.doSearch(); }));
+          
+          if (this.dom.zoomDecBtn) this.dom.zoomDecBtn.addEventListener('click', () => this.changeZoomBy(-5));
+          if (this.dom.zoomIncBtn) this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(+5));
+          if (this.dom.zoomSlider) this.dom.zoomSlider.addEventListener('input', this.handleZoomSlider.bind(this));
 
-    const lastSeenVersion = localStorage.getItem('lastSeenVersion');
-    if (lastSeenVersion !== this.config.CURRENT_VERSION) { this.showPatchNotes(); }
-    
-    const settingsToPersist = {
-        'mapTileDetail': { el: this.dom.tileDetailSelect, default: '49', prop: 'value' },
-        'mapAlwaysShowRss': { el: this.dom.allianceRssAlwaysVisibleToggle, default: 'false', prop: 'checked' },
-        'mapShowGridlines': { el: this.dom.gridlinesToggle, default: 'true', prop: 'checked' },
-        'mapShowAllianceRss': { el: this.dom.allianceRssToggle, default: 'true', prop: 'checked' },
-        'mapShowCoords': { el: this.dom.coordsToggle, default: 'true', prop: 'checked' },
-        'mapAlwaysShowClaimed': { el: this.dom.alwaysShowClaimedToggle, default: 'false', prop: 'checked'},
-    };
-    Object.entries(settingsToPersist).forEach(([key, conf]) => {
-        if (conf.el) {
-            const saved = localStorage.getItem(key) ?? conf.default;
-            conf.el[conf.prop] = conf.prop === 'checked' ? (saved === 'true') : saved;
-            conf.el.addEventListener('change', () => {
-                localStorage.setItem(key, String(conf.el[conf.prop]));
-                if(key === 'mapTileDetail') this.state.currentTileDetailThreshold = parseInt(conf.el.value, 10);
+          this.renderZoomPresets();
+
+          if (this.dom.minimapToggleBtn && this.dom.minimapContainer) {
+            this.dom.minimapToggleBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              this.dom.minimapContainer.classList.toggle('visible');
+              this.dom.minimapToggleBtn.classList.toggle('active', this.dom.minimapContainer.classList.contains('visible'));
             });
-            if(key === 'mapTileDetail') this.state.currentTileDetailThreshold = parseInt(conf.el.value, 10);
-        }
-    });
-    
-    this.loadPinnedBookmarks();
-    this.renderAllBookmarkUI();
-    if (this.dom.versionDisplay) this.dom.versionDisplay.textContent = 'V' + this.config.CURRENT_VERSION;
-    
-    if (this.dom.btnGo) this.dom.btnGo.addEventListener('click', this.doSearch.bind(this));
-    if (this.dom.inpX && this.dom.inpY) [this.dom.inpX, this.dom.inpY].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') this.doSearch(); }));
-    
-    if (this.dom.zoomDecBtn) this.dom.zoomDecBtn.addEventListener('click', () => this.changeZoomBy(-5));
-    if (this.dom.zoomIncBtn) this.dom.zoomIncBtn.addEventListener('click', () => this.changeZoomBy(+5));
-    if (this.dom.zoomSlider) this.dom.zoomSlider.addEventListener('input', this.handleZoomSlider.bind(this));
+            const isDesktop = window.innerWidth > 768;
+            this.dom.minimapContainer.classList.toggle('visible', isDesktop);
+            this.dom.minimapToggleBtn.classList.toggle('active', isDesktop);
+          }
+          
+          // --- BUILD MODE UI LISTENERS ---
+          if (this.dom.buildModeToggleBtn) this.dom.buildModeToggleBtn.title = "Manage Plan / Alliances";
+          if (this.dom.toggleBuildModeActualBtn) this.dom.toggleBuildModeActualBtn.addEventListener('click', this.setBuildModeActive.bind(this));
+          if (this.dom.createAllianceBtn) this.dom.createAllianceBtn.addEventListener('click', this.createAlliance.bind(this));
+          if (this.dom.exportPlanBtn) this.dom.exportPlanBtn.addEventListener('click', this.exportPlan.bind(this));
+          if (this.dom.importPlanBtn) this.dom.importPlanBtn.addEventListener('click', () => this.dom.planFileInput.click());
+          if (this.dom.planFileInput) this.dom.planFileInput.addEventListener('change', this.importPlan.bind(this));
+          if (this.dom.clearPlanBtn) this.dom.clearPlanBtn.addEventListener('click', this.clearPlan.bind(this));
+          if (this.dom.saveAllianceChangesBtn) this.dom.saveAllianceChangesBtn.addEventListener('click', this.saveAllianceChanges.bind(this));
 
-    this.renderZoomPresets();
-
-    if (this.dom.minimapToggleBtn && this.dom.minimapContainer) {
-      this.dom.minimapToggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.dom.minimapContainer.classList.toggle('visible');
-        this.dom.minimapToggleBtn.classList.toggle('active', this.dom.minimapContainer.classList.contains('visible'));
-      });
-      const isDesktop = window.innerWidth > 768;
-      this.dom.minimapContainer.classList.toggle('visible', isDesktop);
-      this.dom.minimapToggleBtn.classList.toggle('active', isDesktop);
-    }
-    
-    // --- BUILD MODE UI LISTENERS ---
-    if (this.dom.buildModeToggleBtn) this.dom.buildModeToggleBtn.title = "Manage Plan / Alliances";
-    if (this.dom.toggleBuildModeActualBtn) this.dom.toggleBuildModeActualBtn.addEventListener('click', this.setBuildModeActive.bind(this));
-    if (this.dom.createAllianceBtn) this.dom.createAllianceBtn.addEventListener('click', this.createAlliance.bind(this));
-    if (this.dom.exportPlanBtn) this.dom.exportPlanBtn.addEventListener('click', this.exportPlan.bind(this));
-    if (this.dom.importPlanBtn) this.dom.importPlanBtn.addEventListener('click', () => this.dom.planFileInput.click());
-    if (this.dom.planFileInput) this.dom.planFileInput.addEventListener('change', this.importPlan.bind(this));
-    if (this.dom.clearPlanBtn) this.dom.clearPlanBtn.addEventListener('click', this.clearPlan.bind(this));
-    if (this.dom.saveAllianceChangesBtn) this.dom.saveAllianceChangesBtn.addEventListener('click', this.saveAllianceChanges.bind(this));
-
-    window.addEventListener('resize', this.resize.bind(this));
-    window.addEventListener('mousemove', this.handleMouseMove.bind(this));
-    window.addEventListener('mouseup', () => { this.state.dragging = false; });
-    window.addEventListener('keydown', this.handleKeyDown.bind(this));
-    this.dom.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-    this.dom.canvas.addEventListener('click', this.handleCanvasClick.bind(this));
-    this.dom.canvas.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
-    this.dom.canvas.addEventListener('dblclick', this.handleDblClick.bind(this));
-    this.dom.canvas.addEventListener('contextmenu', this.handleRightClick.bind(this));
-    this.dom.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
-    this.dom.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
-    this.dom.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
-    if (this.dom.minimapCanvas) {
-      this.dom.minimapCanvas.addEventListener('mousedown', this.handleMinimapMouseDown.bind(this));
-      this.dom.minimapCanvas.addEventListener('mousemove', this.handleMinimapMouseMove.bind(this));
-      this.dom.minimapCanvas.addEventListener('mouseleave', this.handleMinimapMouseUp.bind(this));
-      window.addEventListener('mouseup', this.handleMinimapMouseUp.bind(this));
-    }
-},
+          window.addEventListener('resize', this.resize.bind(this));
+          window.addEventListener('mousemove', this.handleMouseMove.bind(this));
+          window.addEventListener('mouseup', () => { this.state.dragging = false; });
+          window.addEventListener('keydown', this.handleKeyDown.bind(this));
+          this.dom.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+          this.dom.canvas.addEventListener('click', this.handleCanvasClick.bind(this));
+          this.dom.canvas.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
+          this.dom.canvas.addEventListener('dblclick', this.handleDblClick.bind(this));
+          this.dom.canvas.addEventListener('contextmenu', this.handleRightClick.bind(this));
+          this.dom.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
+          this.dom.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+          this.dom.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
+          if (this.dom.minimapCanvas) {
+            this.dom.minimapCanvas.addEventListener('mousedown', this.handleMinimapMouseDown.bind(this));
+            this.dom.minimapCanvas.addEventListener('mousemove', this.handleMinimapMouseMove.bind(this));
+            this.dom.minimapCanvas.addEventListener('mouseleave', this.handleMinimapMouseUp.bind(this));
+            window.addEventListener('mouseup', this.handleMinimapMouseUp.bind(this));
+          }
+      },
       
       setBuildModeActive() {
           this.state.isBuildMode = !this.state.isBuildMode;
@@ -1302,7 +1353,6 @@ initializeUI() {
           }
         },
 
-      // --- ADD this new function to handle banner updates ---
       updateBanner() {
           if (this.state.isBuildMode && this.state.activeAllianceId) {
               const alliance = this.state.alliances.find(a => a.id === this.state.activeAllianceId);
@@ -1311,7 +1361,6 @@ initializeUI() {
                   this.dom.buildModeBanner.style.backgroundColor = alliance.color;
               }
           } else {
-              // Reset to default when not active or no alliance selected
               this.dom.buildModeBanner.textContent = "Build Mode Enabled";
               this.dom.buildModeBanner.style.backgroundColor = 'var(--build-mode-bg)';
           }
@@ -1345,22 +1394,13 @@ initializeUI() {
           const isDeselecting = this.state.activeAllianceId === id;
           this.state.activeAllianceId = isDeselecting ? null : id;
           
-          this.updateBanner(); // Use the new centralized function
-
-          // Update the UI without a full re-render
+          this.updateBanner();
           this.dom.allianceList.querySelectorAll('.alliance-item').forEach(item => {
               const itemId = parseInt(item.dataset.allianceId, 10);
-              const selectBtn = item.querySelector('.select-btn');
-              if (itemId === this.state.activeAllianceId) {
-                  item.classList.add('selected');
-                  selectBtn.textContent = 'Selected';
-              } else {
-                  item.classList.remove('selected');
-                  selectBtn.textContent = 'Select';
-              }
+              item.classList.toggle('selected', itemId === this.state.activeAllianceId);
+              item.querySelector('.select-btn').textContent = (itemId === this.state.activeAllianceId) ? 'Selected' : 'Select';
           });
           
-          // Show/hide and render the building palette
           this.dom.floatingBuildingsBtn.style.color = this.state.activeAllianceId ? this.state.alliances.find(a=>a.id === this.state.activeAllianceId).color : 'var(--text-color)';
           this.renderBuildingPalette();
       },
@@ -1373,7 +1413,7 @@ initializeUI() {
           this.state.buildModeBuildings = this.state.buildModeBuildings.filter(b => b.allianceId !== id);
           if (this.state.activeAllianceId === id) {
               this.state.activeAllianceId = null;
-              this.dom.buildModeBanner.textContent = "Build Mode Enabled";
+              this.updateBanner();
           }
           this.recalculateAllClaimedTerritory();
           this.savePlanToLocalStorage();
@@ -1407,7 +1447,6 @@ initializeUI() {
           });
       },
 
-      // --- ADD these new functions for the Edit Alliance modal ---
       showEditAllianceModal(allianceId) {
           const alliance = this.state.alliances.find(a => a.id === allianceId);
           if (!alliance) return;
@@ -1456,12 +1495,27 @@ initializeUI() {
           this.dom.buildingPaletteList.innerHTML = '';
           const alliance = this.state.alliances.find(a => a.id === this.state.activeAllianceId);
           
-          if (!alliance) return; // Don't render if no alliance is active
+          if (!alliance) return;
+
+          const allianceBuildings = this.state.buildModeBuildings.filter(b => b.allianceId === alliance.id);
+          const buildingCounts = allianceBuildings.reduce((acc, b) => {
+              acc[b.type] = (acc[b.type] || 0) + 1;
+              return acc;
+          }, {});
 
           for (const [type, def] of Object.entries(this.BUILDING_CATALOG)) {
               const btn = document.createElement('button');
               btn.dataset.type = type;
               btn.innerHTML = `${def.name}<br><span>S: ${def.w}x${def.h} | R: ${def.coverage}x${def.coverage}</span>`;
+              
+              if (def.limit > 0) {
+                  const currentCount = buildingCounts[type] || 0;
+                  if (currentCount >= def.limit) {
+                      btn.disabled = true;
+                      btn.title = `Limit of ${def.limit} reached`;
+                  }
+              }
+
               if (this.state.selectedBuildingType === type) {
                   btn.classList.add('selected');
               }
@@ -1475,47 +1529,11 @@ initializeUI() {
           this.state.selectedBuildingType = isDeselecting ? null : type;
 
           this.dom.canvas.classList.toggle('build-cursor', !!this.state.selectedBuildingType);
-
-          // Update the selection state on the buttons in the palette
           this.dom.buildingPaletteList.querySelectorAll('button').forEach(btn => {
               btn.classList.toggle('selected', btn.dataset.type === this.state.selectedBuildingType);
           });
       },
 
-      placeBuilding(type, x, y) {
-          if (!this.state.activeAllianceId) return;
-          const def = this.BUILDING_CATALOG[type];
-          if (!def) return;
-
-          const { canPlace, message } = this.checkPlacementValidity(type, x, y);
-          if (!canPlace) {
-              console.warn(`Cannot place building: ${message}`);
-              return;
-          }
-
-          const alliance = this.state.alliances.find(a => a.id === this.state.activeAllianceId);
-          let text = def.text.replace('tag', alliance.tag);
-
-          const newBuilding = {
-              id: Date.now(),
-              type, x, y,
-              w: def.w, h: def.h,
-              allianceId: this.state.activeAllianceId,
-              displayText: text
-          };
-          
-          this.state.buildModeBuildings.push(newBuilding);
-          this.recalculateAllClaimedTerritory();
-          this.savePlanToLocalStorage();
-      },
-
-      deleteBuildModeBuilding(buildingId) {
-          this.state.buildModeBuildings = this.state.buildModeBuildings.filter(b => b.id !== buildingId);
-          this.recalculateAllClaimedTerritory();
-          this.savePlanToLocalStorage();
-      },
-
-      // --- IMPORT / EXPORT / LOCAL STORAGE ---
       savePlanToLocalStorage() {
           try {
               const planData = {
@@ -1553,7 +1571,7 @@ initializeUI() {
               this.state.activeAllianceId = null;
               
               if(this.state.isBuildMode) {
-                  this.setBuildModeActive(); // This will turn it off and clean up UI
+                  this.setBuildModeActive();
               }
               
               this.recalculateAllClaimedTerritory();
@@ -1599,7 +1617,7 @@ initializeUI() {
                   const data = JSON.parse(e.target.result);
                   if (data && data.version === 1 && Array.isArray(data.alliances) && Array.isArray(data.buildings)) {
                       if (!confirm("This will overwrite your current plan. Are you sure?")) {
-                          this.dom.planFileInput.value = ''; // Reset file input
+                          this.dom.planFileInput.value = '';
                           return;
                       }
                       this.state.alliances = data.alliances;
@@ -1617,26 +1635,21 @@ initializeUI() {
                   alert(`Error importing plan: ${error.message}`);
                   console.error(error);
               } finally {
-                this.dom.planFileInput.value = ''; // Reset file input
+                this.dom.planFileInput.value = '';
               }
           };
           reader.readAsText(file);
       },
-
 
       recalculateAllClaimedTerritory() {
           this.state.globallyClaimedTiles.clear();
           this.state.claimedTerritory.clear();
           this.state.alliances.forEach(a => this.state.claimedTerritory.set(a.id, new Set()));
 
-          // Pass 1: Claim territory for default non-RSS buildings first (highest priority)
           this.state.allBuildings.forEach(b => {
-              if (!b.isRss && b.coverage) { // Assuming default buildings might have coverage property
-                  // Logic to claim for default buildings if needed in future
-              }
+              if (!b.isRss && b.coverage) {}
           });
           
-          // Pass 2: Iterate through user-placed buildings in the order they were placed
           for (const b of this.state.buildModeBuildings) {
               const def = this.BUILDING_CATALOG[b.type];
               if (!def || def.coverage <= 0) continue;
@@ -1654,13 +1667,11 @@ initializeUI() {
                       const tileY = centerY + dy;
                       const coordStr = `${tileX},${tileY}`;
 
-                      // Check against default, non-RSS buildings
                       const defaultBuilding = this.getBuildingAt(tileX, tileY);
                       if (defaultBuilding && !defaultBuilding.isRss) {
-                          continue; // Skip tiles occupied by important default buildings
+                          continue;
                       }
 
-                      // Only claim the tile if it's not already globally claimed
                       if (!this.state.globallyClaimedTiles.has(coordStr)) {
                           this.state.globallyClaimedTiles.set(coordStr, b.allianceId);
                           allianceTerritory.add(coordStr);
@@ -1692,6 +1703,13 @@ initializeUI() {
           const allianceId = this.state.activeAllianceId;
           if (!def || !allianceId) return { canPlace: false, message: "No building type or alliance selected." };
 
+          if (def.limit > 0) {
+              const count = this.state.buildModeBuildings.filter(b => b.allianceId === allianceId && b.type === type).length;
+              if (count >= def.limit) {
+                  return { canPlace: false, message: `Limit of ${def.limit} for ${def.name} reached for this alliance.` };
+              }
+          }
+
           for (let dx = 0; dx < def.w; dx++) {
               for (let dy = 0; dy < def.h; dy++) {
                   if (this.getBuildingAtCoords(x + dx, y + dy)) {
@@ -1700,7 +1718,6 @@ initializeUI() {
               }
           }
           
-          // Rule for Alliance Towers: Cannot be placed in another alliance's territory.
           if (type === 'alliance_tower') {
               const claimedBy = this.state.globallyClaimedTiles.get(`${x},${y}`);
               if (claimedBy && claimedBy !== allianceId) {
@@ -1730,6 +1747,42 @@ initializeUI() {
           return { canPlace: true, message: "OK" };
       },
 
+      placeBuilding(type, x, y) {
+          if (!this.state.activeAllianceId) return;
+          const def = this.BUILDING_CATALOG[type];
+          if (!def) return;
+
+          const { canPlace, message } = this.checkPlacementValidity(type, x, y);
+          if (!canPlace) {
+              alert(`Cannot place building: ${message}`);
+              console.warn(`Cannot place building: ${message}`);
+              return;
+          }
+
+          const alliance = this.state.alliances.find(a => a.id === this.state.activeAllianceId);
+          let text = def.text.replace('tag', alliance.tag);
+
+          const newBuilding = {
+              id: Date.now(),
+              type, x, y,
+              w: def.w, h: def.h,
+              allianceId: this.state.activeAllianceId,
+              displayText: text
+          };
+          
+          this.state.buildModeBuildings.push(newBuilding);
+          this.recalculateAllClaimedTerritory();
+          this.savePlanToLocalStorage();
+          this.renderBuildingPalette();
+      },
+
+      deleteBuildModeBuilding(buildingId) {
+          this.state.buildModeBuildings = this.state.buildModeBuildings.filter(b => b.id !== buildingId);
+          this.recalculateAllClaimedTerritory();
+          this.savePlanToLocalStorage();
+          this.renderBuildingPalette();
+      },
+
       renderZoomPresets() {
         if (!this.dom.zoomPresetsList) return;
         this.dom.zoomPresetsList.innerHTML = '';
@@ -1742,7 +1795,6 @@ initializeUI() {
                     const targetScale = (zoomVal / 100) * this.config.baseScale;
                     this.animateZoom(targetScale, this.dom.canvas.width / 2, this.dom.canvas.height / 2, 200);
                 }
-                if (this.state.isBuildMode) this.toggleBuildMode();
                 if (this.state.openPanel) {
                     const panelMap = { 'zoomPresets': { btn: this.dom.zoomPresetsToggleBtn, panel: this.dom.zoomPresetsPanel }};
                     const current = panelMap[this.state.openPanel];
@@ -1831,15 +1883,18 @@ initializeUI() {
       renderAddBookmarksList() {
         if (!this.dom.addBookmarksList || !this.state.baseMap.defaultBuildings) return;
           this.dom.addBookmarksList.innerHTML = '';
-          const allLandmarks = this.state.baseMap.defaultBuildings.filter(b => b.displayName && (b.displayName.includes("King's Castle") || b.displayName.includes("Fortress") || b.displayName.includes("Sanctuary")));
+          const landmarkKeywords = ["King's Castle", "Fortress", "Sanctuary", "Outpost", "Altar", "Tower", "Grove", "Armory", "Arsenal", "Camp", "Lodge"];
+          const allLandmarks = this.state.baseMap.defaultBuildings.filter(b => b.displayName && landmarkKeywords.some(kw => b.displayName.includes(kw)));
           const unpinned = allLandmarks.filter(landmark => !this.state.pinnedBookmarks.some(p => p.x === landmark.x && p.y === landmark.y));
             
           const getSortOrder = (name) => {
             if (name.includes("King's Castle")) return 0;
             if (name.includes("Fortress")) return 1;
             if (name.includes("Sanctuary")) return 2;
-            return 3;
+            if (name.includes("Lv.")) return 3 + parseInt(name.split('Lv.')[1], 10); // Sort by level
+            return 10;
           };
+
           unpinned.sort((a, b) => {
             const orderA = getSortOrder(a.displayName);
             const orderB = getSortOrder(b.displayName);
@@ -1849,7 +1904,6 @@ initializeUI() {
           unpinned.forEach(b => this.dom.addBookmarksList.appendChild(this.createBookmarkItem(b, false)));
       },
         goToBookmark(x, y) {
-            if (this.state.isBuildMode) this.toggleBuildMode();
             if (this.state.openPanel) {
                 const panelMap = { 'nav': {btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel}, 'pinnedBookmarks': {btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel} };
                 const current = panelMap[this.state.openPanel];
@@ -2120,16 +2174,17 @@ initializeUI() {
         }
       },
 
-      handleMouseDown(e) { 
-        // In build mode, left click is for placing, not panning
-        if (this.state.isBuildMode && e.button === 0) return;
+      handleMouseDown(e) {
+        if (e.button === 0) {
+          this.state.clickStartX = e.clientX;
+          this.state.clickStartY = e.clientY;
+          this.state.lastX = e.clientX;
+          this.state.lastY = e.clientY;
 
-        if (e.button === 0) { this.state.dragging = true; 
-          this.state.lastX = e.clientX; 
-          this.state.lastY = e.clientY; 
-          this.state.clickStartX = e.clientX; 
-          this.state.clickStartY = e.clientY; 
-        } 
+          if (!(this.state.isBuildMode && this.state.selectedBuildingType)) {
+            this.state.dragging = true;
+          }
+        }
       },
 
       handleMouseMove(e) { 
@@ -2146,14 +2201,15 @@ initializeUI() {
 
       handleCanvasClick(e) {
         const dist = Math.hypot(e.clientX - this.state.clickStartX, e.clientY - this.state.clickStartY);
-        if (dist > 5 && !this.state.isBuildMode) return; 
+        if (dist > 5) return; 
+
         const [worldX, worldY] = this.screenToWorld(e.offsetX, e.offsetY);
 
         if (this.state.isBuildMode) {
             if (this.state.selectedBuildingType) {
                 this.placeBuilding(this.state.selectedBuildingType, worldX, worldY);
             }
-            return; // Don't do normal selection in build mode
+            return;
         }
 
         if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
@@ -2169,15 +2225,13 @@ initializeUI() {
           e.preventDefault();
           if (this.state.isBuildMode) {
               if (this.state.selectedBuildingType) {
-                  // Cancel placement
                   this.state.selectedBuildingType = null;
                   this.dom.canvas.classList.remove('build-cursor');
                   this.renderBuildingPalette();
               } else {
-                  // Try to delete a building
                   const [worldX, worldY] = this.screenToWorld(e.offsetX, e.offsetY);
                   const building = this.getBuildingAtCoords(worldX, worldY);
-                  if (building && building.allianceId) { // Check if it's a build-mode building
+                  if (building && building.allianceId) {
                       if(confirm(`Delete ${building.displayText}?`)) {
                           this.deleteBuildModeBuilding(building.id);
                       }
@@ -2320,18 +2374,35 @@ initializeUI() {
         const worldIsoWidth = N * tileW; const worldIsoHeight = N * tileH;
         const drawableWidth = canvasWidth - (minimap.padding * 2); const drawableHeight = canvasHeight - (minimap.padding * 2);
         const baseMinimapScale = Math.min(drawableWidth / worldIsoWidth, drawableHeight / worldIsoHeight);
-        const mainMapCurrentScale = this.state.cam.scale; const mainMapMaxScale = (maxPct / 100) * baseScale;
-        const zoomStartThresholdScale = minimap.mainMapZoomThresholdForMinimapZoom * baseScale;
-        let zoomFactor; let normalizedZoom = 0;
-        if (mainMapCurrentScale <= zoomStartThresholdScale) { zoomFactor = minimap.zoomFactorMin; } 
-        else { normalizedZoom = Math.max(0, Math.min(1, (mainMapCurrentScale - zoomStartThresholdScale) / (mainMapMaxScale - zoomStartThresholdScale))); zoomFactor = minimap.zoomFactorMin + (minimap.zoomFactorMax - minimap.zoomFactorMin) * normalizedZoom; }
+        
+        const mainMapCurrentScale = this.state.cam.scale; 
+        const mainMapMaxScale = (maxPct / 100) * baseScale;
+        const mainMapMinScale = this.state.minFitScale;
+
+        let normalizedZoom = 0;
+        if (mainMapMaxScale > mainMapMinScale) {
+            normalizedZoom = Math.max(0, Math.min(1, (mainMapCurrentScale - mainMapMinScale) / (mainMapMaxScale - mainMapMinScale)));
+        }
+        
+        // --- NEW: Use an even more aggressive easing function ---
+        // An exponent of 0.1 makes the curve very steep at the start, for a near-instant lock-on effect.
+        const easedNormalizedZoom = Math.pow(normalizedZoom, 0.1);
+
+        const zoomFactor = minimap.zoomFactorMin + (minimap.zoomFactorMax - minimap.zoomFactorMin) * normalizedZoom;
         const finalMinimapScale = baseMinimapScale * zoomFactor;
+
         const mapVisualCenterX_iso = 0; const mapVisualCenterY_iso = -((N - 1) * tileH / 2);
         const [mainViewCenterX, mainViewCenterY] = this.screenToWorld(this.dom.canvas.width / 2, this.dom.canvas.height / 2);
         const [viewportCenterX_iso, viewportCenterY_iso] = this.worldToScreen(mainViewCenterX, mainViewCenterY);
-        const focalPointX = mapVisualCenterX_iso + (viewportCenterX_iso - mapVisualCenterX_iso) * normalizedZoom; const focalPointY = mapVisualCenterY_iso + (viewportCenterY_iso - mapVisualCenterY_iso) * normalizedZoom;
-        const translateX = (canvasWidth / 2) - (focalPointX * finalMinimapScale); const translateY = (canvasHeight / 2) - (focalPointY * finalMinimapScale);
+        
+        // Use the new, more aggressive eased value for panning
+        const focalPointX = mapVisualCenterX_iso + (viewportCenterX_iso - mapVisualCenterX_iso) * easedNormalizedZoom; 
+        const focalPointY = mapVisualCenterY_iso + (viewportCenterY_iso - mapVisualCenterY_iso) * easedNormalizedZoom;
+        
+        const translateX = (canvasWidth / 2) - (focalPointX * finalMinimapScale); 
+        const translateY = (canvasHeight / 2) - (focalPointY * finalMinimapScale);
         this.state.minimapCam = { x: translateX, y: translateY, scale: finalMinimapScale };
+
         mmCtx.setTransform(finalMinimapScale, 0, 0, finalMinimapScale, translateX, translateY);
         const chunksToDraw = this.state.chunkLevels[3];
         chunksToDraw.forEach(chunk => { this.drawChunk(chunk, false, mmCtx); });
@@ -2340,6 +2411,24 @@ initializeUI() {
             if (b.displayName === "King's Castle") buildingFillStyle = minimap.kingCastleColor;
             else if (b.displayName.startsWith("Fortress")) buildingFillStyle = minimap.fortressColor;
             else if (b.displayName.startsWith("Sanctuary")) buildingFillStyle = minimap.sanctuaryColor;
+            else if (b.displayName.startsWith("Lv.1 Builder's Guild")) buildingFillStyle = minimap.buildersGuildOutpostColor;
+            else if (b.displayName.startsWith("Lv.2 Builder's Guild")) buildingFillStyle = minimap.buildersGuildOutpostColor;
+            else if (b.displayName.startsWith("Lv.3 Builder's Guild")) buildingFillStyle = minimap.buildersGuildOutpostColor;
+            else if (b.displayName.startsWith("Lv.1 Forager Grove")) buildingFillStyle = minimap.foragerGroveOutpostColor;
+            else if (b.displayName.startsWith("Lv.2 Forager Grove")) buildingFillStyle = minimap.foragerGroveOutpostColor;
+            else if (b.displayName.startsWith("Lv.3 Forager Grove")) buildingFillStyle = minimap.foragerGroveOutpostColor;
+            else if (b.displayName.startsWith("Lv.1 Harvest Altar")) buildingFillStyle = minimap.harvestAltarOutpostColor;
+            else if (b.displayName.startsWith("Lv.2 Harvest Altar")) buildingFillStyle = minimap.harvestAltarOutpostColor;
+            else if (b.displayName.startsWith("Lv.3 Harvest Altar")) buildingFillStyle = minimap.harvestAltarOutpostColor;
+            else if (b.displayName.startsWith("Lv.1 Scholar's Tower")) buildingFillStyle = minimap.scholarsTowerOutpostColor;
+            else if (b.displayName.startsWith("Lv.2 Scholar's Tower")) buildingFillStyle = minimap.scholarsTowerOutpostColor;
+            else if (b.displayName.startsWith("Lv.3 Scholar's Tower")) buildingFillStyle = minimap.scholarsTowerOutpostColor;
+            else if (b.displayName.startsWith("Lv.2 Arsenal")) buildingFillStyle = minimap.arsenalOutpostColor;
+            else if (b.displayName.startsWith("Lv.3 Arsenal")) buildingFillStyle = minimap.arsenalOutpostColor;
+            else if (b.displayName.startsWith("Lv.4 Arsenal")) buildingFillStyle = minimap.arsenalOutpostColor;
+            else if (b.displayName.startsWith("Lv.2 Armory")) buildingFillStyle = minimap.armoryOutpostColor;
+            else if (b.displayName.startsWith("Lv.3 Armory")) buildingFillStyle = minimap.armoryOutpostColor;
+            else if (b.displayName.startsWith("Lv.4 Armory")) buildingFillStyle = minimap.armoryOutpostColor;
             if (buildingFillStyle) { const originalFill = b.fillColor; b.fillColor = buildingFillStyle; this.drawBuildingFootprint(b, null, false, mmCtx); b.fillColor = originalFill; }
         });
         if (viewportCorners) {
@@ -2393,9 +2482,9 @@ initializeUI() {
           
           if (isBuildModeBuilding) {
               const alliance = state.alliances.find(a => a.id === b.allianceId);
-              if (!alliance) return; // Don't draw if alliance is gone
+              if (!alliance) return;
               b.fillColor = alliance.color;
-              b.borderColor = alliance.color;
+              b.borderColor = this.darkenColor(alliance.color, 40);
               buildingDisplayName = b.displayText;
           }
 
@@ -2408,14 +2497,14 @@ initializeUI() {
           const p_top = { x: stx, y: sty - config.tileH / 2 }; const p_left = { x: slx - config.tileW / 2, y: sly };
           ctx.beginPath(); ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x, p_right.y);
           ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y); ctx.closePath();
-          ctx.fillStyle = fill;
-          ctx.globalAlpha = isBuildModeBuilding ? 0.3 : 1.0;
+          
+          ctx.fillStyle = isBuildModeBuilding ? this.hexToRgba(fill, 0.4) : fill;
           ctx.fill();
-          ctx.globalAlpha = 1.0;
 
           if(drawBorder) {
               ctx.strokeStyle = border; const currentScale = overrideCtx ? this.state.minimapCam.scale : this.state.cam.scale;
-              ctx.lineWidth = (highlightStyle ? config.strokeW * 2 : config.strokeW) / (overrideCtx ? currentScale : 1); ctx.stroke();
+              ctx.lineWidth = (highlightStyle ? config.strokeW * 2 : config.strokeW) / (overrideCtx ? 1 : currentScale);
+              ctx.stroke();
           }
           if (overrideCtx || highlightStyle) return;
           const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
@@ -2424,22 +2513,45 @@ initializeUI() {
             const availableWidth = (p_right.x - p_left.x) * 0.8; const availableHeight = p_bottom.y - p_top.y;
             if (availableWidth < 1 || availableHeight < 1) return; 
             const isSmallBuilding = b.w <= 1 && b.h <= 1;
-            const hasCoords = b.displayCoordinates; const heightFactor = hasCoords ? 0.5 : 1.0;
-            const fontSizeBasedOnHeight = (availableHeight * heightFactor) * 0.9;
+            
             ctx.font = `bold 100px sans-serif`; const textMetrics = ctx.measureText(buildingDisplayName);
-            const displayNameWidth = textMetrics.width || 1; const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
+            const displayNameWidth = textMetrics.width || 1; 
+            const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
+
+            const words = buildingDisplayName.split(' ');
+            let lineCount = words.length;
+            if(b.displayCoordinates) lineCount += 1;
+            const fontSizeBasedOnHeight = (availableHeight / lineCount) * 0.9;
+            
             let optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
             if(isSmallBuilding && optimalFontSize * currentCamScale < 10) optimalFontSize = 10 / currentCamScale;
 
             if (optimalFontSize * currentCamScale < 7 && !isSmallBuilding) return;
 
-            const centerX = (p_left.x + p_right.x) / 2; const yOffset = hasCoords ? optimalFontSize * -0.45 : 0;
-            const centerY = (p_top.y + p_bottom.y) / 2 + yOffset;
-            ctx.fillStyle = config.textColor; ctx.font = `bold ${optimalFontSize}px sans-serif`;
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(buildingDisplayName, centerX, centerY);
+            const centerX = (p_left.x + p_right.x) / 2;
+            const unadjustedCenterY = (p_top.y + p_bottom.y) / 2;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const lineHeight = optimalFontSize * 1.1;
+            let totalBlockHeight = words.length * lineHeight;
             if (b.displayCoordinates) {
-              const coordFontSize = optimalFontSize * 0.7; ctx.font = `${coordFontSize}px sans-serif`;
-              ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, centerY + optimalFontSize * 0.9);
+                totalBlockHeight += lineHeight * 0.8; 
+            }
+            
+            let currentY = unadjustedCenterY - (totalBlockHeight / 2);
+
+            ctx.fillStyle = config.textColor;
+            ctx.font = `bold ${optimalFontSize}px sans-serif`;
+            words.forEach(word => {
+                ctx.fillText(word, centerX, currentY + lineHeight / 2);
+                currentY += lineHeight;
+            });
+
+            if (b.displayCoordinates) {
+              const coordFontSize = optimalFontSize * 0.7;
+              ctx.font = `${coordFontSize}px sans-serif`;
+              ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, currentY + (lineHeight * 0.8) / 2);
             }
           }
       },
@@ -2450,12 +2562,12 @@ initializeUI() {
           
           const ctx = this.dom.ctx;
           
-          // 1. Draw claimed territory
-          ctx.globalAlpha = 0.15;
+          // --- 1. Draw permanently claimed territory ---
           for (const [allianceId, territorySet] of this.state.claimedTerritory.entries()) {
               const alliance = this.state.alliances.find(a => a.id === allianceId);
               if (alliance) {
-                  ctx.fillStyle = alliance.color;
+                  // Pass 1: Fill the entire area
+                  ctx.fillStyle = this.hexToRgba(alliance.color, 0.15);
                   territorySet.forEach(coordStr => {
                       const [x, y] = coordStr.split(',').map(Number);
                       if (x >= viewBounds.minX && x <= viewBounds.maxX && y >= viewBounds.minY && y <= viewBounds.maxY) {
@@ -2469,27 +2581,89 @@ initializeUI() {
                           ctx.fill();
                       }
                   });
+
+                  // Pass 2: Draw the external border
+                  ctx.strokeStyle = this.hexToRgba(this.darkenColor(alliance.color, 40), 0.9);
+                  ctx.lineWidth = this.config.strokeW * 1.5;
+                  territorySet.forEach(coordStr => {
+                      const [x, y] = coordStr.split(',').map(Number);
+                      if (x >= viewBounds.minX && x <= viewBounds.maxX && y >= viewBounds.minY && y <= viewBounds.maxY) {
+                          const [sx, sy] = this.worldToScreen(x, y);
+                          const T = { x: sx, y: sy - this.config.tileH / 2 };
+                          const R = { x: sx + this.config.tileW / 2, y: sy };
+                          const B = { x: sx, y: sy + this.config.tileH / 2 };
+                          const L = { x: sx - this.config.tileW / 2, y: sy };
+
+                          // Draw border only if neighbor is missing
+                          if (!territorySet.has(`${x},${y+1}`)) { ctx.beginPath(); ctx.moveTo(L.x, L.y); ctx.lineTo(T.x, T.y); ctx.stroke(); }
+                          if (!territorySet.has(`${x+1},${y}`)) { ctx.beginPath(); ctx.moveTo(T.x, T.y); ctx.lineTo(R.x, R.y); ctx.stroke(); }
+                          if (!territorySet.has(`${x},${y-1}`)) { ctx.beginPath(); ctx.moveTo(R.x, R.y); ctx.lineTo(B.x, B.y); ctx.stroke(); }
+                          if (!territorySet.has(`${x-1},${y}`)) { ctx.beginPath(); ctx.moveTo(B.x, B.y); ctx.lineTo(L.x, L.y); ctx.stroke(); }
+                      }
+                  });
               }
           }
-          ctx.globalAlpha = 1.0;
 
-          // 2. Draw building placement ghost (only in actual build mode)
+          // --- 2. Draw building placement ghost and its coverage preview ---
           if (this.state.isBuildMode && this.state.selectedBuildingType) {
               const def = this.BUILDING_CATALOG[this.state.selectedBuildingType];
               const { canPlace } = this.checkPlacementValidity(this.state.selectedBuildingType, this.state.mouseWorldPos.x, this.state.mouseWorldPos.y);
               
               if (def) {
+                  // Draw the coverage preview first
+                  if (def.coverage > 0) {
+                      const alliance = this.state.alliances.find(a => a.id === this.state.activeAllianceId);
+                      if (alliance) {
+                          const previewTerritory = new Set();
+                          const radius = Math.floor(def.coverage / 2);
+                          const centerX = this.state.mouseWorldPos.x + Math.floor(def.w / 2);
+                          const centerY = this.state.mouseWorldPos.y + Math.floor(def.h / 2);
+                          for (let dx = -radius; dx <= radius; dx++) {
+                              for (let dy = -radius; dy <= radius; dy++) {
+                                  previewTerritory.add(`${centerX + dx},${centerY + dy}`);
+                              }
+                          }
+
+                          // Pass 1: Fill preview area
+                          ctx.fillStyle = this.hexToRgba(alliance.color, 0.25);
+                          previewTerritory.forEach(coordStr => {
+                              const [x, y] = coordStr.split(',').map(Number);
+                              if (x >= viewBounds.minX && x <= viewBounds.maxX && y >= viewBounds.minY && y <= viewBounds.maxY) {
+                                  const [sx, sy] = this.worldToScreen(x, y);
+                                  ctx.beginPath(); ctx.moveTo(sx, sy-this.config.tileH/2); ctx.lineTo(sx+this.config.tileW/2, sy); ctx.lineTo(sx, sy+this.config.tileH/2); ctx.lineTo(sx-this.config.tileW/2, sy); ctx.closePath();
+                                  ctx.fill();
+                              }
+                          });
+
+                          // Pass 2: Draw preview border
+                          ctx.strokeStyle = this.hexToRgba(this.darkenColor(alliance.color, 40), 0.9);
+                          ctx.lineWidth = this.config.strokeW * 1.5;
+                           previewTerritory.forEach(coordStr => {
+                               const [x, y] = coordStr.split(',').map(Number);
+                               if (x >= viewBounds.minX && x <= viewBounds.maxX && y >= viewBounds.minY && y <= viewBounds.maxY) {
+                                   const [sx, sy] = this.worldToScreen(x, y);
+                                   const T = { x: sx, y: sy - this.config.tileH / 2 }, R = { x: sx + this.config.tileW / 2, y: sy }, B = { x: sx, y: sy + this.config.tileH / 2 }, L = { x: sx - this.config.tileW / 2, y: sy };
+                                   if (!previewTerritory.has(`${x},${y+1}`)) { ctx.beginPath(); ctx.moveTo(L.x, L.y); ctx.lineTo(T.x, T.y); ctx.stroke(); }
+                                   if (!previewTerritory.has(`${x+1},${y}`)) { ctx.beginPath(); ctx.moveTo(T.x, T.y); ctx.lineTo(R.x, R.y); ctx.stroke(); }
+                                   if (!previewTerritory.has(`${x},${y-1}`)) { ctx.beginPath(); ctx.moveTo(R.x, R.y); ctx.lineTo(B.x, B.y); ctx.stroke(); }
+                                   if (!previewTerritory.has(`${x-1},${y}`)) { ctx.beginPath(); ctx.moveTo(B.x, B.y); ctx.lineTo(L.x, L.y); ctx.stroke(); }
+                               }
+                           });
+                      }
+                  }
+                  
+                  // Draw the building ghost on top
                   const ghostBuilding = {
                       x: this.state.mouseWorldPos.x, y: this.state.mouseWorldPos.y,
                       w: def.w, h: def.h,
-                      fillColor: canPlace ? 'rgba(40, 167, 69, 0.7)' : 'rgba(220, 53, 69, 0.7)',
-                      borderColor: canPlace ? '#28a745' : '#dc3545'
+                      fillColor: canPlace ? '#28a745' : '#dc3545',
+                      borderColor: canPlace ? this.darkenColor('#28a745', 40) : this.darkenColor('#dc3545', 40)
                   };
-                  ctx.globalAlpha = 0.7;
                   this.drawBuildingFootprint(ghostBuilding, null, true);
-                  ctx.globalAlpha = 1.0;
               }
           }
+          // Reset line width for other drawing operations
+          ctx.lineWidth = this.config.strokeW;
       },
 
       mainLoop(now) {
