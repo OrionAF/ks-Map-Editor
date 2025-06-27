@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [8.0.0.0] - Major
+
+### Added
+- **New Feature: The Overwatch System!**
+  - A new "Overwatch" (👁️) button and panel have been added to the toolbar.
+  - This system tracks the landmark closest to the center of the screen and displays its name and coordinates in a new, non-intrusive banner at the top of the screen.
+  - The Overwatch panel provides a hierarchical, collapsible checklist, allowing users to granularly enable or disable tracking for specific categories (Fortresses, Sanctuaries, etc.) or individual buildings.
+- **Landmark Images:** Key buildings (King's Castle, Fortresses, Sanctuaries) are now rendered with high-quality images instead of simple colored shapes, dramatically improving the map's visual fidelity.
+- **Dynamic Image Scaling:** Landmark images now intelligently scale up as the user zooms out. This is controlled by new configurable `imageScaleBreakpoint` values in the building data, ensuring buildings remain recognizable at a distance without overwhelming the view when zoomed in.
+- **View & Setting Persistence:** The application now saves your work and preferences automatically.
+  - The map's last known camera position and zoom level are saved to the browser, so your view is restored on refresh.
+  - All selections made in the Overwatch panel are also saved and reloaded, preserving your tracking preferences between sessions.
+- **Granular Render Controls:** The "Build Overlays" settings have been enhanced, splitting the old "Show at Zoom" control into two distinct dropdowns: one for "Show Territory at Zoom" and one for "Show Buildings at Zoom," giving users precise control over map clutter.
+
+### Changed
+- **Intelligent Info Banner Coloring:** The Overwatch info banner now automatically detects the brightness of the building's color it's displaying and sets the font color to either black or white for optimal contrast and readability.
+- **Refined Overwatch Panel UI:** The "King's Castle" entry in the Overwatch panel is now a single, non-collapsible item for a cleaner and more logical user experience.
+
+### Fixed
+- **Fixed Critical Rendering Bug:** Resolved an issue where tiles would fail to render (appearing as black squares) if user-placed buildings were set to "Never" show, ensuring the base map always draws correctly.
+- **Fixed Overwatch Tracking Logic:** Corrected a bug where Outposts and Alliance Resource Buildings were not being properly identified, preventing them from being tracked by the info banner.
+- **Fixed Overwatch Panel Alignment:** Resolved a CSS layout issue where the "King's Castle" checkbox was misaligned with the other category checkboxes.
+
 ## [7.1.0.0] - Minor
 
 ### Added

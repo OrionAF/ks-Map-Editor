@@ -60,6 +60,36 @@ canvas#map.build-cursor {
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 
+#infoBanner {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--panel-bg);
+    color: var(--text-color);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    z-index: 950; /* Below other UI, but above map */
+    display: none; /* Hidden by default */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    text-align: center;
+    pointer-events: none; /* So it doesn't block clicks */
+}
+#infoBannerName {
+    font-weight: bold;
+}
+#infoBannerCoords {
+    margin-left: 10px;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+/* Adjust Build Mode Banner position if Info Banner is also shown */
+#buildModeBanner.with-info-banner {
+    top: 55px; /* Move it down to not overlap */
+}
+
 #versionDisplay {
 	position: absolute;
 	bottom: calc(var(--toolbar-height) + 5px);
@@ -400,6 +430,52 @@ canvas#map.build-cursor {
 #settingsPanel .info-buttons button, #settingsPanel .plan-buttons button {
 	flex: 1;
 	cursor: pointer;
+}
+
+/* --- NEW: Overwatch Panel Styles --- */
+#overwatchPanel {
+    right: 120px;
+    width: 300px;
+}
+.overwatch-list details {
+    border-bottom: 1px solid var(--border-color);
+}
+.overwatch-list details:last-of-type {
+    border-bottom: none;
+}
+.overwatch-list summary {
+    cursor: pointer;
+    list-style: none; /* Remove default marker */
+    padding: 8px 0;
+    font-weight: bold;
+}
+.overwatch-list summary::-webkit-details-marker {
+    display: none; /* Hide default arrow in Chrome/Safari */
+}
+.overwatch-list summary:before {
+    content: '▶';
+    margin-right: 8px;
+    font-size: 0.8em;
+    display: inline-block;
+    transition: transform 0.2s;
+}
+.overwatch-list details[open] > summary:before {
+    transform: rotate(90deg);
+}
+
+/* --- NEW: Hide the arrow ONLY for King's Castle --- */
+.overwatch-list details[data-category="king's_castle"] > summary:before {
+    content: ''; /* Replace the arrow with nothing */
+    margin-right: 0;
+    padding-left: 18px; /* <-- ADD THIS LINE to reclaim the space */
+}
+
+.overwatch-item {
+    font-size: 14px;
+    padding: 4px 0 4px 25px; /* Indent children */
+}
+.overwatch-item label {
+    cursor: pointer;
 }
 
 /* Zoom Presets Panel */
@@ -755,8 +831,14 @@ canvas#map.build-cursor {
     <div id="statsTiles">Tiles: –</div>
   </div>
   
-  <!-- NEW BUILD MODE BANNER -->
+  <!-- BUILD MODE BANNER -->
   <div id="buildModeBanner">Build Mode Enabled</div>
+
+  <!-- INFO BANNER -->
+  <div id="infoBanner">
+    <span id="infoBannerName"></span>
+    <span id="infoBannerCoords"></span>
+  </div>
 
   <div id="minimapContainer">
       <canvas id="minimapCanvas"></canvas>
@@ -793,8 +875,9 @@ canvas#map.build-cursor {
     </div>
     
     <div class="toolbar-group right">
+      <button id="overwatchToggleBtn" title="Overwatch">👁️</button> 
       <button id="zoomPresetsToggleBtn" title="Zoom Presets">🎯</button>
-      <button id="buildModeToggleBtn" title="Build Mode">🛠️</button> <!-- NEW -->
+      <button id="buildModeToggleBtn" title="Build Mode">🛠️</button> 
       <button id="minimapToggleBtn" title="Toggle Minimap">🗺️</button>
       <button id="settingsToggleBtn" title="Settings">⚙️</button>
     </div>
@@ -836,11 +919,42 @@ canvas#map.build-cursor {
     </div>
     <div class="panel-section">
       <h4>Build Overlays</h4>
-      <div><input type="checkbox" id="alwaysShowClaimedToggle"><label for="alwaysShowClaimedToggle"> Always Show Claimed Area</label></div>
+      <div>
+        <label for="userTerritoryRenderSelect">Show Territory at Zoom:</label>
+        <select id="userTerritoryRenderSelect">
+          <option value="0">Always</option>
+          <option value="5">> 5%</option>
+          <option value="10">> 10%</option>
+          <option value="20">> 20%</option>
+          <option value="30">> 30%</option>
+          <option value="40">> 40%</option>
+          <option value="50">> 50%</option>
+          <option value="60">> 60%</option>
+          <option value="80">> 80%</option>
+          <option value="100">> 100%</option>
+          <option value="-1">Never</option>
+        </select>
+      </div>
+      <div>
+        <label for="userBuildingRenderSelect">Show Buildings at Zoom:</label>
+        <select id="userBuildingRenderSelect">
+          <option value="0">Always</option>
+          <option value="5">> 5%</option>
+          <option value="10">> 10%</option>
+          <option value="20">> 20%</option>
+          <option value="30">> 30%</option>
+          <option value="40">> 40%</option>
+          <option value="50">> 50%</option>
+          <option value="60">> 60%</option>
+          <option value="80">> 80%</option>
+          <option value="100">> 100%</option>
+          <option value="-1">Never</option>
+        </select>
+      </div>
     </div>
     <div class="panel-section">
       <h4>Performance</h4>
-      <label for="tileDetailSelect">Merge tiles at zoom:</label>
+      <label for="tileDetailSelect">Un-merge tiles at zoom level:</label>
       <select id="tileDetailSelect">
         <option value="19">20% (Ultra)</option>
         <option value="39">40% (Super)</option>
@@ -873,7 +987,15 @@ canvas#map.build-cursor {
       </div>
   </div>
 
-  <!-- NEW BUILD PANEL -->
+<!-- OVERWATCH PANEL -->
+  <div id="overwatchPanel" class="toolbar-panel">
+    <h4>Overwatch</h4>
+    <div id="overwatchList" class="overwatch-list">
+      <!-- This will be populated by JavaScript -->
+    </div>
+  </div>
+
+  <!-- BUILD PANEL -->
   <div id="buildPanel" class="toolbar-panel">
     <div class="panel-section">
         <h4>Create Alliance</h4>
@@ -946,7 +1068,7 @@ canvas#map.build-cursor {
     const KingshotPlanner = {
       // --- TWEAKABLE SETTINGS ---
       config: {
-        CURRENT_VERSION: '7.1.0.0', 
+        CURRENT_VERSION: '8.0.0.0',
         N: 1200,
         tileW: 10,
         tileH: 10,
@@ -958,6 +1080,13 @@ canvas#map.build-cursor {
         pingColor: '#fff',
         pingDuration: 500,
         baseScale: 5,
+        infoBannerThreshold: 50, // How many tiles away from center to show info banner
+        imageBreakpoints: { 
+            highZoom: 80,    // % zoom level to use base imageScale
+            midZoom: 25,     // % zoom level to use imageScaleBreakpoint_1
+            lowZoom: 10,      // % zoom level to use imageScaleBreakpoint_2
+            imageRenderThreshold: 2.4 // % zoom level to start rendering images
+        },
         biomeColors: {
           fertile: 'rgb(109, 159, 62)',
           plains: 'rgb(158, 180, 103)',
@@ -1027,6 +1156,66 @@ canvas#map.build-cursor {
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
       },
 
+      // --- NEW: CONTRASTING FONT COLOR HELPER ---
+      getContrastingTextColor(color) {
+          // Handles both hex (#RRGGBB) and rgb(a) strings
+          let r, g, b;
+          if (color.startsWith('#')) {
+              r = parseInt(color.slice(1, 3), 16);
+              g = parseInt(color.slice(3, 5), 16);
+              b = parseInt(color.slice(5, 7), 16);
+          } else {
+              const parts = color.match(/(\d+)/g);
+              if (!parts || parts.length < 3) return '#FFFFFF'; // Default to white
+              [r, g, b] = parts.map(Number);
+          }
+          
+          // Formula for calculating luminance (YIQ)
+          const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+          
+          // Return black for light backgrounds, white for dark backgrounds
+          return (yiq >= 128) ? '#000000' : '#FFFFFF';
+      },
+
+      // --- NEW: CAMERA STATE MANAGEMENT ---
+      saveCameraState() {
+          // Don't save if an animation (like 'Go To') is in progress.
+          if (this.state.animationId) return; 
+          const cameraState = {
+              x: this.state.cam.x,
+              y: this.state.cam.y,
+              scale: this.state.cam.scale
+          };
+          localStorage.setItem('kingshot_camera_state', JSON.stringify(cameraState));
+      },
+
+      requestSaveCameraState() {
+          // This creates a small delay, so we don't save on every single frame of a drag.
+          clearTimeout(this.state.saveTimeout);
+          this.state.saveTimeout = setTimeout(() => this.saveCameraState(), 500);
+      },
+
+      loadCameraState() {
+          const savedState = localStorage.getItem('kingshot_camera_state');
+          if (savedState) {
+              try {
+                  const cameraState = JSON.parse(savedState);
+                  // Validate the loaded data to prevent errors
+                  if (cameraState && typeof cameraState.x === 'number' && typeof cameraState.y === 'number' && typeof cameraState.scale === 'number') {
+                      this.state.cam.x = cameraState.x;
+                      this.state.cam.y = cameraState.y;
+                      this.state.cam.scale = cameraState.scale;
+                      console.log("Camera state loaded from browser storage.");
+                      return true; // Indicate success
+                  }
+              } catch (e) {
+                  console.error("Could not parse saved camera state:", e);
+                  localStorage.removeItem('kingshot_camera_state'); // Clear out corrupted data
+              }
+          }
+          return false; // Indicate failure
+      },
+
       // --- BUILDING CATALOG ---
       BUILDING_CATALOG: {
         'alliance_tower': { name: 'Alliance Tower', w: 1, h: 1, coverage: 7, text: 'tag', rule: 'any' },
@@ -1041,6 +1230,8 @@ canvas#map.build-cursor {
       state: {
         baseMap: { unoccupiableTiles: [], defaultBuildings: [] },
         patchNotes: '',
+        buildingImages: new Map(), 
+        saveTimeout: null, 
         allBuildings: [],
         buildingMap: new Map(),
         chunkLevels: [],
@@ -1081,44 +1272,58 @@ canvas#map.build-cursor {
         claimedTerritory: new Map(), 
         globallyClaimedTiles: new Map(), 
         mouseWorldPos: { x: 0, y: 0 },
+        userTerritoryRenderThreshold: 0, 
+        userBuildingRenderThreshold: 0,
+        infoBannerBuildingId: null, 
+        infoBannerUpdateTime: 0, 
+        overwatchSettings: {}, 
       },
       dom: {}, // Will be populated in init()
 
       // --- CORE INITIALIZATION ---
+      loadImage(src) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+      },
+
       init() {
         // --- DOM REFERENCES (Updated for new UI) ---
         this.dom = {
-          canvas: document.getElementById('map'),
-          ctx: null,
-          inpX: document.getElementById('inpX'),
-          inpY: document.getElementById('inpY'),
-          btnGo: document.getElementById('btnGo'),
-          zoomLevelEl: document.getElementById('zoomLevel'),
-          zoomDecBtn: document.getElementById('zoomDecBtn'),
-          zoomIncBtn: document.getElementById('zoomIncBtn'),
-          zoomSlider: document.getElementById('zoomSlider'),
-          zoomPresetsToggleBtn: document.getElementById('zoomPresetsToggleBtn'),
-          zoomPresetsPanel: document.getElementById('zoomPresetsPanel'),
-          zoomPresetsList: document.getElementById('zoomPresetsList'),
-          centerTileEl: document.getElementById('centerTile'),
-          statsPanel: document.getElementById('statsPanel'),
-          statsFPSEl: document.getElementById('statsFPS'),
-          statsTilesEl: document.getElementById('statsTiles'),
-          coordsToggle: document.getElementById('coordsToggle'),
-          versionDisplay: document.getElementById('versionDisplay'),
-          modalOverlay: document.getElementById('modalOverlay'),
-          patchNotesBtn: document.getElementById('patchNotesBtn'),
-          patchNotesModal: document.getElementById('patchNotesModal'),
-          patchNotesBody: document.getElementById('patchNotesBody'),
-          closePatchNotesBtn: document.getElementById('closePatchNotesBtn'),
-          hidePatchNotesCheckbox: document.getElementById('hidePatchNotesCheckbox'),
-          infoBtn: document.getElementById('infoBtn'),
-          controlsModal: document.getElementById('controlsModal'),
-          closeControlsBtn: document.getElementById('closeControlsBtn'),
-          tileDetailSelect: document.getElementById('tileDetailSelect'),
-          gridlinesToggle: document.getElementById('gridlinesToggle'),
-          allianceRssToggle: document.getElementById('allianceRssToggle'),
-          allianceRssAlwaysVisibleToggle: document.getElementById('allianceRssAlwaysVisibleToggle'),
+          canvas:                           document.getElementById('map'),
+          ctx:                              null,
+          inpX:                             document.getElementById('inpX'),
+          inpY:                             document.getElementById('inpY'),
+          btnGo:                            document.getElementById('btnGo'),
+          zoomLevelEl:                      document.getElementById('zoomLevel'),
+          zoomDecBtn:                       document.getElementById('zoomDecBtn'),
+          zoomIncBtn:                       document.getElementById('zoomIncBtn'),
+          zoomSlider:                       document.getElementById('zoomSlider'),
+          zoomPresetsToggleBtn:             document.getElementById('zoomPresetsToggleBtn'),
+          zoomPresetsPanel:                 document.getElementById('zoomPresetsPanel'),
+          zoomPresetsList:                  document.getElementById('zoomPresetsList'),
+          centerTileEl:                     document.getElementById('centerTile'),
+          statsPanel:                       document.getElementById('statsPanel'),
+          statsFPSEl:                       document.getElementById('statsFPS'),
+          statsTilesEl:                     document.getElementById('statsTiles'),
+          coordsToggle:                     document.getElementById('coordsToggle'),
+          versionDisplay:                   document.getElementById('versionDisplay'),
+          modalOverlay:                     document.getElementById('modalOverlay'),
+          patchNotesBtn:                    document.getElementById('patchNotesBtn'),
+          patchNotesModal:                  document.getElementById('patchNotesModal'),
+          patchNotesBody:                   document.getElementById('patchNotesBody'),
+          closePatchNotesBtn:               document.getElementById('closePatchNotesBtn'),
+          hidePatchNotesCheckbox:           document.getElementById('hidePatchNotesCheckbox'),
+          infoBtn:                          document.getElementById('infoBtn'),
+          controlsModal:                    document.getElementById('controlsModal'),
+          closeControlsBtn:                 document.getElementById('closeControlsBtn'),
+          tileDetailSelect:                 document.getElementById('tileDetailSelect'),
+          gridlinesToggle:                  document.getElementById('gridlinesToggle'),
+          allianceRssToggle:                document.getElementById('allianceRssToggle'),
+          allianceRssAlwaysVisibleToggle:   document.getElementById('allianceRssAlwaysVisibleToggle'),
           settingsToggleBtn: document.getElementById('settingsToggleBtn'),
           settingsPanel: document.getElementById('settingsPanel'),
           minimapContainer: document.getElementById('minimapContainer'),
@@ -1153,6 +1358,14 @@ canvas#map.build-cursor {
           exportPlanBtn: document.getElementById('exportPlanBtn'),
           planFileInput: document.getElementById('planFileInput'),
           clearPlanBtn: document.getElementById('clearPlanBtn'),
+          userTerritoryRenderSelect: document.getElementById('userTerritoryRenderSelect'),
+          userBuildingRenderSelect: document.getElementById('userBuildingRenderSelect'),
+          infoBanner: document.getElementById('infoBanner'),
+          infoBannerName: document.getElementById('infoBannerName'),
+          infoBannerCoords: document.getElementById('infoBannerCoords'),
+          overwatchToggleBtn: document.getElementById('overwatchToggleBtn'), 
+          overwatchPanel: document.getElementById('overwatchPanel'),       
+          overwatchList: document.getElementById('overwatchList'),         
         };
 
         this.dom.ctx = this.dom.canvas.getContext('2d');
@@ -1167,14 +1380,21 @@ canvas#map.build-cursor {
         this.state.lastFrame = performance.now();
         Promise.all([
           fetch('baseMap.json').then(r => r.ok ? r.json() : { unoccupiableTiles: [], defaultBuildings: [] }),
-          fetch('CHANGELOG.md').then(r => r.ok ? r.text() : '')
+          fetch('CHANGELOG.md').then(r => r.ok ? r.text() : ''),
+          this.loadImage('kings_castle.png'),
+          this.loadImage('fortress.png'),  
+          this.loadImage('sanctuary.png')    
         ])
-        .then(([baseMapData, changelogText]) => {
+        .then(([baseMapData, changelogText, kingCastleImage, fortressImage, sanctuaryImage]) => {
+          this.state.buildingImages.set('kings_castle', kingCastleImage); 
+          this.state.buildingImages.set('fortress', fortressImage);
+          this.state.buildingImages.set('sanctuary', sanctuaryImage);    
           Object.assign(this.state.baseMap, baseMapData);
           this.state.patchNotes = changelogText;
           this.preProcessBuildings();
           this.preCalculateChunks();
           this.loadPlanFromLocalStorage();
+          this.loadOverwatchSettings(); 
           this.initializeUI();
           this.resize();
           requestAnimationFrame(this.mainLoop.bind(this));
@@ -1183,8 +1403,8 @@ canvas#map.build-cursor {
       },
 
       initializeUI() {
-          // --- PANEL TOGGLING LOGIC ---
           const panelMap = {
+              'overwatch': { btn: this.dom.overwatchToggleBtn, panel: this.dom.overwatchPanel },
               'settings': { btn: this.dom.settingsToggleBtn, panel: this.dom.settingsPanel },
               'nav': { btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel },
               'zoomPresets': { btn: this.dom.zoomPresetsToggleBtn, panel: this.dom.zoomPresetsPanel },
@@ -1196,7 +1416,6 @@ canvas#map.build-cursor {
           const togglePanel = (panelName) => {
                   const panelInfo = panelMap[panelName];
                   if (!panelInfo) return;
-
                   if (panelInfo.panel.classList.contains('open')) {
                       panelInfo.panel.classList.remove('open');
                       panelInfo.btn.classList.remove('active');
@@ -1212,7 +1431,6 @@ canvas#map.build-cursor {
                   }
               };
 
-          // Close panels when clicking outside
           document.addEventListener('click', (e) => {
               if (!this.state.openPanel) return;
               const current = panelMap[this.state.openPanel];
@@ -1221,18 +1439,15 @@ canvas#map.build-cursor {
               }
           });
 
-          // Attach toggle events
           Object.keys(panelMap).forEach(key => {
               panelMap[key].btn.addEventListener('click', (e) => { 
                   e.stopPropagation(); 
-                  if (key === 'build') {
-                      this.renderAlliancePanel();
-                  }
+                  if (key === 'build') { this.renderAlliancePanel(); }
+                  if (key === 'overwatch') { this.buildOverwatchPanel(); } 
                   togglePanel(key); 
               });
           });
-
-          // --- FIX: Navigation Panel Tab Logic ---
+          
           const navPanel = this.dom.navPanel;
           if (navPanel) {
               navPanel.addEventListener('click', (e) => {
@@ -1248,7 +1463,6 @@ canvas#map.build-cursor {
               });
           }
           
-          // MODAL and other event listeners...
           if (this.dom.infoBtn) this.dom.infoBtn.addEventListener('click', this.showControlsModal.bind(this));
           if (this.dom.patchNotesBtn) this.dom.patchNotesBtn.addEventListener('click', this.showPatchNotes.bind(this));
           
@@ -1260,21 +1474,29 @@ canvas#map.build-cursor {
           
           const settingsToPersist = {
               'mapTileDetail': { el: this.dom.tileDetailSelect, default: '49', prop: 'value' },
-              'mapAlwaysShowRss': { el: this.dom.allianceRssAlwaysVisibleToggle, default: 'false', prop: 'checked' },
               'mapShowGridlines': { el: this.dom.gridlinesToggle, default: 'true', prop: 'checked' },
-              'mapShowAllianceRss': { el: this.dom.allianceRssToggle, default: 'true', prop: 'checked' },
               'mapShowCoords': { el: this.dom.coordsToggle, default: 'true', prop: 'checked' },
-              'mapAlwaysShowClaimed': { el: this.dom.alwaysShowClaimedToggle, default: 'false', prop: 'checked'},
+              'mapShowAllianceRss': { el: this.dom.allianceRssToggle, default: 'true', prop: 'checked' },
+              'mapAlwaysShowRss': { el: this.dom.allianceRssAlwaysVisibleToggle, default: 'false', prop: 'checked' },
+              'mapUserTerritoryRender': { el: this.dom.userTerritoryRenderSelect, default: '0', prop: 'value' },
+              'mapUserBuildingRender': { el: this.dom.userBuildingRenderSelect, default: '0', prop: 'value' }
           };
+
           Object.entries(settingsToPersist).forEach(([key, conf]) => {
               if (conf.el) {
                   const saved = localStorage.getItem(key) ?? conf.default;
                   conf.el[conf.prop] = conf.prop === 'checked' ? (saved === 'true') : saved;
+                  
+                  if (key === 'mapTileDetail') this.state.currentTileDetailThreshold = parseInt(saved, 10);
+                  if (key === 'mapUserTerritoryRender') this.state.userTerritoryRenderThreshold = parseInt(saved, 10);
+                  if (key === 'mapUserBuildingRender') this.state.userBuildingRenderThreshold = parseInt(saved, 10);
+
                   conf.el.addEventListener('change', () => {
                       localStorage.setItem(key, String(conf.el[conf.prop]));
-                      if(key === 'mapTileDetail') this.state.currentTileDetailThreshold = parseInt(conf.el.value, 10);
+                      if (key === 'mapTileDetail') this.state.currentTileDetailThreshold = parseInt(conf.el.value, 10);
+                      if (key === 'mapUserTerritoryRender') this.state.userTerritoryRenderThreshold = parseInt(conf.el.value, 10);
+                      if (key === 'mapUserBuildingRender') this.state.userBuildingRenderThreshold = parseInt(conf.el.value, 10);
                   });
-                  if(key === 'mapTileDetail') this.state.currentTileDetailThreshold = parseInt(conf.el.value, 10);
               }
           });
           
@@ -1302,7 +1524,6 @@ canvas#map.build-cursor {
             this.dom.minimapToggleBtn.classList.toggle('active', isDesktop);
           }
           
-          // --- BUILD MODE UI LISTENERS ---
           if (this.dom.buildModeToggleBtn) this.dom.buildModeToggleBtn.title = "Manage Plan / Alliances";
           if (this.dom.toggleBuildModeActualBtn) this.dom.toggleBuildModeActualBtn.addEventListener('click', this.setBuildModeActive.bind(this));
           if (this.dom.createAllianceBtn) this.dom.createAllianceBtn.addEventListener('click', this.createAlliance.bind(this));
@@ -1311,6 +1532,7 @@ canvas#map.build-cursor {
           if (this.dom.planFileInput) this.dom.planFileInput.addEventListener('change', this.importPlan.bind(this));
           if (this.dom.clearPlanBtn) this.dom.clearPlanBtn.addEventListener('click', this.clearPlan.bind(this));
           if (this.dom.saveAllianceChangesBtn) this.dom.saveAllianceChangesBtn.addEventListener('click', this.saveAllianceChanges.bind(this));
+          if(this.dom.overwatchList) this.dom.overwatchList.addEventListener('change', this.handleOverwatchChange.bind(this));
 
           window.addEventListener('resize', this.resize.bind(this));
           window.addEventListener('mousemove', this.handleMouseMove.bind(this));
@@ -1331,7 +1553,7 @@ canvas#map.build-cursor {
             window.addEventListener('mouseup', this.handleMinimapMouseUp.bind(this));
           }
       },
-      
+
       setBuildModeActive() {
           this.state.isBuildMode = !this.state.isBuildMode;
           const isActive = this.state.isBuildMode;
@@ -1488,6 +1710,106 @@ canvas#map.build-cursor {
           this.dom.patchNotesModal.style.display = 'none';
           this.dom.controlsModal.style.display = 'none';
           this.dom.editAllianceModal.style.display = 'none';
+      },
+
+      // --- OVERWATCH SYSTEM ---
+      buildOverwatchPanel() {
+          this.dom.overwatchList.innerHTML = '';
+          const categories = {
+              'King\'s Castle': { parent: true, children: [] },
+              'Fortress': { parent: true, children: [] },
+              'Sanctuary': { parent: true, children: [] },
+              'Outpost': { parent: true, children: [] },
+              'Alliance Resource Buildings': { parent: true, children: [] }
+          };
+
+          this.state.allBuildings.forEach(b => {
+              if (b.displayName.includes('King\'s Castle')) categories['King\'s Castle'].children.push(b);
+              else if (b.displayName.includes('Fortress')) categories['Fortress'].children.push(b);
+              else if (b.displayName.includes('Sanctuary')) categories['Sanctuary'].children.push(b);
+              else if (b.isRss) categories['Alliance Resource Buildings'].children.push(b);
+              else if (b.displayName.includes('Lv.')) categories['Outpost'].children.push(b);
+          });
+          
+          const createCheckbox = (id, label, isChild = false, isChecked = true) => {
+              const div = document.createElement('div');
+              div.className = `overwatch-item ${isChild ? 'child' : ''}`;
+              div.innerHTML = `<label><input type="checkbox" data-id="${id}" ${isChecked ? 'checked' : ''}> ${label}</label>`;
+              return div;
+          };
+
+          for (const [category, data] of Object.entries(categories)) {
+              if (data.children.length > 0 || category === 'Alliance Resource Buildings') {
+                  const parentId = category.toLowerCase().replace(/\s/g, '_');
+                  const parentChecked = this.state.overwatchSettings[parentId] !== false;
+
+                  const details = document.createElement('details');
+                  // Add a specific data attribute for CSS targeting
+                  details.dataset.category = parentId; 
+                  
+                  const summary = document.createElement('summary');
+                  
+                  const parentCheckbox = document.createElement('input');
+                  parentCheckbox.type = 'checkbox';
+                  parentCheckbox.dataset.id = parentId;
+                  parentCheckbox.checked = parentChecked;
+                  
+                  summary.appendChild(parentCheckbox);
+                  summary.append(` ${category}`);
+                  details.appendChild(summary);
+
+                  if (category === 'Alliance Resource Buildings') {
+                      Object.keys(this.config.ALLIANCE_RSS_STYLES).forEach(type => {
+                          const childId = `resource_${type}`;
+                          const childChecked = this.state.overwatchSettings[childId] !== false;
+                          details.appendChild(createCheckbox(childId, this.config.ALLIANCE_RSS_STYLES[type].displayName, true, childChecked));
+                      });
+                  } else {
+                      data.children.forEach(b => {
+                          const childId = b.id || `${b.x},${b.y}`;
+                          const childChecked = this.state.overwatchSettings[childId] !== false;
+                          details.appendChild(createCheckbox(childId, b.displayName, true, childChecked));
+                      });
+                  }
+                  this.dom.overwatchList.appendChild(details);
+              }
+          }
+      },
+      handleOverwatchChange(e) {
+          const checkbox = e.target;
+          const id = checkbox.dataset.id;
+          const isChecked = checkbox.checked;
+          this.state.overwatchSettings[id] = isChecked;
+
+          const parentDetails = checkbox.closest('details');
+          if (!parentDetails) return;
+
+          // Check if the clicked checkbox is in the <summary> (a parent)
+          if (checkbox.parentElement === parentDetails.querySelector('summary')) {
+              // This is a parent checkbox, update all children within its <details> tag
+              parentDetails.querySelectorAll('.overwatch-item input[type="checkbox"]').forEach(childCheckbox => {
+                  childCheckbox.checked = isChecked;
+                  this.state.overwatchSettings[childCheckbox.dataset.id] = isChecked;
+              });
+          }
+          this.saveOverwatchSettings();
+      },
+
+      saveOverwatchSettings() {
+          localStorage.setItem('kingshot_overwatch_settings', JSON.stringify(this.state.overwatchSettings));
+      },
+
+      loadOverwatchSettings() {
+          const saved = localStorage.getItem('kingshot_overwatch_settings');
+          if (saved) {
+              try {
+                  this.state.overwatchSettings = JSON.parse(saved);
+                  console.log("Overwatch settings loaded.");
+              } catch (e) {
+                  console.error("Could not parse Overwatch settings:", e);
+                  this.state.overwatchSettings = {};
+              }
+          }
       },
 
       renderBuildingPalette() {
@@ -2063,6 +2385,8 @@ canvas#map.build-cursor {
         }
         if (isNaN(this.state.cam.x)) this.state.cam.x = canvasW / 2;
         if (isNaN(this.state.cam.y)) this.state.cam.y = canvasH / 2;
+
+        this.requestSaveCameraState();
       },
 
       changeZoomBy(delta) {
@@ -2339,7 +2663,7 @@ canvas#map.build-cursor {
         if (e.touches.length < 2) this.state.touchMode = null;
       },
 
-      resize() {
+resize() {
         this.dom.canvas.width = window.innerWidth; this.dom.canvas.height = window.innerHeight;
         if (this.dom.minimapCanvas && this.config.minimap) {
           const dpr = window.devicePixelRatio || 1;
@@ -2351,8 +2675,16 @@ canvas#map.build-cursor {
         const scaleY = this.dom.canvas.height / mapTotalHeight;
         this.state.minFitScale = Math.max(0.1, Math.min(scaleX, scaleY) * 0.95);
         if (isNaN(this.state.minFitScale)) { this.state.minFitScale = 0.1; }
+        
         if (this.state.isInitialLoad) {
-          this.state.isInitialLoad = false; this.zoomToFit();
+          this.state.isInitialLoad = false;
+          // Try to load the saved state. If it fails, zoom to fit.
+          const loaded = this.loadCameraState();
+          if (!loaded) {
+            this.zoomToFit();
+          } else {
+            this.clampCamera(); // Ensure loaded values are valid
+          }
         } else {
           this.state.cam.scale = Math.max(this.state.minFitScale, this.state.cam.scale);
           if (isNaN(this.state.cam.scale)) { this.state.cam.scale = this.state.minFitScale; }
@@ -2495,59 +2827,103 @@ canvas#map.build-cursor {
           const [stx, sty] = this.worldToScreen(x0 + w - 1, y0 + h - 1); const [slx, sly] = this.worldToScreen(x0, y0 + h - 1);
           const p_bottom = { x: sbx, y: sby + config.tileH / 2 }; const p_right = { x: srx + config.tileW / 2, y: sry };
           const p_top = { x: stx, y: sty - config.tileH / 2 }; const p_left = { x: slx - config.tileW / 2, y: sly };
-          ctx.beginPath(); ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x, p_right.y);
-          ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y); ctx.closePath();
+          
+          const currentZoomPct = (state.cam.scale / config.baseScale) * 100;
+          
+          // Use the new, separate threshold for buildings
+          if (isBuildModeBuilding && (this.state.userBuildingRenderThreshold === -1 || currentZoomPct < this.state.userBuildingRenderThreshold)) {
+              return;
+          }
+
+          ctx.beginPath(); 
+          ctx.moveTo(p_bottom.x, p_bottom.y); 
+          ctx.lineTo(p_right.x, p_right.y);
+          ctx.lineTo(p_top.x, p_top.y); 
+          ctx.lineTo(p_left.x, p_left.y); 
+          ctx.closePath();
           
           ctx.fillStyle = isBuildModeBuilding ? this.hexToRgba(fill, 0.4) : fill;
           ctx.fill();
 
           if(drawBorder) {
-              ctx.strokeStyle = border; const currentScale = overrideCtx ? this.state.minimapCam.scale : this.state.cam.scale;
+              ctx.strokeStyle = border; 
+              const currentScale = overrideCtx ? this.state.minimapCam.scale : this.state.cam.scale;
               ctx.lineWidth = (highlightStyle ? config.strokeW * 2 : config.strokeW) / (overrideCtx ? 1 : currentScale);
               ctx.stroke();
           }
+
+          if (b.imageKey && state.buildingImages.has(b.imageKey) && !overrideCtx && currentZoomPct >= config.imageBreakpoints.imageRenderThreshold) {
+              const image = state.buildingImages.get(b.imageKey);
+              let dynamicScale = b.imageScale || 1.0;
+              if (b.imageScaleBreakpoint_1 && b.imageScaleBreakpoint_2 && config.imageBreakpoints) {
+                  const { highZoom, midZoom, lowZoom } = config.imageBreakpoints;
+                  if (currentZoomPct >= highZoom) {
+                      dynamicScale = b.imageScale;
+                  } else if (currentZoomPct >= midZoom) {
+                      const progress = (highZoom - currentZoomPct) / (highZoom - midZoom);
+                      dynamicScale = b.imageScale + (b.imageScaleBreakpoint_1 - b.imageScale) * progress;
+                  } else if (currentZoomPct >= lowZoom) {
+                      const progress = (midZoom - currentZoomPct) / (midZoom - lowZoom);
+                      dynamicScale = b.imageScaleBreakpoint_1 + (b.imageScaleBreakpoint_2 - b.imageScaleBreakpoint_1) * progress;
+                  } else {
+                      dynamicScale = b.imageScaleBreakpoint_2;
+                  }
+              }
+              const renderWidth = image.naturalWidth * dynamicScale;
+              const renderHeight = image.naturalHeight * dynamicScale;
+              let drawX, drawY;
+              if (b.anchorTile && typeof b.anchorTile.x === 'number' && typeof b.anchorTile.y === 'number') {
+                  const [tileScreenX, tileScreenY] = this.worldToScreen(b.anchorTile.x, b.anchorTile.y);
+                  const mapAnchorX = tileScreenX;
+                  const mapAnchorY = tileScreenY + (this.config.tileH / 2);
+                  const imageAnchorX = renderWidth / 2;
+                  const imageAnchorY = renderHeight / 2;
+                  drawX = mapAnchorX - imageAnchorX;
+                  drawY = mapAnchorY - imageAnchorY;
+              } else {
+                  const footprintCenterX = (p_left.x + p_right.x) / 2;
+                  const footprintCenterY = (p_top.y + p_bottom.y) / 2;
+                  drawX = footprintCenterX - (renderWidth / 2);
+                  drawY = footprintCenterY - (renderHeight / 2);
+              }
+              ctx.drawImage(image, drawX, drawY, renderWidth, renderHeight);
+              return; 
+          }
+
+
           if (overrideCtx || highlightStyle) return;
-          const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
-          const pct = Math.round((currentCamScale / config.baseScale) * 100);
-          if ((isBuildModeBuilding && pct > 30) || (!isBuildModeBuilding && currentCamScale > 0.4 && buildingDisplayName)) {
+          
+          const textZoomThreshold = isBuildModeBuilding ? 30 : 40;
+          if (currentZoomPct > textZoomThreshold && buildingDisplayName) {
             const availableWidth = (p_right.x - p_left.x) * 0.8; const availableHeight = p_bottom.y - p_top.y;
             if (availableWidth < 1 || availableHeight < 1) return; 
             const isSmallBuilding = b.w <= 1 && b.h <= 1;
-            
             ctx.font = `bold 100px sans-serif`; const textMetrics = ctx.measureText(buildingDisplayName);
             const displayNameWidth = textMetrics.width || 1; 
             const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
-
             const words = buildingDisplayName.split(' ');
             let lineCount = words.length;
             if(b.displayCoordinates) lineCount += 1;
             const fontSizeBasedOnHeight = (availableHeight / lineCount) * 0.9;
-            
             let optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
-            if(isSmallBuilding && optimalFontSize * currentCamScale < 10) optimalFontSize = 10 / currentCamScale;
-
-            if (optimalFontSize * currentCamScale < 7 && !isSmallBuilding) return;
-
+            if(isSmallBuilding && optimalFontSize * currentZoomPct < 10) optimalFontSize = 10 / currentZoomPct;
+            if (optimalFontSize * currentZoomPct < 7 && !isSmallBuilding) return;
             const centerX = (p_left.x + p_right.x) / 2;
             const unadjustedCenterY = (p_top.y + p_bottom.y) / 2;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-
             const lineHeight = optimalFontSize * 1.1;
             let totalBlockHeight = words.length * lineHeight;
             if (b.displayCoordinates) {
                 totalBlockHeight += lineHeight * 0.8; 
             }
-            
             let currentY = unadjustedCenterY - (totalBlockHeight / 2);
-
             ctx.fillStyle = config.textColor;
             ctx.font = `bold ${optimalFontSize}px sans-serif`;
             words.forEach(word => {
                 ctx.fillText(word, centerX, currentY + lineHeight / 2);
                 currentY += lineHeight;
             });
-
             if (b.displayCoordinates) {
               const coordFontSize = optimalFontSize * 0.7;
               ctx.font = `${coordFontSize}px sans-serif`;
@@ -2557,44 +2933,39 @@ canvas#map.build-cursor {
       },
       
       drawBuildModeOverlays(viewBounds) {
-          const showOverlays = this.state.isBuildMode || (this.dom.alwaysShowClaimedToggle && this.dom.alwaysShowClaimedToggle.checked);
-          if (!showOverlays) return;
+          const currentZoomPct = (this.state.cam.scale / this.config.baseScale) * 100;
+
+          // Use the new, separate threshold for territory.
+          if (this.state.userTerritoryRenderThreshold === -1 || currentZoomPct < this.state.userTerritoryRenderThreshold) {
+            return;
+          }
           
           const ctx = this.dom.ctx;
           
-          // --- 1. Draw permanently claimed territory ---
           for (const [allianceId, territorySet] of this.state.claimedTerritory.entries()) {
               const alliance = this.state.alliances.find(a => a.id === allianceId);
               if (alliance) {
-                  // Pass 1: Fill the entire area
                   ctx.fillStyle = this.hexToRgba(alliance.color, 0.15);
                   territorySet.forEach(coordStr => {
                       const [x, y] = coordStr.split(',').map(Number);
                       if (x >= viewBounds.minX && x <= viewBounds.maxX && y >= viewBounds.minY && y <= viewBounds.maxY) {
                           const [sx, sy] = this.worldToScreen(x, y);
                           ctx.beginPath();
-                          ctx.moveTo(sx, sy - this.config.tileH / 2);
-                          ctx.lineTo(sx + this.config.tileW / 2, sy);
-                          ctx.lineTo(sx, sy + this.config.tileH / 2);
-                          ctx.lineTo(sx - this.config.tileW / 2, sy);
+                          ctx.moveTo(sx, sy - this.config.tileH / 2); ctx.lineTo(sx + this.config.tileW / 2, sy);
+                          ctx.lineTo(sx, sy + this.config.tileH / 2); ctx.lineTo(sx - this.config.tileW / 2, sy);
                           ctx.closePath();
                           ctx.fill();
                       }
                   });
 
-                  // Pass 2: Draw the external border
                   ctx.strokeStyle = this.hexToRgba(this.darkenColor(alliance.color, 40), 0.9);
                   ctx.lineWidth = this.config.strokeW * 1.5;
                   territorySet.forEach(coordStr => {
                       const [x, y] = coordStr.split(',').map(Number);
                       if (x >= viewBounds.minX && x <= viewBounds.maxX && y >= viewBounds.minY && y <= viewBounds.maxY) {
                           const [sx, sy] = this.worldToScreen(x, y);
-                          const T = { x: sx, y: sy - this.config.tileH / 2 };
-                          const R = { x: sx + this.config.tileW / 2, y: sy };
-                          const B = { x: sx, y: sy + this.config.tileH / 2 };
-                          const L = { x: sx - this.config.tileW / 2, y: sy };
-
-                          // Draw border only if neighbor is missing
+                          const T = { x: sx, y: sy - this.config.tileH / 2 }, R = { x: sx + this.config.tileW / 2, y: sy };
+                          const B = { x: sx, y: sy + this.config.tileH / 2 }, L = { x: sx - this.config.tileW / 2, y: sy };
                           if (!territorySet.has(`${x},${y+1}`)) { ctx.beginPath(); ctx.moveTo(L.x, L.y); ctx.lineTo(T.x, T.y); ctx.stroke(); }
                           if (!territorySet.has(`${x+1},${y}`)) { ctx.beginPath(); ctx.moveTo(T.x, T.y); ctx.lineTo(R.x, R.y); ctx.stroke(); }
                           if (!territorySet.has(`${x},${y-1}`)) { ctx.beginPath(); ctx.moveTo(R.x, R.y); ctx.lineTo(B.x, B.y); ctx.stroke(); }
@@ -2604,13 +2975,11 @@ canvas#map.build-cursor {
               }
           }
 
-          // --- 2. Draw building placement ghost and its coverage preview ---
           if (this.state.isBuildMode && this.state.selectedBuildingType) {
               const def = this.BUILDING_CATALOG[this.state.selectedBuildingType];
               const { canPlace } = this.checkPlacementValidity(this.state.selectedBuildingType, this.state.mouseWorldPos.x, this.state.mouseWorldPos.y);
               
               if (def) {
-                  // Draw the coverage preview first
                   if (def.coverage > 0) {
                       const alliance = this.state.alliances.find(a => a.id === this.state.activeAllianceId);
                       if (alliance) {
@@ -2623,8 +2992,7 @@ canvas#map.build-cursor {
                                   previewTerritory.add(`${centerX + dx},${centerY + dy}`);
                               }
                           }
-
-                          // Pass 1: Fill preview area
+                          
                           ctx.fillStyle = this.hexToRgba(alliance.color, 0.25);
                           previewTerritory.forEach(coordStr => {
                               const [x, y] = coordStr.split(',').map(Number);
@@ -2634,8 +3002,7 @@ canvas#map.build-cursor {
                                   ctx.fill();
                               }
                           });
-
-                          // Pass 2: Draw preview border
+                          
                           ctx.strokeStyle = this.hexToRgba(this.darkenColor(alliance.color, 40), 0.9);
                           ctx.lineWidth = this.config.strokeW * 1.5;
                            previewTerritory.forEach(coordStr => {
@@ -2652,7 +3019,6 @@ canvas#map.build-cursor {
                       }
                   }
                   
-                  // Draw the building ghost on top
                   const ghostBuilding = {
                       x: this.state.mouseWorldPos.x, y: this.state.mouseWorldPos.y,
                       w: def.w, h: def.h,
@@ -2662,8 +3028,73 @@ canvas#map.build-cursor {
                   this.drawBuildingFootprint(ghostBuilding, null, true);
               }
           }
-          // Reset line width for other drawing operations
           ctx.lineWidth = this.config.strokeW;
+      }, 
+
+      updateInfoBanner() {
+          const { config, state, dom } = this;
+          const [centerX, centerY] = this.screenToWorld(dom.canvas.width / 2, dom.canvas.height / 2);
+          const currentZoomPct = (state.cam.scale / config.baseScale) * 100;
+
+          if (currentZoomPct < 20) {
+              dom.infoBanner.style.display = 'none';
+              dom.buildModeBanner.classList.remove('with-info-banner');
+              state.infoBannerBuildingId = null;
+              return;
+          }
+
+          const trackedBuildings = state.allBuildings.filter(b => {
+              const parentId = b.displayName.includes('King\'s Castle') ? 'king\'s_castle' 
+                             : b.displayName.includes('Fortress') ? 'fortress' 
+                             : b.displayName.includes('Sanctuary') ? 'sanctuary'
+                             : b.isRss ? 'alliance_resource_buildings'
+                             : b.displayName.includes('Lv.') ? 'outpost' : null;
+              
+              if (!parentId) return false;
+              if (state.overwatchSettings[parentId] === false) return false;
+              const childId = b.isRss ? `resource_${b.type}` : (b.id || `${b.x},${b.y}`);
+              return state.overwatchSettings[childId] !== false;
+          });
+
+          let closestBuilding = null;
+          let minDist = Infinity;
+
+          for (const b of trackedBuildings) {
+              const buildingCenterX = b.x + (b.w - 1) / 2;
+              const buildingCenterY = b.y + (b.h - 1) / 2;
+              const dist = Math.hypot(centerX - buildingCenterX, centerY - buildingCenterY);
+              if (dist < minDist) {
+                  minDist = dist;
+                  closestBuilding = b;
+              }
+          }
+
+          if (closestBuilding && minDist <= config.infoBannerThreshold) {
+              const buildingId = closestBuilding.id || `${closestBuilding.x},${closestBuilding.y}`;
+              
+              if (state.infoBannerBuildingId !== buildingId) {
+                  dom.infoBannerName.textContent = closestBuilding.displayText || closestBuilding.displayName;
+                  dom.infoBannerCoords.textContent = `(X${closestBuilding.x}, Y${closestBuilding.y})`;
+                  
+                  const bannerColor = closestBuilding.fillColor || 'var(--panel-bg)';
+                  const bannerBorderColor = this.darkenColor(bannerColor, 40) || 'var(--border-color)';
+                  
+                  // --- NEW: Set banner colors and contrasting text color ---
+                  dom.infoBanner.style.backgroundColor = bannerColor;
+                  dom.infoBanner.style.border = `1px solid ${bannerBorderColor}`;
+                  dom.infoBanner.style.color = this.getContrastingTextColor(bannerColor);
+                  
+                  dom.infoBanner.style.display = 'block';
+                  dom.buildModeBanner.classList.add('with-info-banner');
+                  state.infoBannerBuildingId = buildingId;
+              }
+          } else {
+              if (state.infoBannerBuildingId !== null) {
+                  dom.infoBanner.style.display = 'none';
+                  dom.buildModeBanner.classList.remove('with-info-banner');
+                  state.infoBannerBuildingId = null;
+              }
+          }
       },
 
       mainLoop(now) {
@@ -2701,37 +3132,53 @@ canvas#map.build-cursor {
 
           // --- Drawing Base Layer ---
           if (chunkLevel === -1) {
-            const shouldDrawBorders = showGrid && pct > 50; const minSum = Math.floor(viewBounds.minX + viewBounds.minY); const maxSum = Math.ceil(viewBounds.maxX + viewBounds.maxY);
-            for (let sum = minSum; sum <= maxSum; sum++) {
-              const startXCoord = Math.floor(Math.max(viewBounds.minX, (sum - viewBounds.maxY))); const endXCoord = Math.ceil(Math.min(viewBounds.maxX, (sum - viewBounds.minY)));
-              for (let x = startXCoord; x <= endXCoord; x++) { const y = sum - x; if (x < 0 || x >= config.N || y < 0 || y >= config.N) continue; if (!this.getBuildingAtCoords(x, y)) this.drawTile(x, y, shouldDrawBorders); }
-            }
-            state.allBuildings.filter(b => (!b.isRss || showRss) && !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY)).forEach(b => this.drawBuildingFootprint(b, null, shouldDrawBorders));
-            ctx.fillStyle = '#444';
-            (state.baseMap.unoccupiableTiles || []).forEach(([x, y]) => { if (this.getBuildingAtCoords(x, y)) return; if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return; const [sx, sy] = this.worldToScreen(x, y); ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy); ctx.closePath(); ctx.fill(); });
+              const shouldDrawBorders = showGrid && pct > 50;
+              const minSum = Math.floor(viewBounds.minX + viewBounds.minY);
+              const maxSum = Math.ceil(viewBounds.maxX + viewBounds.maxY);
+              for (let sum = minSum; sum <= maxSum; sum++) {
+                  const startXCoord = Math.floor(Math.max(viewBounds.minX, (sum - viewBounds.maxY)));
+                  const endXCoord = Math.ceil(Math.min(viewBounds.maxX, (sum - viewBounds.minY)));
+                  for (let x = startXCoord; x <= endXCoord; x++) {
+                      const y = sum - x;
+                      if (x < 0 || x >= config.N || y < 0 || y >= config.N) continue;
+                      this.drawTile(x, y, shouldDrawBorders);
+                  }
+              }
           } else {
-            if (state.chunkLevels && state.chunkLevels[chunkLevel]) {
-              const chunksToDraw = state.chunkLevels[chunkLevel]; const chunkSize = Math.pow(2, chunkLevel + 1);
-              const startChunkX = Math.floor(viewBounds.minX / chunkSize) * chunkSize; const endChunkX = Math.ceil(viewBounds.maxX / chunkSize) * chunkSize;
-              const startChunkY = Math.floor(viewBounds.minY / chunkSize) * chunkSize; const endChunkY = Math.ceil(viewBounds.maxY / chunkSize) * chunkSize;
-              for (let x = startChunkX; x <= endChunkX; x += chunkSize) { for (let y = startChunkY; y <= endChunkY; y += chunkSize) { const chunk = chunksToDraw.get(`${x},${y}`); if (chunk) this.drawChunk(chunk, false); } }
-            }
-            state.allBuildings.filter(b => !b.isRss && !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY)).forEach(b => this.drawBuildingFootprint(b, null, false));
-            if (showRss && alwaysShowRss) {
-                state.allBuildings.filter(b => b.isRss && !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY)).forEach(b => this.drawBuildingFootprint(b, null, false));
-            }
-            if (chunkLevel < 2) {
-              ctx.fillStyle = '#444';
-              (state.baseMap.unoccupiableTiles || []).forEach(([x, y]) => { if (this.getBuildingAtCoords(x, y)) return; if (x < viewBounds.minX || x > viewBounds.maxX || y < viewBounds.minY || y > viewBounds.maxY) return; const [sx, sy] = this.worldToScreen(x, y); ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy); ctx.closePath(); ctx.fill(); });
-            }
+              if (state.chunkLevels && state.chunkLevels[chunkLevel]) {
+                  const chunksToDraw = state.chunkLevels[chunkLevel];
+                  const chunkSize = Math.pow(2, chunkLevel + 1);
+                  const startChunkX = Math.floor(viewBounds.minX / chunkSize) * chunkSize;
+                  const endChunkX = Math.ceil(viewBounds.maxX / chunkSize) * chunkSize;
+                  const startChunkY = Math.floor(viewBounds.minY / chunkSize) * chunkSize;
+                  const endChunkY = Math.ceil(viewBounds.maxY / chunkSize) * chunkSize;
+                  for (let x = startChunkX; x <= endChunkX; x += chunkSize) {
+                      for (let y = startChunkY; y <= endChunkY; y += chunkSize) {
+                          const chunk = chunksToDraw.get(`${x},${y}`);
+                          if (chunk) this.drawChunk(chunk, false);
+                      }
+                  }
+              }
           }
-          
-          // --- Draw Build Mode Content ---
-          this.drawBuildModeOverlays(viewBounds); // This now handles claimed area toggle
-          state.buildModeBuildings
-            .filter(b => !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
-            .forEach(b => this.drawBuildingFootprint(b, null, true));
 
+          // --- Pass 2: Draw Default and Build Mode Buildings on TOP of the base layer ---
+          const buildingsToRender = state.allBuildings.concat(state.buildModeBuildings);
+          buildingsToRender
+            .filter(b => !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
+            .filter(b => { // Filter out RSS buildings based on settings
+                if (!b.isRss) return true;
+                return showRss && (alwaysShowRss || chunkLevel === -1);
+            })
+            .forEach(b => this.drawBuildingFootprint(b, null, chunkLevel === -1 && showGrid && pct > 50));
+          
+          
+          this.drawBuildModeOverlays(viewBounds);
+
+          // --- NEW: Update the Info Banner (throttled for performance) ---
+          if (now - state.infoBannerUpdateTime > 100) {
+            this.updateInfoBanner();
+            state.infoBannerUpdateTime = now;
+          }
 
           // --- Draw Selection ---
           if (state.selection && !state.isBuildMode) {
@@ -2752,8 +3199,7 @@ canvas#map.build-cursor {
           }
         } catch (error) { console.error("Error in mainLoop:", error); }
         requestAnimationFrame(this.mainLoop.bind(this));
-      }
-
+      },
     };
     KingshotPlanner.init();
   </script>

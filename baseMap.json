@@ -242,7 +242,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(255,215,0,1)",
-      "borderColor": "rgba(204,172,0,1)"
+      "borderColor": "rgba(204,172,0,1)",
+      "imageKey": "kings_castle",
+      "imageScale": 0.095,
+      "imageScaleBreakpoint_1": 0.17,
+      "imageScaleBreakpoint_2": 0.25,
+      "anchorTile": { "x": 600.3, "y": 600.9 }
     },
     {
       "x": 800,
@@ -253,7 +258,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(178,34,34,1)",
-      "borderColor": "rgba(142,27,27,1)"
+      "borderColor": "rgba(142,27,27,1)",
+      "imageKey": "fortress",
+      "imageScale": 0.05,
+      "imageScaleBreakpoint_1": 0.09,
+      "imageScaleBreakpoint_2": 0.13,
+      "anchorTile": { "x": 803.2, "y": 600.2 }
     },
     {
       "x": 597,
@@ -264,7 +274,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(178,34,34,1)",
-      "borderColor": "rgba(142,27,27,1)"
+      "borderColor": "rgba(142,27,27,1)",
+      "imageKey": "fortress",
+      "imageScale": 0.05,
+      "imageScaleBreakpoint_1": 0.09,
+      "imageScaleBreakpoint_2": 0.13,
+      "anchorTile": { "x": 600.2, "y": 403.2 }
     },
         {
       "x": 400,
@@ -275,7 +290,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(178,34,34,1)",
-      "borderColor": "rgba(142,27,27,1)"
+      "borderColor": "rgba(142,27,27,1)",
+      "imageKey": "fortress",
+      "imageScale": 0.05,
+      "imageScaleBreakpoint_1": 0.09,
+      "imageScaleBreakpoint_2": 0.13,
+      "anchorTile": { "x": 403.2, "y": 600.2 }
     },
         {
       "x": 597,
@@ -286,7 +306,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(178,34,34,1)",
-      "borderColor": "rgba(142,27,27,1)"
+      "borderColor": "rgba(142,27,27,1)",
+      "imageKey": "fortress",
+      "imageScale": 0.05,
+      "imageScaleBreakpoint_1": 0.09,
+      "imageScaleBreakpoint_2": 0.13,
+      "anchorTile": { "x": 600.2, "y": 803.2 }
     },
         {
       "x": 237,
@@ -297,7 +322,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(65,105,225,1)",
-      "borderColor": "rgba(52,84,178,1)"
+      "borderColor": "rgba(52,84,178,1)",
+      "imageKey": "sanctuary",
+      "imageScale": 0.057,
+      "imageScaleBreakpoint_1": 0.10,
+      "imageScaleBreakpoint_2": 0.15,
+      "anchorTile": { "x": 240.2, "y": 831.2 }
     },
         {
       "x": 237,
@@ -308,7 +338,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(65,105,225,1)",
-      "borderColor": "rgba(52,84,178,1)"
+      "borderColor": "rgba(52,84,178,1)",
+      "imageKey": "sanctuary",
+      "imageScale": 0.057,
+      "imageScaleBreakpoint_1": 0.10,
+      "imageScaleBreakpoint_2": 0.15,
+      "anchorTile": { "x": 240.2, "y": 609.2 }
     },
         {
       "x": 237,
@@ -319,7 +354,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(65,105,225,1)",
-      "borderColor": "rgba(52,84,178,1)"
+      "borderColor": "rgba(52,84,178,1)",
+      "imageKey": "sanctuary",
+      "imageScale": 0.057,
+      "imageScaleBreakpoint_1": 0.10,
+      "imageScaleBreakpoint_2": 0.15,
+      "anchorTile": { "x": 240.2, "y": 351.2 }
     },
         {
       "x": 366,
@@ -330,7 +370,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(65,105,225,1)",
-      "borderColor": "rgba(52,84,178,1)"
+      "borderColor": "rgba(52,84,178,1)",
+      "imageKey": "sanctuary",
+      "imageScale": 0.057,
+      "imageScaleBreakpoint_1": 0.10,
+      "imageScaleBreakpoint_2": 0.15,
+      "anchorTile": { "x": 369.2, "y": 240.2 }
     },
         {
       "x": 588,
@@ -341,7 +386,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(65,105,225,1)",
-      "borderColor": "rgba(52,84,178,1)"
+      "borderColor": "rgba(52,84,178,1)",
+      "imageKey": "sanctuary",
+      "imageScale": 0.057,
+      "imageScaleBreakpoint_1": 0.10,
+      "imageScaleBreakpoint_2": 0.15,
+      "anchorTile": { "x": 591.2, "y": 240.2 }
     },
         {
       "x": 846,
@@ -352,7 +402,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(65,105,225,1)",
-      "borderColor": "rgba(52,84,178,1)"
+      "borderColor": "rgba(52,84,178,1)",
+      "imageKey": "sanctuary",
+      "imageScale": 0.057,
+      "imageScaleBreakpoint_1": 0.10,
+      "imageScaleBreakpoint_2": 0.15,
+      "anchorTile": { "x": 849.2, "y": 240.2 }
     },
         {
       "x": 957,
@@ -363,7 +418,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(65,105,225,1)",
-      "borderColor": "rgba(52,84,178,1)"
+      "borderColor": "rgba(52,84,178,1)",
+      "imageKey": "sanctuary",
+      "imageScale": 0.057,
+      "imageScaleBreakpoint_1": 0.10,
+      "imageScaleBreakpoint_2": 0.15,
+      "anchorTile": { "x": 960.2, "y": 351.2 }
     },
         {
       "x": 957,
@@ -374,7 +434,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(65,105,225,1)",
-      "borderColor": "rgba(52,84,178,1)"
+      "borderColor": "rgba(52,84,178,1)",
+      "imageKey": "sanctuary",
+      "imageScale": 0.057,
+      "imageScaleBreakpoint_1": 0.10,
+      "imageScaleBreakpoint_2": 0.15,
+      "anchorTile": { "x": 960.2, "y": 609.2 }
     },
         {
       "x": 957,
@@ -385,7 +450,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(65,105,225,1)",
-      "borderColor": "rgba(52,84,178,1)"
+      "borderColor": "rgba(52,84,178,1)",
+      "imageKey": "sanctuary",
+      "imageScale": 0.057,
+      "imageScaleBreakpoint_1": 0.10,
+      "imageScaleBreakpoint_2": 0.15,
+      "anchorTile": { "x": 960.2, "y": 831.2 }
     },
         {
       "x": 846,
@@ -396,7 +466,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(65,105,225,1)",
-      "borderColor": "rgba(52,84,178,1)"
+      "borderColor": "rgba(52,84,178,1)",
+      "imageKey": "sanctuary",
+      "imageScale": 0.057,
+      "imageScaleBreakpoint_1": 0.10,
+      "imageScaleBreakpoint_2": 0.15,
+      "anchorTile": { "x": 849.2, "y": 960.2 }
     },
         {
       "x": 606,
@@ -407,7 +482,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(65,105,225,1)",
-      "borderColor": "rgba(52,84,178,1)"
+      "borderColor": "rgba(52,84,178,1)",
+      "imageKey": "sanctuary",
+      "imageScale": 0.057,
+      "imageScaleBreakpoint_1": 0.10,
+      "imageScaleBreakpoint_2": 0.15,
+      "anchorTile": { "x": 609.2, "y": 960.2 }
     },
         {
       "x": 366,
@@ -418,7 +498,12 @@
       "displayCoordinates": true,
       "hideCoordinates": true,
       "fillColor": "rgba(65,105,225,1)",
-      "borderColor": "rgba(52,84,178,1)"
+      "borderColor": "rgba(52,84,178,1)",
+      "imageKey": "sanctuary",
+      "imageScale": 0.057,
+      "imageScaleBreakpoint_1": 0.10,
+      "imageScaleBreakpoint_2": 0.15,
+      "anchorTile": { "x": 369.2, "y": 960.2 }
     },
         {
       "x": 138,
@@ -488,7 +573,6 @@
     }
   ],
   "allianceRssBuildings": [
-    { "type": "wood", "x": 594, "y": 594 },
     { "type": "wood", "x": 24, "y": 34 },
     { "type": "food", "x": 59, "y": 59 },
     { "type": "stone", "x": 400, "y": 400 },
