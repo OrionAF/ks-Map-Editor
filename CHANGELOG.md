@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [8.0.1.0] - Patch
+
+### Fixed
+- **Fixed Critical Rendering Bug:** Resolved an issue where tiles would fail to render (appearing as black squares) if user-placed buildings or territory were hidden via the "Show at Zoom" setting. The map's base layer now always draws correctly.
+- **Fixed Overwatch Tracking:** Corrected a bug where Outposts were not being properly identified and categorized, preventing them from being tracked by the Overwatch info banner.
+- **Fixed Text Rendering on User Buildings:** Fixed an issue where the names on user-placed buildings (like HQs and Statues) were not scaling correctly and were always being rendered at the smallest possible font size.
+- **Fixed UI Inconsistencies:**
+  - Removed a redundant and confusing "Always Show Claimed Area" checkbox, consolidating its logic into the "Show Territory at Zoom" dropdown.
+  - Corrected the values in the "Show at Zoom" dropdowns to accurately reflect their corresponding percentages.
+
 ## [8.0.0.0] - Major
 
 ### Added

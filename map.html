@@ -1068,7 +1068,7 @@ canvas#map.build-cursor {
     const KingshotPlanner = {
       // --- TWEAKABLE SETTINGS ---
       config: {
-        CURRENT_VERSION: '8.0.0.0',
+        CURRENT_VERSION: '8.0.1.0',
         N: 1200,
         tileW: 10,
         tileH: 10,
@@ -1235,7 +1235,6 @@ canvas#map.build-cursor {
         allBuildings: [],
         buildingMap: new Map(),
         chunkLevels: [],
-        userBuildings: [],
         cam: { x: 0, y: 0, scale: 1 },
         lastFrame: 0,
         tileCount: 0,
@@ -1347,7 +1346,6 @@ canvas#map.build-cursor {
           floatingBuildingsBtn: document.getElementById('floatingBuildingsBtn'),
           buildingPalettePanel: document.getElementById('buildingPalettePanel'),
           buildingPaletteList: document.getElementById('buildingPaletteList'),
-          alwaysShowClaimedToggle: document.getElementById('alwaysShowClaimedToggle'),
           editAllianceModal: document.getElementById('editAllianceModal'),
           editAllianceIdInput: document.getElementById('editAllianceId'),
           editAllianceNameInput: document.getElementById('editAllianceName'),
@@ -2303,11 +2301,11 @@ canvas#map.build-cursor {
       },
 
       preProcessBuildings() {
-        let buildings = [...(this.state.baseMap.defaultBuildings || []), ...(this.state.userBuildings || [])];
+        let buildings = [...(this.state.baseMap.defaultBuildings || [])];
         if (this.state.baseMap.allianceRssBuildings) {
           const formattedRssBuildings = this.state.baseMap.allianceRssBuildings.map(rss => {
             const style = this.config.ALLIANCE_RSS_STYLES[rss.type] || {};
-            return { x: rss.x, y: rss.y, w: 2, h: 2, displayName: style.displayName, fillColor: style.fillColor, borderColor: style.borderColor, displayCoordinates: false, isRss: true };
+            return { x: rss.x, y: rss.y, w: 2, h: 2, displayName: style.displayName, fillColor: style.fillColor, borderColor: style.borderColor, displayCoordinates: false, isRss: true, type: rss.type };
           });
           buildings = buildings.concat(formattedRssBuildings);
         }
@@ -2830,7 +2828,6 @@ resize() {
           
           const currentZoomPct = (state.cam.scale / config.baseScale) * 100;
           
-          // Use the new, separate threshold for buildings
           if (isBuildModeBuilding && (this.state.userBuildingRenderThreshold === -1 || currentZoomPct < this.state.userBuildingRenderThreshold)) {
               return;
           }
@@ -2890,7 +2887,6 @@ resize() {
               return; 
           }
 
-
           if (overrideCtx || highlightStyle) return;
           
           const textZoomThreshold = isBuildModeBuilding ? 30 : 40;
@@ -2935,7 +2931,6 @@ resize() {
       drawBuildModeOverlays(viewBounds) {
           const currentZoomPct = (this.state.cam.scale / this.config.baseScale) * 100;
 
-          // Use the new, separate threshold for territory.
           if (this.state.userTerritoryRenderThreshold === -1 || currentZoomPct < this.state.userTerritoryRenderThreshold) {
             return;
           }
@@ -2972,60 +2967,6 @@ resize() {
                           if (!territorySet.has(`${x-1},${y}`)) { ctx.beginPath(); ctx.moveTo(B.x, B.y); ctx.lineTo(L.x, L.y); ctx.stroke(); }
                       }
                   });
-              }
-          }
-
-          if (this.state.isBuildMode && this.state.selectedBuildingType) {
-              const def = this.BUILDING_CATALOG[this.state.selectedBuildingType];
-              const { canPlace } = this.checkPlacementValidity(this.state.selectedBuildingType, this.state.mouseWorldPos.x, this.state.mouseWorldPos.y);
-              
-              if (def) {
-                  if (def.coverage > 0) {
-                      const alliance = this.state.alliances.find(a => a.id === this.state.activeAllianceId);
-                      if (alliance) {
-                          const previewTerritory = new Set();
-                          const radius = Math.floor(def.coverage / 2);
-                          const centerX = this.state.mouseWorldPos.x + Math.floor(def.w / 2);
-                          const centerY = this.state.mouseWorldPos.y + Math.floor(def.h / 2);
-                          for (let dx = -radius; dx <= radius; dx++) {
-                              for (let dy = -radius; dy <= radius; dy++) {
-                                  previewTerritory.add(`${centerX + dx},${centerY + dy}`);
-                              }
-                          }
-                          
-                          ctx.fillStyle = this.hexToRgba(alliance.color, 0.25);
-                          previewTerritory.forEach(coordStr => {
-                              const [x, y] = coordStr.split(',').map(Number);
-                              if (x >= viewBounds.minX && x <= viewBounds.maxX && y >= viewBounds.minY && y <= viewBounds.maxY) {
-                                  const [sx, sy] = this.worldToScreen(x, y);
-                                  ctx.beginPath(); ctx.moveTo(sx, sy-this.config.tileH/2); ctx.lineTo(sx+this.config.tileW/2, sy); ctx.lineTo(sx, sy+this.config.tileH/2); ctx.lineTo(sx-this.config.tileW/2, sy); ctx.closePath();
-                                  ctx.fill();
-                              }
-                          });
-                          
-                          ctx.strokeStyle = this.hexToRgba(this.darkenColor(alliance.color, 40), 0.9);
-                          ctx.lineWidth = this.config.strokeW * 1.5;
-                           previewTerritory.forEach(coordStr => {
-                               const [x, y] = coordStr.split(',').map(Number);
-                               if (x >= viewBounds.minX && x <= viewBounds.maxX && y >= viewBounds.minY && y <= viewBounds.maxY) {
-                                   const [sx, sy] = this.worldToScreen(x, y);
-                                   const T = { x: sx, y: sy - this.config.tileH / 2 }, R = { x: sx + this.config.tileW / 2, y: sy }, B = { x: sx, y: sy + this.config.tileH / 2 }, L = { x: sx - this.config.tileW / 2, y: sy };
-                                   if (!previewTerritory.has(`${x},${y+1}`)) { ctx.beginPath(); ctx.moveTo(L.x, L.y); ctx.lineTo(T.x, T.y); ctx.stroke(); }
-                                   if (!previewTerritory.has(`${x+1},${y}`)) { ctx.beginPath(); ctx.moveTo(T.x, T.y); ctx.lineTo(R.x, R.y); ctx.stroke(); }
-                                   if (!previewTerritory.has(`${x},${y-1}`)) { ctx.beginPath(); ctx.moveTo(R.x, R.y); ctx.lineTo(B.x, B.y); ctx.stroke(); }
-                                   if (!previewTerritory.has(`${x-1},${y}`)) { ctx.beginPath(); ctx.moveTo(B.x, B.y); ctx.lineTo(L.x, L.y); ctx.stroke(); }
-                               }
-                           });
-                      }
-                  }
-                  
-                  const ghostBuilding = {
-                      x: this.state.mouseWorldPos.x, y: this.state.mouseWorldPos.y,
-                      w: def.w, h: def.h,
-                      fillColor: canPlace ? '#28a745' : '#dc3545',
-                      borderColor: canPlace ? this.darkenColor('#28a745', 40) : this.darkenColor('#dc3545', 40)
-                  };
-                  this.drawBuildingFootprint(ghostBuilding, null, true);
               }
           }
           ctx.lineWidth = this.config.strokeW;
@@ -3130,18 +3071,15 @@ resize() {
           const showRss = dom.allianceRssToggle ? dom.allianceRssToggle.checked : false;
           const alwaysShowRss = dom.allianceRssAlwaysVisibleToggle ? dom.allianceRssAlwaysVisibleToggle.checked : false;
 
-          // --- Drawing Base Layer ---
+          // --- Pass 1: Draw Base Map Layer ---
           if (chunkLevel === -1) {
               const shouldDrawBorders = showGrid && pct > 50;
-              const minSum = Math.floor(viewBounds.minX + viewBounds.minY);
-              const maxSum = Math.ceil(viewBounds.maxX + viewBounds.maxY);
-              for (let sum = minSum; sum <= maxSum; sum++) {
-                  const startXCoord = Math.floor(Math.max(viewBounds.minX, (sum - viewBounds.maxY)));
-                  const endXCoord = Math.ceil(Math.min(viewBounds.maxX, (sum - viewBounds.minY)));
-                  for (let x = startXCoord; x <= endXCoord; x++) {
-                      const y = sum - x;
+              for (let x = viewBounds.minX; x <= viewBounds.maxX; x++) {
+                  for (let y = viewBounds.minY; y <= viewBounds.maxY; y++) {
                       if (x < 0 || x >= config.N || y < 0 || y >= config.N) continue;
-                      this.drawTile(x, y, shouldDrawBorders);
+                      if (!this.getBuildingAt(x, y)) {
+                          this.drawTile(x, y, shouldDrawBorders);
+                      }
                   }
               }
           } else {
@@ -3160,21 +3098,35 @@ resize() {
                   }
               }
           }
+          
+          // --- Pass 2: Draw Territory Overlays ---
+          this.drawBuildModeOverlays(viewBounds);
 
-          // --- Pass 2: Draw Default and Build Mode Buildings on TOP of the base layer ---
+          // --- Pass 3: Draw Buildings ---
           const buildingsToRender = state.allBuildings.concat(state.buildModeBuildings);
           buildingsToRender
             .filter(b => !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
-            .filter(b => { // Filter out RSS buildings based on settings
+            .filter(b => { 
                 if (!b.isRss) return true;
                 return showRss && (alwaysShowRss || chunkLevel === -1);
             })
             .forEach(b => this.drawBuildingFootprint(b, null, chunkLevel === -1 && showGrid && pct > 50));
           
-          
-          this.drawBuildModeOverlays(viewBounds);
+          // --- Pass 4: Draw Build Placement Ghost ---
+          if (state.isBuildMode && state.selectedBuildingType) {
+              const def = this.BUILDING_CATALOG[state.selectedBuildingType];
+              const { canPlace } = this.checkPlacementValidity(state.selectedBuildingType, state.mouseWorldPos.x, state.mouseWorldPos.y);
+              if (def) {
+                  const ghostBuilding = {
+                      x: state.mouseWorldPos.x, y: state.mouseWorldPos.y,
+                      w: def.w, h: def.h,
+                      fillColor: canPlace ? '#28a745' : '#dc3545',
+                      borderColor: canPlace ? this.darkenColor('#28a745', 40) : this.darkenColor('#dc3545', 40)
+                  };
+                  this.drawBuildingFootprint(ghostBuilding, null, true);
+              }
+          }
 
-          // --- NEW: Update the Info Banner (throttled for performance) ---
           if (now - state.infoBannerUpdateTime > 100) {
             this.updateInfoBanner();
             state.infoBannerUpdateTime = now;
