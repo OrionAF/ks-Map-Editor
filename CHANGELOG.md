@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.0.0.1] - Patch
+
+### Fixed
+- Fixed versioning
 
 ## [9.0.0.0] - Major
 
