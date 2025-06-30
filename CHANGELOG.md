@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.0.0.0] - Major
+
+### Added
+- **New Map Features:** The map now includes new terrain types: **Ruins**, **Forbidden Areas**, and other **Unoccupiable** tiles. The build system correctly prevents placing structures on these special zones.
+- **Building Placement Preview:** When selecting a building with a territory range (like a Tower or HQ), a semi-transparent preview of its coverage area is now shown at the cursor, allowing for more precise planning.
+- **Enhanced Outpost Visuals:** Many outposts now render with unique, high-quality images instead of generic shapes, greatly improving visual identification across the map.
+- **Safe Alliance Deletion:** A new two-step "Delete Mode" has been added to the Alliance Management panel to prevent accidental deletion of alliances and their associated buildings.
+
+### Changed
+- **Major UI/UX Overhaul:** The build system has been split into two distinct, more intuitive parts:
+  - A persistent **Alliance Management** sidebar (🏰) for creating, editing, and viewing detailed alliance stats.
+  - A pop-up **Build Menu** (🛠️) for entering build mode and selecting buildings to place.
+- **Advanced Alliance Details:** Alliances in the management panel are now collapsible. When expanded, they reveal detailed statistics, including the number of towers built, and lists of controlled HQs, outposts, and resource nodes.
+- **Territory Rendering Optimization:** The drawing of alliance territory has been significantly optimized for better performance and a cleaner, more continuous border.
+- **Refined Minimap Behavior:** The minimap now intelligently switches between a static overview when the main map is zoomed out and a dynamic, context-aware view that follows the viewport when zoomed in.
+
+### Fixed
+- **Fixed Build Banner Readability:** The text color on the "Building as..." banner now automatically adjusts for high contrast against the selected alliance's color, ensuring it's always readable.
+- **Fixed Info Banner Overlap:** The top "Overwatch" info banner now correctly shifts down when the "Build Mode" banner is active, preventing them from overlapping.
+- **Fixed User Building Text:** Corrected the display text for user-placed buildings to properly include brackets around the alliance tag (e.g., `[ABC] PlainsHQ`). The text is also no longer bolded, improving clarity.
+- **Fixed Chunk Rendering:** Resolved a bug where zoomed-out map chunks could incorrectly show the color of special areas (like Ruins) instead of the underlying base biome color.
+- **Fixed Zoom Precision:** Resolved a potential issue where zoom level comparisons could fail due to floating-point inaccuracies, ensuring features like tile-merging trigger at the correct percentage.
+
 ## [8.0.1.0] - Patch
 
 ### Fixed
