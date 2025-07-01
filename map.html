@@ -355,6 +355,95 @@ canvas#map.build-cursor {
     border-right: 1px solid var(--border-color);
     transform: translateX(-105%);
 }
+
+/* --- PLAYER MANAGEMENT PANEL --- */
+#playerPanel {
+    left: 0;
+    border-right: 1px solid var(--border-color);
+    transform: translateX(-105%);
+}
+#playerPanel.open {
+    transform: translateX(0);
+}
+
+#playerPanel .player-list-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin: 0 -15px 0 0;
+    padding-left: 15px;
+    padding-right: 10px;
+}
+
+#playerPanel .create-player-container {
+    flex-shrink: 0;
+    border-top: 1px solid var(--border-color);
+    padding-top: 15px;
+    margin-bottom: -15px;
+}
+
+/* Form grid specific to the player panel for better layout */
+#playerPanel .form-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+#playerPanel .form-grid input[type="color"] {
+    padding: 0;
+    height: 30px;
+    width: 50px;
+}
+#playerPanel .form-grid input {
+    width: 100%;
+}
+#playerPanel #startPlayerPlacementBtn {
+    width: 100%;
+}
+
+/* Player list styles */
+.player-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.player-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 4px;
+    border-left: 5px solid transparent;
+}
+.player-item .color-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+.player-item .info {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.player-item .info .name {
+    font-size: 14px;
+    font-weight: bold;
+}
+.player-item .info .power {
+    font-size: 12px;
+    opacity: 0.8;
+}
+.player-item .controls {
+    display: flex;
+    gap: 4px;
+}
+.player-item .controls button {
+    font-size: 12px;
+    padding: 3px 6px;
+}
 #buildPanel.open, #devModePanel.open { transform: translateX(0); }
 #devModePanel {
     padding-bottom: calc(var(--toolbar-height) + 15px);
@@ -427,6 +516,7 @@ canvas#map.build-cursor {
         <div class="toolbar-group left">
             <button id="allianceMgtToggleBtn" title="Alliance Management">🏰</button>
             <button id="buildMenuToggleBtn" title="Build Menu">🛠️</button>
+            <button id="placePlayerToggleBtn" title="Player Management">👤</button>
             <button id="pinnedBookmarksToggleBtn" title="Pinned Landmarks">📌</button>
             <button id="navPanelToggleBtn" title="Navigation">🧭</button>
         </div>
@@ -580,6 +670,28 @@ canvas#map.build-cursor {
         </div>
     </div>
 
+    <!-- Place a Player Panel -->
+    <div id="playerPanel" class="sidebar-panel">
+        <div class="player-list-container">
+            <h4>Placed Players</h4>
+            <div id="playerList" class="player-list">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+        <div class="create-player-container panel-section">
+            <h4>Create Player</h4>
+            <div class="form-grid">
+                <label for="playerNameInput">Name:</label>
+                <input type="text" id="playerNameInput" placeholder="BigKev" maxlength="20">
+                <label for="playerPowerInput">Rally Capacity:</label>
+                <input type="text" id="playerPowerInput" placeholder="1.23m" maxlength="6">
+                <label for="playerColorInput">Color:</label>
+                <input type="color" id="playerColorInput" value="#9400d3">
+            </div>
+            <button id="startPlayerPlacementBtn" class="primary">Place on Map</button>
+        </div>
+    </div>
+
     <!-- *** NEW BUILD MENU PANEL *** -->
     <div id="buildMenuPanel" class="toolbar-panel">
         <div id="buildModeToggleContainer" class="panel-section">
@@ -615,6 +727,26 @@ canvas#map.build-cursor {
                 <li><strong>Cancel Placement (Build Mode)</strong>: Right-click or press Escape key.</li>
                 <li><strong>Delete Building (Build Mode)</strong>: Right-click on a placed building.</li>
             </ul>
+        </div>
+    </div>
+    <!-- Add this new modal to your HTML file -->
+    <div id="editPlayerModal" class="modal">
+        <div class="modal-header">
+            <h3>Edit Player</h3><button class="close-btn">×</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editPlayerId">
+            <div class="form-grid">
+                <label for="editPlayerName">Name:</label>
+                <input type="text" id="editPlayerName" placeholder="Player Name" maxlength="20">
+                <label for="editPlayerPower">Rally Capacity:</label>
+                <input type="text" id="editPlayerPower" placeholder="1.23m" maxlength="6">
+                <label for="editPlayerColor">Color:</label>
+                <input type="color" id="editPlayerColor">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="savePlayerChangesBtn" class="primary">Save Changes</button>
         </div>
     </div>
     <div id="editAllianceModal" class="modal">
@@ -653,8 +785,8 @@ canvas#map.build-cursor {
     const KingshotPlanner = {
         // --- TWEAKABLE SETTINGS ---
         config: {
-            CURRENT_VERSION: '9.0.0.1',
-            enableDevMode: false,
+            CURRENT_VERSION: '9.1.0.0',
+            enableDevMode: true,
             N: 1200,
             tileW: 10,
             tileH: 10,
@@ -854,6 +986,9 @@ canvas#map.build-cursor {
             'statue2': { name: 'Prestige Statue 2', w: 2, h: 2, coverage: 0, text: 'tag Statue 2', rule: 'claimed', limit: 1 },
             'statue3': { name: 'Prestige Statue 3', w: 2, h: 2, coverage: 0, text: 'tag Statue 3', rule: 'claimed', limit: 1 },
         },
+        PLAYER_CATALOG: {
+            'player_castle': { name: 'Player Castle', w: 2, h: 2, fillColor: 'rgba(148, 0, 211, 0.7)', borderColor: 'rgba(126, 0, 180, 1)' }
+        },
         state: {
             baseMap: { unoccupiableTiles: [], defaultBuildings: [] },
             unoccupiableTileSet: new Set(), 
@@ -872,6 +1007,9 @@ canvas#map.build-cursor {
             minFitScale: 0.1,
             isInitialLoad: true,
             touchStartTime: 0,
+            placedPlayers: [],
+            isPlacingPlayer: false,
+            playerToPlace: null,
             dragging: false,
             lastX: 0,
             lastY: 0,
@@ -1006,6 +1144,19 @@ canvas#map.build-cursor {
             devModePanel: document.getElementById('devModePanel'),
             devModeTools: document.getElementById('devModeTools'),
             exportDevMapBtn: document.getElementById('exportDevMapBtn'),
+            placePlayerToggleBtn: document.getElementById('placePlayerToggleBtn'),
+            playerPanel: document.getElementById('playerPanel'),
+            playerList: document.getElementById('playerList'),
+            playerNameInput: document.getElementById('playerNameInput'),
+            playerPowerInput: document.getElementById('playerPowerInput'),
+            playerColorInput: document.getElementById('playerColorInput'),
+            startPlayerPlacementBtn: document.getElementById('startPlayerPlacementBtn'),
+            editPlayerModal: document.getElementById('editPlayerModal'),
+            editPlayerIdInput: document.getElementById('editPlayerId'),
+            editPlayerNameInput: document.getElementById('editPlayerName'),
+            editPlayerPowerInput: document.getElementById('editPlayerPower'),
+            editPlayerColorInput: document.getElementById('editPlayerColor'),
+            savePlayerChangesBtn: document.getElementById('savePlayerChangesBtn'),
             };
 
             this.dom.ctx = this.dom.canvas.getContext('2d');
@@ -1065,6 +1216,7 @@ canvas#map.build-cursor {
             const panelMap = {
                 'allianceMgt': { btn: this.dom.allianceMgtToggleBtn, panel: this.dom.buildPanel, persistent: true },
                 'buildMenu': { btn: this.dom.buildMenuToggleBtn, panel: this.dom.buildMenuPanel, persistent: true },
+                'playerMgt': { btn: this.dom.placePlayerToggleBtn, panel: this.dom.playerPanel, persistent: true },
                 'devMode': { btn: null, panel: this.dom.devModePanel, persistent: true },
                 'pinnedBookmarks': { btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel },
                 'nav': { btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel, persistent: true },
@@ -1110,12 +1262,13 @@ canvas#map.build-cursor {
                     e.stopPropagation();
                     if (key === 'allianceMgt') this.renderAlliancePanel();
                     if (key === 'buildMenu') this.renderBuildMenu();
+                    if (key === 'playerMgt') this.renderPlayerPanel();
                     if (key === 'overwatch') this.buildOverwatchPanel();
                     togglePanel(key); 
                 });
             });
 
-            // B. Event Delegation for Alliance List
+            // B. Event Delegation for Alliance & Player Lists
             if (this.dom.allianceList) {
                 this.dom.allianceList.addEventListener('click', (e) => {
                     const button = e.target.closest('button');
@@ -1132,10 +1285,33 @@ canvas#map.build-cursor {
                 });
             }
 
+            if (this.dom.playerList) {
+                this.dom.playerList.addEventListener('click', (e) => {
+                    const button = e.target.closest('button');
+                    if (!button || !button.dataset.action) return;
+                    const action = button.dataset.action;
+                    const id = parseInt(button.dataset.id, 10);
+                    if (!action || isNaN(id)) return;
+                    e.preventDefault();
+
+                    const player = this.state.placedPlayers.find(p => p.id === id);
+                    if (!player) return;
+
+                    switch (action) {
+                        case 'go': this.goToBookmark(player.x, player.y); break;
+                        case 'edit': this.showEditPlayerModal(id); break;
+                        case 'delete': this.deletePlayer(id); break;
+                    }
+                });
+            }
+
             // C. Listeners for other specific buttons
             if (this.dom.toggleDeleteModeBtn) this.dom.toggleDeleteModeBtn.addEventListener('click', () => { this.state.isAllianceDeleteMode = !this.state.isAllianceDeleteMode; this.renderAlliancePanel(); });
             if (this.dom.createAllianceBtn) this.dom.createAllianceBtn.addEventListener('click', this.createAlliance.bind(this));
             if (this.dom.saveAllianceChangesBtn) this.dom.saveAllianceChangesBtn.addEventListener('click', this.saveAllianceChanges.bind(this));
+            if (this.dom.savePlayerChangesBtn) this.dom.savePlayerChangesBtn.addEventListener('click', this.savePlayerChanges.bind(this));
+            if (this.dom.startPlayerPlacementBtn) this.dom.startPlayerPlacementBtn.addEventListener('click', this.startPlayerPlacement.bind(this));
+
 
             // D. Dev Mode Activation and Listeners
             if (this.config.enableDevMode) {
@@ -1247,11 +1423,10 @@ canvas#map.build-cursor {
                 window.addEventListener('mouseup', this.handleMinimapMouseUp.bind(this));
             }
 
-            // *** G. FINAL, CORRECT KEYDOWN LISTENER ***
+            // G. FINAL, CORRECT KEYDOWN LISTENER
             window.addEventListener('keydown', (e) => {
                 if (e.target.tagName === 'INPUT') return;
                 
-                // This no longer checks for the DEVMODE sequence
                 switch (e.key) {
                     case '+': case '=': this.changeZoomBy(+5); break;
                     case '-':           this.changeZoomBy(-5); break;
@@ -1260,7 +1435,11 @@ canvas#map.build-cursor {
                     case 'ArrowLeft':   this.state.cam.x += this.config.tileW * 5; this.clampCamera(); break;
                     case 'ArrowRight':  this.state.cam.x -= this.config.tileW * 5; this.clampCamera(); break;
                     case 'Escape':
-                        if (this.state.isBuildMode && this.state.selectedBuildingType) {
+                        if (this.state.isPlacingPlayer) {
+                            this.state.isPlacingPlayer = false;
+                            this.state.playerToPlace = null;
+                            this.dom.canvas.classList.remove('build-cursor');
+                        } else if (this.state.isBuildMode && this.state.selectedBuildingType) {
                             this.selectBuildingToPlace(this.state.selectedBuildingType); // Deselect
                         } else if (this.state.isDevMode && this.state.activeDevTool) {
                             this.selectDevTool(this.state.activeDevTool.tool, this.state.activeDevTool.type); // Deselect
@@ -1269,7 +1448,6 @@ canvas#map.build-cursor {
                 }
             });
         },
-
         setBuildModeActive() {
             this.state.isBuildMode = !this.state.isBuildMode;
             const isActive = this.state.isBuildMode;
@@ -1590,11 +1768,196 @@ canvas#map.build-cursor {
             this.hideAllModals();
         },
 
+        // New function to show the modal
+        showPlacePlayerModal() {
+            this.dom.modalOverlay.style.display = 'block';
+            this.dom.placePlayerModal.style.display = 'block';
+        },
+
+        // New function to start the placement process
+        startPlayerPlacement() {
+            const name = this.dom.playerNameInput.value.trim();
+            const power = this.dom.playerPowerInput.value.trim();
+            const color = this.dom.playerColorInput.value;
+
+            if (!name) {
+                alert('Player name cannot be empty.');
+                return;
+            }
+            if (power.length > 6) {
+                alert('Rally Capacity must not be more than 6 characters (e.g., 420k, 1.23m).');
+                return;
+            }
+
+            this.state.isPlacingPlayer = true;
+            this.state.playerToPlace = { name, power, color };
+
+            this.dom.canvas.classList.add('build-cursor');
+            
+            // Close the sidebar panel for better visibility during placement
+            const panelInfo = { btn: this.dom.placePlayerToggleBtn, panel: this.dom.playerPanel };
+            panelInfo.panel.classList.remove('open');
+            panelInfo.btn.classList.remove('active');
+            this.state.openPanel = null;
+        },
+
+        // New helper function to check for player collisions
+        getPlayerAtCoords(x, y) {
+            for (const p of this.state.placedPlayers) {
+                if (x >= p.x && x < p.x + p.w && y >= p.y && y < p.y + p.h) {
+                    return p;
+                }
+            }
+            return null;
+        },
+
+        // New function to perform validity checks and add the player to the state
+        placePlayer(x, y) {
+            if (!this.state.playerToPlace) return;
+
+            const def = this.PLAYER_CATALOG['player_castle'];
+
+            for (let dx = 0; dx < def.w; dx++) {
+                for (let dy = 0; dy < def.h; dy++) {
+                    const checkX = x + dx;
+                    const checkY = y + dy;
+                    if (this.getBuildingAtCoords(checkX, checkY) || this.getPlayerAtCoords(checkX, checkY)) {
+                        alert("Cannot place: Collision with another object.");
+                        return;
+                    }
+                    if (this.state.specialTileMap.has(`${checkX},${checkY}`)) {
+                        alert("Cannot place on Ruins or Forbidden Area tiles.");
+                        return;
+                    }
+                }
+            }
+
+            const newPlayer = {
+                id: Date.now(),
+                type: 'player_castle',
+                x, y,
+                w: def.w, h: def.h,
+                name: this.state.playerToPlace.name,
+                power: this.state.playerToPlace.power,
+                color: this.state.playerToPlace.color
+            };
+
+            this.state.placedPlayers.push(newPlayer);
+            this.savePlanToLocalStorage();
+            this.renderPlayerPanel(); // Re-render list to show the new player
+        },
+
+        renderPlayerPanel() {
+            if (!this.dom.playerList) return;
+            this.dom.playerList.innerHTML = ''; // Clear the list
+
+            // Step 1: Decorate each player with their owning alliance
+            const decoratedPlayers = this.state.placedPlayers.map(player => ({
+                ...player,
+                owningAlliance: this.getOwningAllianceForPlayer(player)
+            }));
+
+            // Step 2: Sort the decorated players
+            decoratedPlayers.sort((a, b) => {
+                const tagA = a.owningAlliance ? a.owningAlliance.tag : 'ZZZ'; // Unaffiliated players last
+                const tagB = b.owningAlliance ? b.owningAlliance.tag : 'ZZZ';
+
+                if (tagA < tagB) return -1;
+                if (tagA > tagB) return 1;
+
+                // If tags are the same, sort by player name
+                return a.name.localeCompare(b.name);
+            });
+
+            // Step 3: Render the sorted list
+            decoratedPlayers.forEach(player => {
+                const item = document.createElement('div');
+                item.className = 'player-item';
+                item.style.borderLeftColor = player.color;
+
+                const allianceTagHTML = player.owningAlliance ? `[${player.owningAlliance.tag}] ` : '';
+
+                item.innerHTML = `
+                    <div class="color-swatch" style="background-color: ${player.color};"></div>
+                    <div class="info">
+                        <div class="name">${allianceTagHTML}${player.name}</div>
+                        <div class="power">${player.power}</div>
+                    </div>
+                    <div class="controls">
+                        <button class="primary" data-action="go" data-id="${player.id}">Go</button>
+                        <button data-action="edit" data-id="${player.id}">Edit</button>
+                        <button class="danger" data-action="delete" data-id="${player.id}">Del</button>
+                    </div>
+                `;
+                this.dom.playerList.appendChild(item);
+            });
+        },
+        deletePlayer(id) {
+            const player = this.state.placedPlayers.find(p => p.id === id);
+            if (player && confirm(`Are you sure you want to delete player "${player.name}"?`)) {
+                this.state.placedPlayers = this.state.placedPlayers.filter(p => p.id !== id);
+                this.savePlanToLocalStorage();
+                this.renderPlayerPanel(); // Re-render the list
+            }
+        },
+
+        getOwningAllianceForPlayer(player) {
+            if (!player) return null;
+            // Check the top-left tile of the player's 2x2 footprint
+            const coordStr = `${player.x},${player.y}`;
+            const allianceId = this.state.globallyClaimedTiles.get(coordStr);
+
+            if (allianceId) {
+                return this.state.alliances.find(a => a.id === allianceId) || null;
+            }
+            return null;
+        },
+
+        showEditPlayerModal(id) {
+            const player = this.state.placedPlayers.find(p => p.id === id);
+            if (!player) return;
+
+            this.dom.editPlayerIdInput.value = player.id;
+            this.dom.editPlayerNameInput.value = player.name;
+            this.dom.editPlayerPowerInput.value = player.power;
+            this.dom.editPlayerColorInput.value = player.color;
+
+            this.dom.modalOverlay.style.display = 'block';
+            this.dom.editPlayerModal.style.display = 'block';
+        },
+
+        savePlayerChanges() {
+            const id = parseInt(this.dom.editPlayerIdInput.value, 10);
+            const player = this.state.placedPlayers.find(p => p.id === id);
+            if (!player) return;
+
+            const newName = this.dom.editPlayerNameInput.value.trim();
+            const newPower = this.dom.editPlayerPowerInput.value.trim();
+
+            if (!newName) {
+                alert("Player name cannot be empty.");
+                return;
+            }
+            if (newPower.length > 6) {
+                alert("Rally Capacity must not be more than 6 characters (e.g., 420k, 1.23m).");
+                return;
+            }
+
+            player.name = newName;
+            player.power = newPower;
+            player.color = this.dom.editPlayerColorInput.value;
+
+            this.savePlanToLocalStorage();
+            this.renderPlayerPanel(); // Re-render the list with the new info
+            this.hideAllModals();
+        },
+
         hideAllModals() {
             this.dom.modalOverlay.style.display = 'none';
             this.dom.patchNotesModal.style.display = 'none';
             this.dom.controlsModal.style.display = 'none';
             this.dom.editAllianceModal.style.display = 'none';
+            this.dom.editPlayerModal.style.display = 'none';
         },
 
         // --- OVERWATCH SYSTEM ---
@@ -1766,7 +2129,8 @@ canvas#map.build-cursor {
             try {
                 const planData = {
                     alliances: this.state.alliances,
-                    buildings: this.state.buildModeBuildings
+                    buildings: this.state.buildModeBuildings,
+                    placedPlayers: this.state.placedPlayers
                 };
                 localStorage.setItem('kingshot_build_plan', JSON.stringify(planData));
             } catch(e) {
@@ -1782,7 +2146,7 @@ canvas#map.build-cursor {
                     if (data && Array.isArray(data.alliances) && Array.isArray(data.buildings)) {
                         this.state.alliances = data.alliances;
                         this.state.buildModeBuildings = data.buildings;
-                        // NEW: Update the combined building list after loading from storage
+                        this.state.placedPlayers = data.placedPlayers || [];
                         this.updateVisibleBuildingsList();
                         this.recalculateAllClaimedTerritory();
                         console.log("Backup plan loaded from browser storage.");
@@ -1795,16 +2159,16 @@ canvas#map.build-cursor {
         },
 
         clearPlan() {
-            if (confirm("Are you sure you want to clear the entire plan? This will delete all alliances and buildings and cannot be undone.")) {
+            if (confirm("Are you sure you want to clear the entire plan? This will delete all alliances, buildings, and placed players and cannot be undone.")) {
                 this.state.alliances = [];
                 this.state.buildModeBuildings = [];
+                this.state.placedPlayers = [];
                 this.state.activeAllianceId = null;
                 
                 if(this.state.isBuildMode) {
                     this.setBuildModeActive();
                 }
                 
-                // NEW: Update the combined building list after clearing the plan
                 this.updateVisibleBuildingsList();
                 this.recalculateAllClaimedTerritory();
                 localStorage.removeItem('kingshot_build_plan');
@@ -1812,20 +2176,24 @@ canvas#map.build-cursor {
                 if(this.dom.buildPanel.classList.contains('open')) {
                 this.renderAlliancePanel();
                 }
+                if(this.dom.playerPanel.classList.contains('open')) {
+                    this.renderPlayerPanel();
+                }
                 
                 alert("Plan cleared.");
             }
         },
 
         exportPlan() {
-            if (this.state.alliances.length === 0 && this.state.buildModeBuildings.length === 0) {
-                alert("Nothing to export. Create some alliances or buildings first.");
+            if (this.state.alliances.length === 0 && this.state.buildModeBuildings.length === 0 && this.state.placedPlayers.length === 0) {
+                alert("Nothing to export. Create some alliances, buildings, or players first.");
                 return;
             }
             const planData = {
-                version: 1,
+                version: 1.1,
                 alliances: this.state.alliances,
-                buildings: this.state.buildModeBuildings
+                buildings: this.state.buildModeBuildings,
+                placedPlayers: this.state.placedPlayers
             };
             const jsonString = JSON.stringify(planData, null, 2);
             const blob = new Blob([jsonString], { type: 'application/json' });
@@ -1847,14 +2215,14 @@ canvas#map.build-cursor {
             reader.onload = (e) => {
                 try {
                     const data = JSON.parse(e.target.result);
-                    if (data && data.version === 1 && Array.isArray(data.alliances) && Array.isArray(data.buildings)) {
+                    if (data && (data.version === 1 || data.version === 1.1) && Array.isArray(data.alliances) && Array.isArray(data.buildings)) {
                         if (!confirm("This will overwrite your current plan. Are you sure?")) {
                             this.dom.planFileInput.value = '';
                             return;
                         }
                         this.state.alliances = data.alliances;
                         this.state.buildModeBuildings = data.buildings;
-                        // NEW: Update the combined building list after importing
+                        this.state.placedPlayers = data.placedPlayers || [];
                         this.updateVisibleBuildingsList();
                         this.recalculateAllClaimedTerritory();
                         this.savePlanToLocalStorage();
@@ -2547,6 +2915,15 @@ canvas#map.build-cursor {
 
             const [worldX, worldY] = this.screenToWorld(e.offsetX, e.offsetY);
 
+            if (this.state.isPlacingPlayer) {
+                this.placePlayer(worldX, worldY);
+                // Exit placement mode
+                this.state.isPlacingPlayer = false;
+                this.state.playerToPlace = null;
+                this.dom.canvas.classList.remove('build-cursor');
+                return; // Important to stop further click processing
+            }
+
             // --- DEV MODE CLICK LOGIC ---
             if (this.state.isDevMode && this.state.activeDevTool) {
                 if (this.getBuildingAtCoords(worldX, worldY)) {
@@ -2595,11 +2972,12 @@ canvas#map.build-cursor {
             }
 
             if (worldX >= 0 && worldX < this.config.N && worldY >= 0 && worldY < this.config.N) {
-            const building = this.getBuildingAtCoords(worldX, worldY);
-            this.state.selection = building || { x: worldX, y: worldY };
-            if (this.state.selection) this.state.selection.pingStart = performance.now();
-            if (this.dom.inpX && this.state.selection) this.dom.inpX.value = this.state.selection.x;
-            if (this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
+                const building = this.getBuildingAtCoords(worldX, worldY);
+                const player = this.getPlayerAtCoords(worldX, worldY);
+                this.state.selection = player || building || { x: worldX, y: worldY };
+                if (this.state.selection) this.state.selection.pingStart = performance.now();
+                if (this.dom.inpX && this.state.selection) this.dom.inpX.value = this.state.selection.x;
+                if (this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
             }
         },
 
@@ -2666,8 +3044,21 @@ canvas#map.build-cursor {
                     }
                 }
             }
-        },
 
+            // Add logic for deleting players in normal mode
+            if (!this.state.isBuildMode && !this.state.isDevMode) {
+                const [worldX, worldY] = this.screenToWorld(e.offsetX, e.offsetY);
+                const playerToDelete = this.getPlayerAtCoords(worldX, worldY);
+                if (playerToDelete) {
+                    if (confirm(`Delete player ${playerToDelete.name}?`)) {
+                        this.state.placedPlayers = this.state.placedPlayers.filter(p => p.id !== playerToDelete.id);
+                        this.savePlanToLocalStorage();
+                        this.renderPlayerPanel();
+                    }
+                    return; // Exit after handling
+                }
+            }
+        },
         handleWheel(e) { 
             e.preventDefault(); 
             const factor = e.deltaY < 0 ? 1.2 : 0.8; 
@@ -2930,6 +3321,7 @@ canvas#map.build-cursor {
         drawBuildingFootprint(b, highlightStyle = null, drawBorder = true, overrideCtx = null) {
             const { config, state } = this; const ctx = overrideCtx || this.dom.ctx;
             
+            const isPlayerCastle = b.type === 'player_castle';
             let buildingDisplayName = b.displayName;
             let isBuildModeBuilding = !!b.allianceId;
             
@@ -2939,6 +3331,12 @@ canvas#map.build-cursor {
                 b.fillColor = alliance.color;
                 b.borderColor = this.darkenColor(alliance.color, 40);
                 buildingDisplayName = b.displayText; 
+            }
+
+            // For player castles, use the color stored on the object itself
+            if (isPlayerCastle) {
+                b.fillColor = b.color || this.PLAYER_CATALOG.player_castle.fillColor;
+                b.borderColor = this.darkenColor(b.fillColor, 40);
             }
 
             const fill = highlightStyle ? 'rgba(0,0,0,0)' : (b.fillColor || 'rgba(0,255,0,0.3)');
@@ -3012,54 +3410,69 @@ canvas#map.build-cursor {
 
             if (overrideCtx || highlightStyle) return;
             
-            const textZoomThreshold = isBuildModeBuilding ? 30 : 40;
-            if (currentZoomPct > textZoomThreshold && buildingDisplayName) {
-                const words = buildingDisplayName.split(' ');
+            const textZoomThreshold = isPlayerCastle ? 30 : (b.allianceId ? 30 : 40);
+            
+            if (currentZoomPct > textZoomThreshold && (buildingDisplayName || isPlayerCastle)) {
                 const availableWidth = (p_right.x - p_left.x) * 0.8; 
                 const availableHeight = p_bottom.y - p_top.y;
-                if (availableWidth < 1 || availableHeight < 1) return; 
-                const isSmallBuilding = b.w <= 1 && b.h <= 1;
-                ctx.font = `bold ${100}px sans-serif`; // Remove bold from measurement
-                const textMetrics = ctx.measureText(buildingDisplayName);
-                const displayNameWidth = textMetrics.width || 1; 
-                const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
-                
-                let lineCount = words.length;
-                if(b.displayCoordinates) lineCount += 1;
-                const fontSizeBasedOnHeight = (availableHeight / lineCount) * 0.9;
-                let optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
-                if(isSmallBuilding && optimalFontSize * currentZoomPct < 10) optimalFontSize = 10 / currentZoomPct;
-                if (optimalFontSize * currentZoomPct < 7 && !isSmallBuilding) return;
+                if (availableWidth < 1 || availableHeight < 1) return;
 
                 const centerX = (p_left.x + p_right.x) / 2;
-                const unadjustedCenterY = (p_top.y + p_bottom.y) / 2;
+                const centerY = (p_top.y + p_bottom.y) / 2;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                const lineHeight = optimalFontSize * 1.1;
-                let totalBlockHeight = words.length * lineHeight;
-                if (b.displayCoordinates) {
-                    totalBlockHeight += lineHeight * 0.8; 
-                }
-                let currentY = unadjustedCenterY - (totalBlockHeight / 2);
-                
-                ctx.fillStyle = this.getContrastingTextColor(b.fillColor || '#000000');
-                
-                // *** FIX IS HERE: Removed 'bold' from the font style ***
-                const slightlyAdjustedOptimalFontSize = optimalFontSize * 0.8;
-                ctx.font = `bold ${slightlyAdjustedOptimalFontSize}px sans-serif`;
 
-                words.forEach(word => {
-                    ctx.fillText(word, centerX, currentY + lineHeight / 2);
-                    currentY += lineHeight;
-                });
-                if (b.displayCoordinates) {
-                    const coordFontSize = optimalFontSize * 0.7;
-                    ctx.font = `${coordFontSize}px sans-serif`;
-                    ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, currentY + (lineHeight * 0.8) / 2);
+                if (isPlayerCastle) {
+                    ctx.fillStyle = this.getContrastingTextColor(b.fillColor);
+                    
+                    let nameFontSize = Math.min(config.tileH * 0.7, (availableWidth / (b.name.length || 1)) * 1.5);
+                    ctx.font = `bold ${nameFontSize * 0.8}px sans-serif`;
+                    ctx.fillText(b.name, centerX, centerY - nameFontSize * 0.45);
+                    
+                    let powerFontSize = Math.min(config.tileH * 0.6, (availableWidth / (b.power.length || 1)) * 1.5);
+                    ctx.font = `${powerFontSize * 0.8}px sans-serif`;
+                    ctx.fillText(b.power, centerX, centerY + powerFontSize * 0.55);
+
+                } else if (buildingDisplayName) {
+                    const words = buildingDisplayName.split(' ');
+                    const isSmallBuilding = b.w <= 1 && b.h <= 1;
+                    ctx.font = `bold ${100}px sans-serif`; 
+                    const textMetrics = ctx.measureText(buildingDisplayName);
+                    const displayNameWidth = textMetrics.width || 1; 
+                    const fontSizeBasedOnWidth = (availableWidth / displayNameWidth) * 100;
+                    
+                    let lineCount = words.length;
+                    if(b.displayCoordinates) lineCount += 1;
+                    const fontSizeBasedOnHeight = (availableHeight / lineCount) * 0.9;
+                    let optimalFontSize = Math.min(fontSizeBasedOnHeight, fontSizeBasedOnWidth);
+                    if(isSmallBuilding && optimalFontSize * currentZoomPct < 10) optimalFontSize = 10 / currentZoomPct;
+                    if (optimalFontSize * currentZoomPct < 7 && !isSmallBuilding) return;
+
+                    const unadjustedCenterY = (p_top.y + p_bottom.y) / 2;
+                    const lineHeight = optimalFontSize * 1.1;
+                    let totalBlockHeight = words.length * lineHeight;
+                    if (b.displayCoordinates) {
+                        totalBlockHeight += lineHeight * 0.8; 
+                    }
+                    let currentY = unadjustedCenterY - (totalBlockHeight / 2);
+                    
+                    ctx.fillStyle = this.getContrastingTextColor(b.fillColor || '#000000');
+                    
+                    const slightlyAdjustedOptimalFontSize = optimalFontSize * 0.8;
+                    ctx.font = `bold ${slightlyAdjustedOptimalFontSize}px sans-serif`;
+
+                    words.forEach(word => {
+                        ctx.fillText(word, centerX, currentY + lineHeight / 2);
+                        currentY += lineHeight;
+                    });
+                    if (b.displayCoordinates) {
+                        const coordFontSize = optimalFontSize * 0.7;
+                        ctx.font = `${coordFontSize}px sans-serif`;
+                        ctx.fillText(`(X${b.x}, Y${b.y})`, centerX, currentY + (lineHeight * 0.8) / 2);
+                    }
                 }
             }
         },
-        
         // The entire drawBuildModeOverlays function, rewritten for clarity and performance
         drawBuildModeOverlays(viewBounds) {
             const currentZoomPct = (this.state.cam.scale / this.config.baseScale) * 100;
@@ -3254,142 +3667,180 @@ canvas#map.build-cursor {
         mainLoop(now) {
             const { dom, state, config } = this; const ctx = dom.ctx;
             try {
-            ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, dom.canvas.width, dom.canvas.height);
-            const [centerX, centerY] = this.screenToWorld(dom.canvas.width / 2, dom.canvas.height / 2);
-            if (dom.centerTileEl) dom.centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
-            const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
-            const pct = Math.round((currentCamScale / config.baseScale) * 100);
-            if (dom.zoomLevelEl) dom.zoomLevelEl.textContent = `Zoom: ${pct}%`;
-            if (dom.zoomSlider) {
-                const minScalePct = Math.round((state.minFitScale / config.baseScale) * 100);
-                const maxScalePct = Math.round((config.maxPct / 100 * config.baseScale / config.baseScale) * 100);
-                dom.zoomSlider.min = minScalePct; dom.zoomSlider.max = maxScalePct;
-                if (document.activeElement !== dom.zoomSlider) dom.zoomSlider.value = pct;
-            }
-            state.tileCount = 0; ctx.save();
-            ctx.setTransform(currentCamScale, 0, 0, currentCamScale, state.cam.x, state.cam.y);
-            ctx.strokeStyle = config.borderColor; ctx.lineWidth = config.strokeW;
-            const [tl_x, tl_y] = this.screenToWorld(0, 0); const [tr_x, tr_y] = this.screenToWorld(dom.canvas.width, 0);
-            const [bl_x, bl_y] = this.screenToWorld(0, dom.canvas.height); const [br_x, br_y] = this.screenToWorld(dom.canvas.width, dom.canvas.height);
-            const viewBounds = {
-                minX: Math.min(tl_x, tr_x, bl_x, br_x) - 2, maxX: Math.max(tl_x, tr_x, bl_x, br_x) + 2,
-                minY: Math.min(tl_y, tr_y, bl_y, br_y) - 2, maxY: Math.max(tl_y, tr_y, bl_y, br_y) + 2,
-            };
-            const viewportCorners = { tl: { x: tl_x, y: tl_y }, tr: { x: tr_x, y: tr_y }, bl: { x: bl_x, y: bl_y }, br: { x: br_x, y: br_y } };
-            if (isNaN(viewBounds.minX) || isNaN(viewBounds.maxX) || isNaN(viewBounds.minY) || isNaN(viewBounds.maxY)) {
-                ctx.restore(); this.drawIsometricMinimap(null); requestAnimationFrame(this.mainLoop.bind(this)); return;
-            }
-            const chunkLevel = this.getChunkLevelForZoom(pct);
-            const showGrid = dom.gridlinesToggle ? dom.gridlinesToggle.checked : false;
-            const showRss = dom.allianceRssToggle ? dom.allianceRssToggle.checked : false;
-            const alwaysShowRss = dom.allianceRssAlwaysVisibleToggle ? dom.allianceRssAlwaysVisibleToggle.checked : false;
-
-            // --- Pass 1: Draw Base Map Layer ---
-            if (chunkLevel === -1) {
-                const shouldDrawBorders = showGrid && pct > 50;
-                for (let x = viewBounds.minX; x <= viewBounds.maxX; x++) {
-                    for (let y = viewBounds.minY; y <= viewBounds.maxY; y++) {
-                        if (x < 0 || x >= config.N || y < 0 || y >= config.N) continue;
-                        if (this.getBuildingAt(x, y)) {
-                            continue;
-                        }
-                        this.drawTile(x, y, shouldDrawBorders);
-                    }
+                ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, dom.canvas.width, dom.canvas.height);
+                const [centerX, centerY] = this.screenToWorld(dom.canvas.width / 2, dom.canvas.height / 2);
+                if (dom.centerTileEl) dom.centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
+                const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
+                const pct = Math.round((currentCamScale / config.baseScale) * 100);
+                if (dom.zoomLevelEl) dom.zoomLevelEl.textContent = `Zoom: ${pct}%`;
+                if (dom.zoomSlider) {
+                    const minScalePct = Math.round((state.minFitScale / config.baseScale) * 100);
+                    const maxScalePct = Math.round((config.maxPct / 100 * config.baseScale / config.baseScale) * 100);
+                    dom.zoomSlider.min = minScalePct; dom.zoomSlider.max = maxScalePct;
+                    if (document.activeElement !== dom.zoomSlider) dom.zoomSlider.value = pct;
                 }
-            } else {
-                if (state.chunkLevels && state.chunkLevels[chunkLevel]) {
-                    const chunksToDraw = state.chunkLevels[chunkLevel];
-                    const chunkSize = Math.pow(2, chunkLevel + 1);
-                    const startChunkX = Math.floor(viewBounds.minX / chunkSize) * chunkSize;
-                    const endChunkX = Math.ceil(viewBounds.maxX / chunkSize) * chunkSize;
-                    const startChunkY = Math.floor(viewBounds.minY / chunkSize) * chunkSize;
-                    const endChunkY = Math.ceil(viewBounds.maxY / chunkSize) * chunkSize;
-                    for (let x = startChunkX; x <= endChunkX; x += chunkSize) {
-                        for (let y = startChunkY; y <= endChunkY; y += chunkSize) {
-                            const chunk = chunksToDraw.get(`${x},${y}`);
-                            if (chunk) this.drawChunk(chunk, false);
+                state.tileCount = 0; ctx.save();
+                ctx.setTransform(currentCamScale, 0, 0, currentCamScale, state.cam.x, state.cam.y);
+                ctx.strokeStyle = config.borderColor; ctx.lineWidth = config.strokeW;
+                const [tl_x, tl_y] = this.screenToWorld(0, 0); const [tr_x, tr_y] = this.screenToWorld(dom.canvas.width, 0);
+                const [bl_x, bl_y] = this.screenToWorld(0, dom.canvas.height); const [br_x, br_y] = this.screenToWorld(dom.canvas.width, dom.canvas.height);
+                const viewBounds = {
+                    minX: Math.min(tl_x, tr_x, bl_x, br_x) - 2, maxX: Math.max(tl_x, tr_x, bl_x, br_x) + 2,
+                    minY: Math.min(tl_y, tr_y, bl_y, br_y) - 2, maxY: Math.max(tl_y, tr_y, bl_y, br_y) + 2,
+                };
+                const viewportCorners = { tl: { x: tl_x, y: tl_y }, tr: { x: tr_x, y: tr_y }, bl: { x: bl_x, y: bl_y }, br: { x: br_x, y: br_y } };
+                if (isNaN(viewBounds.minX) || isNaN(viewBounds.maxX) || isNaN(viewBounds.minY) || isNaN(viewBounds.maxY)) {
+                    ctx.restore(); this.drawIsometricMinimap(null); requestAnimationFrame(this.mainLoop.bind(this)); return;
+                }
+                const chunkLevel = this.getChunkLevelForZoom(pct);
+                const showGrid = dom.gridlinesToggle ? dom.gridlinesToggle.checked : false;
+                const showRss = dom.allianceRssToggle ? dom.allianceRssToggle.checked : false;
+                const alwaysShowRss = dom.allianceRssAlwaysVisibleToggle ? dom.allianceRssAlwaysVisibleToggle.checked : false;
+
+                // --- Pass 1: Draw Base Map Layer ---
+                if (chunkLevel === -1) {
+                    const shouldDrawBorders = showGrid && pct > 50;
+                    for (let x = viewBounds.minX; x <= viewBounds.maxX; x++) {
+                        for (let y = viewBounds.minY; y <= viewBounds.maxY; y++) {
+                            if (x < 0 || x >= config.N || y < 0 || y >= config.N) continue;
+                            if (this.getBuildingAt(x, y)) {
+                                continue;
+                            }
+                            this.drawTile(x, y, shouldDrawBorders);
                         }
                     }
-                }
-            }
-            
-            // --- Pass 2: Draw Territory Overlays ---
-            this.drawBuildModeOverlays(viewBounds);
-
-            // --- Pass 3: Draw Buildings ---
-            state.allVisibleBuildings
-                .filter(b => !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
-                .filter(b => { 
-                    if (!b.isRss) return true;
-                    return showRss && (alwaysShowRss || chunkLevel === -1);
-                })
-                .forEach(b => this.drawBuildingFootprint(b, null, chunkLevel === -1 && showGrid && pct > 50));
-            
-            // --- Pass 4: Draw Build Placement Ghost & Coverage Preview ---
-            if (state.isBuildMode && state.selectedBuildingType) {
-                const def = this.BUILDING_CATALOG[state.selectedBuildingType];
-                const { canPlace } = this.checkPlacementValidity(state.selectedBuildingType, state.mouseWorldPos.x, state.mouseWorldPos.y);
-                if (def) {
-                    if (def.coverage > 0) {
-                        const radius = Math.floor(def.coverage / 2);
-                        const centerX = state.mouseWorldPos.x + Math.floor(def.w / 2);
-                        const centerY = state.mouseWorldPos.y + Math.floor(def.h / 2);
-                        const coverageX = centerX - radius;
-                        const coverageY = centerY - radius;
-                        const coverageSize = def.coverage;
-                        const [sbx, sby] = this.worldToScreen(coverageX, coverageY);
-                        const [srx, sry] = this.worldToScreen(coverageX + coverageSize - 1, coverageY);
-                        const [stx, sty] = this.worldToScreen(coverageX + coverageSize - 1, coverageY + coverageSize - 1);
-                        const [slx, sly] = this.worldToScreen(coverageX, coverageY + coverageSize - 1);
-                        const p_bottom = { x: sbx, y: sby + config.tileH / 2 };
-                        const p_right = { x: srx + config.tileW / 2, y: sry };
-                        const p_top = { x: stx, y: sty - config.tileH / 2 };
-                        const p_left = { x: slx - config.tileW / 2, y: sly };
-                        ctx.beginPath();
-                        ctx.moveTo(p_bottom.x, p_bottom.y);
-                        ctx.lineTo(p_right.x, p_right.y);
-                        ctx.lineTo(p_top.x, p_top.y);
-                        ctx.lineTo(p_left.x, p_left.y);
-                        ctx.closePath();
-                        ctx.fillStyle = canPlace ? this.hexToRgba('#28a745', 0.15) : this.hexToRgba('#dc3545', 0.15);
-                        ctx.fill();
+                } else {
+                    if (state.chunkLevels && state.chunkLevels[chunkLevel]) {
+                        const chunksToDraw = state.chunkLevels[chunkLevel];
+                        const chunkSize = Math.pow(2, chunkLevel + 1);
+                        const startChunkX = Math.floor(viewBounds.minX / chunkSize) * chunkSize;
+                        const endChunkX = Math.ceil(viewBounds.maxX / chunkSize) * chunkSize;
+                        const startChunkY = Math.floor(viewBounds.minY / chunkSize) * chunkSize;
+                        const endChunkY = Math.ceil(viewBounds.maxY / chunkSize) * chunkSize;
+                        for (let x = startChunkX; x <= endChunkX; x += chunkSize) {
+                            for (let y = startChunkY; y <= endChunkY; y += chunkSize) {
+                                const chunk = chunksToDraw.get(`${x},${y}`);
+                                if (chunk) this.drawChunk(chunk, false);
+                            }
+                        }
                     }
-                    const ghostBuilding = {
+                }
+                
+                // --- Pass 2: Draw Territory Overlays ---
+                this.drawBuildModeOverlays(viewBounds);
+
+                // --- Pass 3: Draw Buildings ---
+                state.allVisibleBuildings
+                    .filter(b => !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
+                    .filter(b => { 
+                        if (!b.isRss) return true;
+                        return showRss && (alwaysShowRss || chunkLevel === -1);
+                    })
+                    .forEach(b => this.drawBuildingFootprint(b, null, chunkLevel === -1 && showGrid && pct > 50));
+                
+                // --- Pass 3.5: Draw Players ---
+                state.placedPlayers
+                    .filter(p => !(p.x > viewBounds.maxX || p.x + p.w - 1 < viewBounds.minX || p.y > viewBounds.maxY || p.y + p.h - 1 < viewBounds.minY))
+                    .forEach(p => {
+                        const def = this.PLAYER_CATALOG[p.type];
+                        // Create a temporary object that mimics a building for the rendering function
+                        const buildingLikeObject = { ...p, fillColor: def.fillColor, borderColor: def.borderColor };
+                        this.drawBuildingFootprint(buildingLikeObject, null, chunkLevel === -1 && showGrid && pct > 50);
+                    });
+
+                // --- Pass 4: Draw Build Placement Ghost & Coverage Preview ---
+                if (state.isBuildMode && state.selectedBuildingType) {
+                    const def = this.BUILDING_CATALOG[state.selectedBuildingType];
+                    const { canPlace } = this.checkPlacementValidity(state.selectedBuildingType, state.mouseWorldPos.x, state.mouseWorldPos.y);
+                    if (def) {
+                        if (def.coverage > 0) {
+                            const radius = Math.floor(def.coverage / 2);
+                            const centerX = state.mouseWorldPos.x + Math.floor(def.w / 2);
+                            const centerY = state.mouseWorldPos.y + Math.floor(def.h / 2);
+                            const coverageX = centerX - radius;
+                            const coverageY = centerY - radius;
+                            const coverageSize = def.coverage;
+                            const [sbx, sby] = this.worldToScreen(coverageX, coverageY);
+                            const [srx, sry] = this.worldToScreen(coverageX + coverageSize - 1, coverageY);
+                            const [stx, sty] = this.worldToScreen(coverageX + coverageSize - 1, coverageY + coverageSize - 1);
+                            const [slx, sly] = this.worldToScreen(coverageX, coverageY + coverageSize - 1);
+                            const p_bottom = { x: sbx, y: sby + config.tileH / 2 };
+                            const p_right = { x: srx + config.tileW / 2, y: sry };
+                            const p_top = { x: stx, y: sty - config.tileH / 2 };
+                            const p_left = { x: slx - config.tileW / 2, y: sly };
+                            ctx.beginPath();
+                            ctx.moveTo(p_bottom.x, p_bottom.y);
+                            ctx.lineTo(p_right.x, p_right.y);
+                            ctx.lineTo(p_top.x, p_top.y);
+                            ctx.lineTo(p_left.x, p_left.y);
+                            ctx.closePath();
+                            ctx.fillStyle = canPlace ? this.hexToRgba('#28a745', 0.15) : this.hexToRgba('#dc3545', 0.15);
+                            ctx.fill();
+                        }
+                        const ghostBuilding = {
+                            x: state.mouseWorldPos.x, y: state.mouseWorldPos.y,
+                            w: def.w, h: def.h,
+                            fillColor: canPlace ? this.hexToRgba('#28a745', 0.6) : this.hexToRgba('#dc3545', 0.6),
+                            borderColor: canPlace ? this.darkenColor('#28a745', 40) : this.darkenColor('#dc3545', 40)
+                        };
+                        this.drawBuildingFootprint(ghostBuilding, null, true);
+                    }
+                }
+                
+                if (state.isPlacingPlayer && state.playerToPlace) {
+                    const def = this.PLAYER_CATALOG['player_castle'];
+                    // Simple validity check
+                    let canPlace = true;
+                    for (let dx = 0; dx < def.w; dx++) {
+                        for (let dy = 0; dy < def.h; dy++) {
+                            if (this.state.specialTileMap.has(`${state.mouseWorldPos.x + dx},${state.mouseWorldPos.y + dy}`) ||
+                                this.getBuildingAtCoords(state.mouseWorldPos.x + dx, state.mouseWorldPos.y + dy) ||
+                                this.getPlayerAtCoords(state.mouseWorldPos.x + dx, state.mouseWorldPos.y + dy) ) {
+                                canPlace = false;
+                                break;
+                            }
+                        }
+                        if (!canPlace) break;
+                    }
+
+                    const ghostPlayer = {
                         x: state.mouseWorldPos.x, y: state.mouseWorldPos.y,
                         w: def.w, h: def.h,
-                        fillColor: canPlace ? this.hexToRgba('#28a745', 0.6) : this.hexToRgba('#dc3545', 0.6),
-                        borderColor: canPlace ? this.darkenColor('#28a745', 40) : this.darkenColor('#dc3545', 40)
+                        type: 'player_castle',
+                        fillColor: canPlace ? this.hexToRgba(state.playerToPlace.color, 0.6) : this.hexToRgba('#dc3545', 0.6),
+                        borderColor: canPlace ? this.darkenColor(state.playerToPlace.color, 40) : this.darkenColor('#dc3545', 40),
+                        name: state.playerToPlace.name,
+                        power: state.playerToPlace.power,
+                        color: state.playerToPlace.color
                     };
-                    this.drawBuildingFootprint(ghostBuilding, null, true);
+                    this.drawBuildingFootprint(ghostPlayer, null, true);
                 }
-            }
 
-            if (now - state.infoBannerUpdateTime > 100) {
-                this.updateInfoBanner();
-                state.infoBannerUpdateTime = now;
-            }
+                if (now - state.infoBannerUpdateTime > 100) {
+                    this.updateInfoBanner();
+                    state.infoBannerUpdateTime = now;
+                }
 
-            // --- Draw Selection ---
-            if (state.selection && !state.isBuildMode) {
-                let highlightColor = config.selectionColor;
-                if (state.selection.pingStart && now - state.selection.pingStart < config.pingDuration) { if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) { highlightColor = config.pingColor; } }
-                if (state.selection.w) { this.drawBuildingFootprint(state.selection, highlightColor, true); } 
-                else { const [sx, sy] = this.worldToScreen(state.selection.x, state.selection.y); ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy); ctx.closePath(); ctx.strokeStyle = highlightColor; ctx.lineWidth = config.strokeW * 1.5; ctx.stroke(); }
-            }
-            ctx.restore();
-            this.drawIsometricMinimap(viewportCorners);
-            const dt = now - state.lastFrame; state.lastFrame = now;
-            if (dt > 0) { state.lastFPS = Math.round(1000 / dt); }
-            state.lastTiles = state.tileCount;
-            if (now - state.statsUpdateTime > 500) {
-                if (dom.statsFPSEl) dom.statsFPSEl.textContent = `FPS:   ${state.lastFPS}`;
-                if (dom.statsTilesEl) dom.statsTilesEl.textContent = `Tiles: ${state.lastTiles}`;
-                state.statsUpdateTime = now;
-            }
+                // --- Draw Selection ---
+                if (state.selection && !state.isBuildMode) {
+                    let highlightColor = config.selectionColor;
+                    if (state.selection.pingStart && now - state.selection.pingStart < config.pingDuration) { if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) { highlightColor = config.pingColor; } }
+                    if (state.selection.w) { this.drawBuildingFootprint(state.selection, highlightColor, true); } 
+                    else { const [sx, sy] = this.worldToScreen(state.selection.x, state.selection.y); ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy); ctx.closePath(); ctx.strokeStyle = highlightColor; ctx.lineWidth = config.strokeW * 1.5; ctx.stroke(); }
+                }
+                ctx.restore();
+                this.drawIsometricMinimap(viewportCorners);
+                const dt = now - state.lastFrame; state.lastFrame = now;
+                if (dt > 0) { state.lastFPS = Math.round(1000 / dt); }
+                state.lastTiles = state.tileCount;
+                if (now - state.statsUpdateTime > 500) {
+                    if (dom.statsFPSEl) dom.statsFPSEl.textContent = `FPS:   ${state.lastFPS}`;
+                    if (dom.statsTilesEl) dom.statsTilesEl.textContent = `Tiles: ${state.lastTiles}`;
+                    state.statsUpdateTime = now;
+                }
             } catch (error) { console.error("Error in mainLoop:", error); }
             requestAnimationFrame(this.mainLoop.bind(this));
         },
-
     };
     KingshotPlanner.init();
   </script>

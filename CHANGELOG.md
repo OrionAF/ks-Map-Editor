@@ -2,7 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## [9.0.0.1] - Patch
+## [9.1.0.0] - Minor
+
+### Added
+- **New Feature: Player Management (👤)!** A new dedicated sidebar panel has been added for placing and managing individual players on the map.
+- **Place & Customize Players:** Users can now place unique 2x2 "player castles", each with a custom name, rally capacity (e.g., "687k"), and a user-selected color.
+- **Edit Player Details:** An "Edit" button has been added for each player, allowing their name, rally capacity, and color to be modified at any time via a pop-up modal.
+- **Intelligent Player Sorting:** The player list in the management panel is automatically sorted by the tag of the alliance territory a player resides in, making it easy to see who is where. Unaffiliated players are grouped at the end of the list.
+- **Enhanced Placement UX:** Placing a player now a semi-transparent "ghost" tile at the cursor, providing a clear preview before clicking.
+- **Integrated Player Controls:** The new sidebar provides `Go`, `Edit`, and `Delete` controls for each player, creating a workflow consistent with the Alliance Management panel.
+
+## [9.0.1.0] - Patch
 
 ### Fixed
 - Fixed versioning
