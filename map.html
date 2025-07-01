@@ -785,7 +785,7 @@ canvas#map.build-cursor {
     const KingshotPlanner = {
         // --- TWEAKABLE SETTINGS ---
         config: {
-            CURRENT_VERSION: '9.1.2.0',
+            CURRENT_VERSION: '9.1.3.0',
             enableDevMode: false,
             N: 1200,
             tileW: 10,
@@ -2994,7 +2994,7 @@ canvas#map.build-cursor {
                 if (this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
             }
         },
-        
+
         handleRightClick(e) {
             e.preventDefault();
 
@@ -3512,7 +3512,8 @@ canvas#map.build-cursor {
                 if (territoryInView.length === 0) continue;
 
                 // Pass 1: Draw the semi-transparent fill for all tiles in view
-                ctx.fillStyle = this.hexToRgba(alliance.color, 0.15);
+                // MODIFICATION: Alpha value increased from 0.15 to 0.2 for less transparency
+                ctx.fillStyle = this.hexToRgba(alliance.color, 0.2);
                 ctx.beginPath();
                 for (const tile of territoryInView) {
                     const [sx, sy] = this.worldToScreen(tile.x, tile.y);
@@ -3546,7 +3547,6 @@ canvas#map.build-cursor {
             }
             ctx.lineWidth = this.config.strokeW; // Reset line width
         },
-
         updateInfoBanner() {
             const { config, state, dom } = this;
 
@@ -3741,10 +3741,9 @@ canvas#map.build-cursor {
                     }
                 }
                 
-                // --- Pass 2: Draw Territory Overlays ---
-                this.drawBuildModeOverlays(viewBounds);
+                // MODIFICATION: Territory drawing was moved from here...
 
-                // --- Pass 3: Draw Buildings ---
+                // --- Pass 2: Draw Buildings ---
                 state.allVisibleBuildings
                     .filter(b => !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
                     .filter(b => { 
@@ -3753,17 +3752,20 @@ canvas#map.build-cursor {
                     })
                     .forEach(b => this.drawBuildingFootprint(b, null, chunkLevel === -1 && showGrid && pct > 50));
                 
-                // --- Pass 3.5: Draw Players ---
+                // --- Pass 3: Draw Players ---
                 state.placedPlayers
                     .filter(p => !(p.x > viewBounds.maxX || p.x + p.w - 1 < viewBounds.minX || p.y > viewBounds.maxY || p.y + p.h - 1 < viewBounds.minY))
                     .forEach(p => {
                         const def = this.PLAYER_CATALOG[p.type];
-                        // Create a temporary object that mimics a building for the rendering function
                         const buildingLikeObject = { ...p, fillColor: def.fillColor, borderColor: def.borderColor };
                         this.drawBuildingFootprint(buildingLikeObject, null, chunkLevel === -1 && showGrid && pct > 50);
                     });
+                    
+                // --- Pass 4: Draw Territory Overlays ---
+                // MODIFICATION: ...to here, so it renders on top of players and buildings.
+                this.drawBuildModeOverlays(viewBounds);
 
-                // --- Pass 4: Draw Build Placement Ghost & Coverage Preview ---
+                // --- Pass 5: Draw Build Placement Ghost & Coverage Preview ---
                 if (state.isBuildMode && state.selectedBuildingType) {
                     const def = this.BUILDING_CATALOG[state.selectedBuildingType];
                     const { canPlace } = this.checkPlacementValidity(state.selectedBuildingType, state.mouseWorldPos.x, state.mouseWorldPos.y);
@@ -3804,7 +3806,6 @@ canvas#map.build-cursor {
                 
                 if (state.isPlacingPlayer && state.playerToPlace) {
                     const def = this.PLAYER_CATALOG['player_castle'];
-                    // Simple validity check
                     let canPlace = true;
                     for (let dx = 0; dx < def.w; dx++) {
                         for (let dy = 0; dy < def.h; dy++) {

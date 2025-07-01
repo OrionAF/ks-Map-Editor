@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.1.3.0] - Patch
+
+### Changed
+- **Improved Visual Hierarchy:** Alliance territory overlays are now rendered on top of placed players, and the fill color has been made slightly more opaque for better clarity.
+- **Enhanced Player Readability:** Player castles are now drawn with a dark border, improving contrast and making them easier to distinguish when placed near other objects or similarly-colored territories.
+
 ## [9.1.2.0] - Patch
 
 ### Changed
