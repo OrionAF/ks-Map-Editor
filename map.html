@@ -3340,6 +3340,7 @@ canvas#map.build-cursor {
             let buildingDisplayName = b.displayName;
             let isBuildModeBuilding = !!b.allianceId;
             
+            // Set colors for build mode buildings first
             if (isBuildModeBuilding) {
                 const alliance = state.alliances.find(a => a.id === b.allianceId);
                 if (!alliance) return;
@@ -3348,7 +3349,7 @@ canvas#map.build-cursor {
                 buildingDisplayName = b.displayText; 
             }
 
-            // For player castles, use the color stored on the object itself
+            // Then, set colors for player castles, using their custom color
             if (isPlayerCastle) {
                 b.fillColor = b.color || this.PLAYER_CATALOG.player_castle.fillColor;
                 b.borderColor = this.darkenColor(b.fillColor, 40);
@@ -3380,8 +3381,12 @@ canvas#map.build-cursor {
 
             if(drawBorder) {
                 ctx.strokeStyle = border; 
-                const currentScale = overrideCtx ? this.state.minimapCam.scale : this.state.cam.scale;
-                ctx.lineWidth = (highlightStyle ? config.strokeW * 2 : config.strokeW) / (overrideCtx ? 1 : currentScale);
+                
+                // THE BUG FIX IS HERE:
+                // The incorrect division by 'currentScale' has been removed.
+                // This sets a proper world-space thickness that scales correctly with zoom.
+                ctx.lineWidth = highlightStyle ? config.strokeW * 2 : config.strokeW;
+                
                 ctx.stroke();
             }
 
@@ -3488,6 +3493,7 @@ canvas#map.build-cursor {
                 }
             }
         },
+        
         // The entire drawBuildModeOverlays function, rewritten for clarity and performance
         drawBuildModeOverlays(viewBounds) {
             const currentZoomPct = (this.state.cam.scale / this.config.baseScale) * 100;
@@ -3741,8 +3747,6 @@ canvas#map.build-cursor {
                     }
                 }
                 
-                // MODIFICATION: Territory drawing was moved from here...
-
                 // --- Pass 2: Draw Buildings ---
                 state.allVisibleBuildings
                     .filter(b => !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
@@ -3756,13 +3760,13 @@ canvas#map.build-cursor {
                 state.placedPlayers
                     .filter(p => !(p.x > viewBounds.maxX || p.x + p.w - 1 < viewBounds.minX || p.y > viewBounds.maxY || p.y + p.h - 1 < viewBounds.minY))
                     .forEach(p => {
-                        const def = this.PLAYER_CATALOG[p.type];
-                        const buildingLikeObject = { ...p, fillColor: def.fillColor, borderColor: def.borderColor };
-                        this.drawBuildingFootprint(buildingLikeObject, null, chunkLevel === -1 && showGrid && pct > 50);
+                        // THE FIX IS HERE: We simply pass a copy of the player object.
+                        // The drawing function will handle deriving all colors from the custom 'p.color'.
+                        const buildingLikeObject = { ...p };
+                        this.drawBuildingFootprint(buildingLikeObject, null, true);
                     });
                     
                 // --- Pass 4: Draw Territory Overlays ---
-                // MODIFICATION: ...to here, so it renders on top of players and buildings.
                 this.drawBuildModeOverlays(viewBounds);
 
                 // --- Pass 5: Draw Build Placement Ghost & Coverage Preview ---
@@ -3857,6 +3861,7 @@ canvas#map.build-cursor {
             } catch (error) { console.error("Error in mainLoop:", error); }
             requestAnimationFrame(this.mainLoop.bind(this));
         },
+    
     };
     KingshotPlanner.init();
   </script>
