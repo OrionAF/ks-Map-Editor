@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.1.1.0] - Patch
+
+### Removed
+- Disabled accidental dev mode, as it's useless outside of development.
+
 ## [9.1.0.0] - Minor
 
 ### Added
