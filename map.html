@@ -785,7 +785,7 @@ canvas#map.build-cursor {
     const KingshotPlanner = {
         // --- TWEAKABLE SETTINGS ---
         config: {
-            CURRENT_VERSION: '9.1.1.0',
+            CURRENT_VERSION: '9.1.2.0',
             enableDevMode: false,
             N: 1200,
             tileW: 10,
@@ -1213,7 +1213,8 @@ canvas#map.build-cursor {
 
         initializeUI() {
             // --- 1. DEFINE ALL UI PANELS ---
-            const panelMap = {
+            // Moved panelMap to this.dom for global access
+            this.dom.panelMap = {
                 'allianceMgt': { btn: this.dom.allianceMgtToggleBtn, panel: this.dom.buildPanel, persistent: true },
                 'buildMenu': { btn: this.dom.buildMenuToggleBtn, panel: this.dom.buildMenuPanel, persistent: true },
                 'playerMgt': { btn: this.dom.placePlayerToggleBtn, panel: this.dom.playerPanel, persistent: true },
@@ -1225,46 +1226,28 @@ canvas#map.build-cursor {
                 'settings': { btn: this.dom.settingsToggleBtn, panel: this.dom.settingsPanel },
             };
 
-            // --- 2. PANEL TOGGLING LOGIC ---
-            const togglePanel = (panelName, forceClose = false) => {
-                const panelInfo = panelMap[panelName];
-                if (!panelInfo) return;
-                const isAlreadyOpen = panelInfo.panel.classList.contains('open');
-                const shouldOpen = !isAlreadyOpen && !forceClose;
-                if (this.state.openPanel && panelMap[this.state.openPanel]) {
-                    panelMap[this.state.openPanel].panel.classList.remove('open');
-                    if(panelMap[this.state.openPanel].btn) panelMap[this.state.openPanel].btn.classList.remove('active');
-                }
-                if (shouldOpen) {
-                    panelInfo.panel.classList.add('open');
-                    if(panelInfo.btn) panelInfo.btn.classList.add('active');
-                    this.state.openPanel = panelName;
-                } else {
-                    this.state.openPanel = null;
-                }
-            };
-            
-            // --- 3. EVENT LISTENERS ---
+            // --- 2. EVENT LISTENERS ---
 
             // A. Listeners for UI interaction
             document.addEventListener('click', (e) => {
                 if (!this.state.openPanel) return;
-                const currentPanelInfo = panelMap[this.state.openPanel];
+                const currentPanelInfo = this.dom.panelMap[this.state.openPanel];
                 if (currentPanelInfo.persistent) return;
                 if (!currentPanelInfo.panel.contains(e.target) && !currentPanelInfo.btn.contains(e.target)) {
-                    togglePanel(this.state.openPanel, true);
+                    this.togglePanel(this.state.openPanel, true);
                 }
             });
 
-            Object.keys(panelMap).forEach(key => {
-                if (!panelMap[key].btn) return;
-                panelMap[key].btn.addEventListener('click', (e) => { 
+            Object.keys(this.dom.panelMap).forEach(key => {
+                const panelInfo = this.dom.panelMap[key];
+                if (!panelInfo.btn) return;
+                panelInfo.btn.addEventListener('click', (e) => { 
                     e.stopPropagation();
                     if (key === 'allianceMgt') this.renderAlliancePanel();
                     if (key === 'buildMenu') this.renderBuildMenu();
                     if (key === 'playerMgt') this.renderPlayerPanel();
                     if (key === 'overwatch') this.buildOverwatchPanel();
-                    togglePanel(key); 
+                    this.togglePanel(key); 
                 });
             });
 
@@ -1448,6 +1431,7 @@ canvas#map.build-cursor {
                 }
             });
         },
+
         setBuildModeActive() {
             this.state.isBuildMode = !this.state.isBuildMode;
             const isActive = this.state.isBuildMode;
@@ -1960,6 +1944,32 @@ canvas#map.build-cursor {
             this.dom.editPlayerModal.style.display = 'none';
         },
 
+        // Add this as a new method to the main KingshotPlanner object
+        togglePanel(panelName, forceClose = false) {
+            const panelInfo = this.dom.panelMap[panelName];
+            if (!panelInfo) return;
+
+            const isCurrentlyOpen = panelInfo.panel.classList.contains('open');
+            const shouldOpen = !isCurrentlyOpen && !forceClose;
+
+            // Close any currently open panel
+            if (this.state.openPanel && this.dom.panelMap[this.state.openPanel]) {
+                const currentPanel = this.dom.panelMap[this.state.openPanel];
+                currentPanel.panel.classList.remove('open');
+                if (currentPanel.btn) currentPanel.btn.classList.remove('active');
+            }
+
+            // Open the new panel if required
+            if (shouldOpen) {
+                panelInfo.panel.classList.add('open');
+                if (panelInfo.btn) panelInfo.btn.classList.add('active');
+                this.state.openPanel = panelName;
+            } else {
+                // If we're closing the current panel or not opening a new one
+                this.state.openPanel = null;
+            }
+        },
+
         // --- OVERWATCH SYSTEM ---
         buildOverwatchPanel() {
             this.dom.overwatchList.innerHTML = '';
@@ -2401,10 +2411,10 @@ canvas#map.build-cursor {
 
         deleteBuildModeBuilding(buildingId) {
             this.state.buildModeBuildings = this.state.buildModeBuildings.filter(b => b.id !== buildingId);
-            // NEW: Update the combined building list after deleting a building
             this.updateVisibleBuildingsList();
             this.recalculateAllClaimedTerritory();
             this.savePlanToLocalStorage();
+            this.renderBuildMenu(); // UX FIX: Re-render the build menu to update button states (e.g., for limited buildings).
         },
 
         renderZoomPresets() {
@@ -2921,6 +2931,10 @@ canvas#map.build-cursor {
                 this.state.isPlacingPlayer = false;
                 this.state.playerToPlace = null;
                 this.dom.canvas.classList.remove('build-cursor');
+                
+                // BUG FIX: Re-open the player panel after placement is complete
+                this.togglePanel('playerMgt');
+                
                 return; // Important to stop further click processing
             }
 
@@ -2980,7 +2994,7 @@ canvas#map.build-cursor {
                 if (this.dom.inpY && this.state.selection) this.dom.inpY.value = this.state.selection.y;
             }
         },
-
+        
         handleRightClick(e) {
             e.preventDefault();
 
@@ -3026,8 +3040,9 @@ canvas#map.build-cursor {
                     this.preProcessBuildings();
                     this.preProcessSpecialAreas();
                     this.saveDevMapToLocalStorage();
+                    return; // BUG FIX: The return is now INSIDE this block.
                 }
-                return;
+                // BUG FIX: MOVED a return from here to the block above.
             }
             
             // Normal Build Mode Right-Click

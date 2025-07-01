@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.1.2.0] - Patch
+
+### Changed
+- **Improved Player Panel Behavior:** The "Player Management" panel is now persistent and will remain open when clicking on the map, matching the behavior of the Alliance Management panel.
+
+### Fixed
+- **Fixed Building Deletion:** Corrected a critical bug that prevented right-clicking to delete alliance buildings (like towers and HQs) while in Build Mode.
+- **Fixed UI Update:** The Build Menu now correctly updates its buttons (e.g., for limited-quantity buildings) immediately after a building is deleted.
+
 ## [9.1.1.0] - Patch
 
 ### Removed
