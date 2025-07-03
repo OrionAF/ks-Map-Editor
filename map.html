@@ -137,6 +137,31 @@ canvas#map.build-cursor {
     background-color: var(--build-mode-bg);
 }
 #bottomToolbar #zoomLevel { font-size: 14px; min-width: 90px; text-align: center; user-select: none; }
+
+/* --- NEW ZOOM TOOLBAR (Mobile Only) --- */
+#zoomToolbar {
+	position: fixed;
+	bottom: var(--toolbar-height); /* Sits directly on top of the main toolbar */
+	left: 0;
+	width: 100%;
+	height: var(--toolbar-height);
+	background: var(--toolbar-bg);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	border-bottom: 1px solid var(--border-color); /* Visual separator */
+	display: none; /* Hidden by default on desktop */
+	justify-content: space-between;
+	align-items: center;
+	padding: 0 10px;
+	box-sizing: border-box;
+	z-index: 999; /* Just below the main toolbar */
+}
+
+/* Ensure the center group fills the space to push the presets button right */
+#zoomToolbar .toolbar-group.center {
+    flex-grow: 1;
+}
+
 #zoomSlider { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; background: rgba(255, 255, 255, 0.2); border-radius: 5px; outline: none; margin: 0 10px; }
 #zoomSlider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; background: #f1f1f1; border-radius: 50%; cursor: pointer; }
 #zoomSlider::-moz-range-thumb { width: 18px; height: 18px; background: #f1f1f1; border-radius: 50%; cursor: pointer; border: none; }
@@ -483,6 +508,27 @@ canvas#map.build-cursor {
 	#zoomLevel { display: none; }
 	#statsPanel, #centerTile, #versionDisplay { display: none; }
 }
+
+/* --- NEW MOBILE-ONLY TOOLBAR RULES --- */
+@media (max-width: 768px) {
+    /* Show the new zoom toolbar */
+    #zoomToolbar {
+        display: flex;
+    }
+
+    /* Adjust the bottom position of elements that were relative to the old single toolbar */
+    #versionDisplay, #centerTile {
+        bottom: calc(var(--toolbar-height) * 2 + 5px);
+    }
+
+    .toolbar-panel {
+        bottom: calc(var(--toolbar-height) * 2 + 10px);
+    }
+
+    .sidebar-panel {
+        padding-bottom: calc(var(--toolbar-height) * 2 + 15px);
+    }
+}
 </style>
 </head>
 <body>
@@ -511,7 +557,20 @@ canvas#map.build-cursor {
     <!-- MAIN CANVAS -->
     <canvas id="map"></canvas>
 
-    <!-- NEW BOTTOM TOOLBAR & PANELS -->
+    <!-- NEW ZOOM TOOLBAR (Mobile Only) -->
+    <div id="zoomToolbar">
+        <div class="toolbar-group center">
+        <button id="zoomDecBtn" title="Zoom Out">-</button>
+        <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
+        <button id="zoomIncBtn" title="Zoom In">+</button>
+        <div id="zoomLevel">Zoom: 100%</div>
+        </div>
+        <div class="toolbar-group right">
+            <button id="zoomPresetsToggleBtn" title="Zoom Presets">🎯</button>
+        </div>
+    </div>
+
+    <!-- MODIFIED BOTTOM TOOLBAR (Main Actions) -->
     <div id="bottomToolbar">
         <div class="toolbar-group left">
             <button id="allianceMgtToggleBtn" title="Alliance Management">🏰</button>
@@ -520,17 +579,12 @@ canvas#map.build-cursor {
             <button id="pinnedBookmarksToggleBtn" title="Pinned Landmarks">📌</button>
             <button id="navPanelToggleBtn" title="Navigation">🧭</button>
         </div>
-    
-        <div class="toolbar-group center">
-            <button id="zoomDecBtn" title="Zoom Out">-</button>
-            <input id="zoomSlider" type="range" min="1" max="100" step="1" value="100">
-            <button id="zoomIncBtn" title="Zoom In">+</button>
-            <div id="zoomLevel">Zoom: 100%</div>
-        </div>
-    
+
+        <!-- The center group has been moved to the zoom toolbar -->
+
         <div class="toolbar-group right">
-            <button id="overwatchToggleBtn" title="Overwatch">👁️</button> 
-            <button id="zoomPresetsToggleBtn" title="Zoom Presets">🎯</button>
+            <button id="overwatchToggleBtn" title="Overwatch">👁️</button>
+            <button id="marchCalcToggleBtn" title="March Calculator">👢</button>
             <button id="minimapToggleBtn" title="Toggle Minimap">🗺️</button>
             <button id="settingsToggleBtn" title="Settings">⚙️</button>
         </div>
@@ -729,6 +783,7 @@ canvas#map.build-cursor {
             </ul>
         </div>
     </div>
+
     <!-- Add this new modal to your HTML file -->
     <div id="editPlayerModal" class="modal">
         <div class="modal-header">
@@ -766,6 +821,30 @@ canvas#map.build-cursor {
         </div>
         <div class="modal-footer">
             <button id="saveAllianceChangesBtn" class="primary">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- March Calculator Modal -->
+    <div id="marchBonusModal" class="modal">
+        <div class="modal-header">
+            <h3>March Speed Bonuses</h3><button class="close-btn">×</button>
+        </div>
+        <div class="modal-body">
+            <p>Enter your total march speed bonuses as percentages (e.g., enter '25' for 25%).</p>
+            <div class="form-grid">
+                <label for="marchBonusPvp">March Speed (PvP):</label>
+                <input type="number" id="marchBonusPvp" min="0" value="6">
+                <label for="marchBonusPve">Hunting March Speed (PvE):</label>
+                <input type="number" id="marchBonusPve" min="0" value="20">
+            </div>
+            <p style="font-size: 12px; opacity: 0.8; margin-top: 15px;">
+                <strong>Note:</strong> Your total PvE speed will be the sum of both bonuses.
+                Right-click on a building or player to start a march calculation. Right-click again to cancel.
+            </p>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: space-between;">
+            <button id="clearAllMarchesBtn" class="danger">Clear All Marches</button>
+            <button id="saveMarchBonusesBtn" class="primary">Save & Close</button>
         </div>
     </div>
 
@@ -1841,16 +1920,42 @@ canvas#map.build-cursor {
                 owningAlliance: this.getOwningAllianceForPlayer(player)
             }));
 
-            // Step 2: Sort the decorated players
+            // Step 2: Sort the decorated players using a natural sort algorithm
             decoratedPlayers.sort((a, b) => {
                 const tagA = a.owningAlliance ? a.owningAlliance.tag : 'ZZZ'; // Unaffiliated players last
                 const tagB = b.owningAlliance ? b.owningAlliance.tag : 'ZZZ';
 
+                // First, sort by alliance tag
                 if (tagA < tagB) return -1;
                 if (tagA > tagB) return 1;
 
-                // If tags are the same, sort by player name
-                return a.name.localeCompare(b.name);
+                // If tags are the same, use natural sort for the player name
+                // This regex splits the string into alternating parts of non-digits and digits
+                const re = /(\d+)/g;
+                const nameA = a.name.split(re);
+                const nameB = b.name.split(re);
+
+                for (let i = 0; i < Math.min(nameA.length, nameB.length); i++) {
+                    const partA = nameA[i];
+                    const partB = nameB[i];
+
+                    // If the parts are numbers, compare them as such
+                    if (!isNaN(partA) && !isNaN(partB)) {
+                        const numA = parseInt(partA, 10);
+                        const numB = parseInt(partB, 10);
+                        if (numA !== numB) {
+                            return numA - numB;
+                        }
+                    } else {
+                        // Otherwise, compare them as strings
+                        if (partA !== partB) {
+                            return partA.localeCompare(partB);
+                        }
+                    }
+                }
+
+                // If one name is a prefix of the other, the shorter one comes first
+                return nameA.length - nameB.length;
             });
 
             // Step 3: Render the sorted list
@@ -1876,6 +1981,7 @@ canvas#map.build-cursor {
                 this.dom.playerList.appendChild(item);
             });
         },
+
         deletePlayer(id) {
             const player = this.state.placedPlayers.find(p => p.id === id);
             if (player && confirm(`Are you sure you want to delete player "${player.name}"?`)) {
