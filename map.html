@@ -1141,6 +1141,7 @@ canvas#map.build-cursor {
             startCamX: 0,
             startCamY: 0,
             statsUpdateTime: 0,
+            longPressTimeout: null, 
             currentTileDetailThreshold: 50,
             isMinimapDragging: false,
             minimapClickStartPos: { x: 0, y: 0 },
@@ -3264,25 +3265,58 @@ canvas#map.build-cursor {
 
         handleTouchStart(e) {
             e.preventDefault();
+            // Clear any previous long press timer
+            clearTimeout(this.state.longPressTimeout);
+
             if (e.touches.length === 1) {
-                this.state.touchMode = 'pan'; const t = e.touches[0]; this.state.lastX = t.clientX; this.state.lastY = t.clientY;
-                this.state.clickStartX = t.clientX; this.state.clickStartY = t.clientY; this.state.touchStartTime = performance.now();
+                this.state.touchMode = 'pan'; 
+                const t = e.touches[0]; 
+                this.state.lastX = t.clientX; 
+                this.state.lastY = t.clientY;
+                this.state.clickStartX = t.clientX; 
+                this.state.clickStartY = t.clientY; 
+                this.state.touchStartTime = performance.now();
+
+                // Set a timer for the long press action
+                this.state.longPressTimeout = setTimeout(() => {
+                    // When the timer fires, we are no longer in a 'pan' or 'click' mode.
+                    this.state.touchMode = 'longpress'; 
+                    this.handleLongPress(t.clientX, t.clientY);
+                }, 500); // 500ms for a long press
+
             } else if (e.touches.length === 2) {
-                this.state.touchMode = 'pinch'; const [a, b] = e.touches;
+                // If a second finger is added, it's a pinch, not a long press.
+                clearTimeout(this.state.longPressTimeout);
+                this.state.touchMode = 'pinch'; 
+                const [a, b] = e.touches;
                 this.state.startDist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
-                this.state.startScale = this.state.cam.scale; this.state.pinchCenter = { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
-                this.state.startCamX = this.state.cam.x; this.state.startCamY = this.state.cam.y;
+                this.state.startScale = this.state.cam.scale; 
+                this.state.pinchCenter = { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
+                this.state.startCamX = this.state.cam.x; 
+                this.state.startCamY = this.state.cam.y;
             }
         },
 
         handleTouchMove(e) {
             e.preventDefault(); if (this.state.animationId) { cancelAnimationFrame(this.state.animationId); this.state.animationId = null; }
+
+            // If the finger moves significantly, cancel the long press timer.
+            if (this.state.touchMode === 'pan' && e.touches.length === 1) {
+                const t = e.touches[0];
+                const dist = Math.hypot(t.clientX - this.state.clickStartX, t.clientY - this.state.clickStartY);
+                if (dist > 10) { // Moved more than 10px, it's a drag, not a hold.
+                    clearTimeout(this.state.longPressTimeout);
+                }
+            }
+
             if (this.state.touchMode === 'pan' && e.touches.length === 1) {
                 const t = e.touches[0]; 
                 this.state.cam.x += t.clientX - this.state.lastX; 
                 this.state.cam.y += t.clientY - this.state.lastY;
                 this.state.lastX = t.clientX; this.state.lastY = t.clientY; this.clampCamera();
             } else if (this.state.touchMode === 'pinch' && e.touches.length === 2) {
+                // A pinch also cancels a long press.
+                clearTimeout(this.state.longPressTimeout);
                 const [a, b] = e.touches; const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
                 if (this.state.startDist === 0) return; let newScale = this.state.startScale * (dist / this.state.startDist);
                 this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, newScale));
@@ -3296,6 +3330,15 @@ canvas#map.build-cursor {
         },
 
         handleTouchEnd(e) {
+            // Always clear the long press timer when a touch ends.
+            clearTimeout(this.state.longPressTimeout);
+
+            // If a long press just happened, don't also process a tap.
+            if (this.state.touchMode === 'longpress') {
+                this.state.touchMode = null;
+                return;
+            }
+
             if (this.state.touchMode === 'pan' && e.changedTouches.length === 1) {
                 const t = e.changedTouches[0]; const dist = Math.hypot(t.clientX - this.state.clickStartX, t.clientY - this.state.clickStartY);
                 const duration = performance.now() - this.state.touchStartTime;
@@ -3324,6 +3367,40 @@ canvas#map.build-cursor {
                 }
             }
             if (e.touches.length < 2) this.state.touchMode = null;
+        },
+
+        handleLongPress(clientX, clientY) {
+            const [worldX, worldY] = this.screenToWorld(clientX, clientY);
+
+            // Logic for deleting players (works outside build mode)
+            if (!this.state.isBuildMode && !this.state.isDevMode) {
+                const playerToDelete = this.getPlayerAtCoords(worldX, worldY);
+                if (playerToDelete) {
+                    // Vibrate to give feedback that the long press was registered
+                    if ('vibrate' in navigator) navigator.vibrate(50); 
+                    if (confirm(`Delete player ${playerToDelete.name}?`)) {
+                        this.state.placedPlayers = this.state.placedPlayers.filter(p => p.id !== playerToDelete.id);
+                        this.savePlanToLocalStorage();
+                        this.renderPlayerPanel();
+                    }
+                    return; // Exit after handling
+                }
+            }
+
+            // Logic for deleting buildings (only in build mode)
+            if (this.state.isBuildMode) {
+                // Don't allow deletion if a building is currently selected for placement
+                if (this.state.selectedBuildingType) return; 
+
+                const building = this.getBuildingAtCoords(worldX, worldY);
+                if (building && building.allianceId) {
+                    // Vibrate to give feedback
+                    if ('vibrate' in navigator) navigator.vibrate(50);
+                    if(confirm(`Delete ${building.displayText}?`)) {
+                        this.deleteBuildModeBuilding(building.id);
+                    }
+                }
+            }
         },
 
         resize() {
