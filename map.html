@@ -960,8 +960,6 @@ canvas#map.build-cursor {
             <button id="confirmBuildBtn" class="primary">Place</button>
         </div>
 
-        <div id="devModePanel" class="sidebar-panel">
-
 <script>
     const KingshotPlanner = {
         // --- TWEAKABLE SETTINGS ---
@@ -1813,9 +1811,6 @@ canvas#map.build-cursor {
             tempCanvas.width = this.dom.canvas.width;
             tempCanvas.height = this.dom.canvas.height;
             const tempCtx = tempCanvas.getContext('2d');
-
-            // Temporarily set a flag to prevent drawing UI elements like selection
-            this.state.isExporting = true;
             
             // Re-run the main loop's drawing logic on the temporary canvas
             this.mainLoop(performance.now(), tempCtx);
@@ -3473,27 +3468,38 @@ canvas#map.build-cursor {
 
         handleTouchStart(e) {
             e.preventDefault();
-            // Clear any previous long press timer
             clearTimeout(this.state.longPressTimeout);
 
             if (e.touches.length === 1) {
+                const t = e.touches[0];
+                
+                if (this.state.isDrawMode) {
+                    this.state.touchMode = 'draw';
+                    const [worldX, worldY] = this.screenToWorld(t.clientX, t.clientY);
+                    this.state.currentDrawing = {
+                        tool: this.state.activeDrawTool,
+                        color: this.state.drawColor,
+                        width: this.state.drawWidth / this.state.cam.scale,
+                        start: { x: worldX, y: worldY },
+                        end: { x: worldX, y: worldY },
+                        points: [{ x: worldX, y: worldY }]
+                    };
+                    return;
+                }
+
                 this.state.touchMode = 'pan'; 
-                const t = e.touches[0]; 
                 this.state.lastX = t.clientX; 
                 this.state.lastY = t.clientY;
                 this.state.clickStartX = t.clientX; 
                 this.state.clickStartY = t.clientY; 
                 this.state.touchStartTime = performance.now();
 
-                // Set a timer for the long press action
                 this.state.longPressTimeout = setTimeout(() => {
-                    // When the timer fires, we are no longer in a 'pan' or 'click' mode.
                     this.state.touchMode = 'longpress'; 
                     this.handleLongPress(t.clientX, t.clientY);
-                }, 500); // 500ms for a long press
+                }, 500);
 
             } else if (e.touches.length === 2) {
-                // If a second finger is added, it's a pinch, not a long press.
                 clearTimeout(this.state.longPressTimeout);
                 this.state.touchMode = 'pinch'; 
                 const [a, b] = e.touches;
@@ -3506,55 +3512,86 @@ canvas#map.build-cursor {
         },
 
         handleTouchMove(e) {
-            e.preventDefault(); if (this.state.animationId) { cancelAnimationFrame(this.state.animationId); this.state.animationId = null; }
+            e.preventDefault(); 
+            if (this.state.animationId) { cancelAnimationFrame(this.state.animationId); this.state.animationId = null; }
+            
+            const t = e.touches[0];
+            if (!t) return;
 
-            // If the finger moves significantly, cancel the long press timer.
-            if (this.state.touchMode === 'pan' && e.touches.length === 1) {
-                const t = e.touches[0];
-                const dist = Math.hypot(t.clientX - this.state.clickStartX, t.clientY - this.state.clickStartY);
-                if (dist > 10) { // Moved more than 10px, it's a drag, not a hold.
-                    clearTimeout(this.state.longPressTimeout);
+            if (this.state.touchMode === 'draw' && this.state.currentDrawing) {
+                const [wx, wy] = this.screenToWorld(t.clientX, t.clientY);
+                this.state.currentDrawing.end = { x: wx, y: wy };
+                if (this.state.currentDrawing.tool === 'pen') {
+                    this.state.currentDrawing.points.push({ x: wx, y: wy });
+                } else if (this.state.currentDrawing.tool === 'eraser') {
+                    this.state.drawings = this.state.drawings.filter(drawing => {
+                        if (drawing.tool === 'pen') {
+                            return !drawing.points.some(p => Math.hypot(p.x - wx, p.y - wy) < drawing.width);
+                        } else {
+                            return Math.hypot(drawing.start.x - wx, drawing.start.y - wy) > drawing.width * 2;
+                        }
+                    });
                 }
+                return;
             }
 
             if (this.state.touchMode === 'pan' && e.touches.length === 1) {
-                const t = e.touches[0]; 
+                const dist = Math.hypot(t.clientX - this.state.clickStartX, t.clientY - this.state.clickStartY);
+                if (dist > 10) {
+                    clearTimeout(this.state.longPressTimeout);
+                }
                 this.state.cam.x += t.clientX - this.state.lastX; 
                 this.state.cam.y += t.clientY - this.state.lastY;
-                this.state.lastX = t.clientX; this.state.lastY = t.clientY; this.clampCamera();
+                this.state.lastX = t.clientX; 
+                this.state.lastY = t.clientY; 
+                this.clampCamera();
             } else if (this.state.touchMode === 'pinch' && e.touches.length === 2) {
-                // A pinch also cancels a long press.
                 clearTimeout(this.state.longPressTimeout);
-                const [a, b] = e.touches; const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
-                if (this.state.startDist === 0) return; let newScale = this.state.startScale * (dist / this.state.startDist);
+                const [a, b] = e.touches; 
+                const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+                if (this.state.startDist === 0) return; 
+                let newScale = this.state.startScale * (dist / this.state.startDist);
                 this.state.cam.scale = Math.max(this.state.minFitScale, Math.min(this.config.maxPct / 100 * this.config.baseScale, newScale));
                 if (isNaN(this.state.cam.scale)) this.state.cam.scale = this.state.startScale;
                 const safeStartScale = (this.state.startScale === 0 || isNaN(this.state.startScale)) ? this.state.minFitScale : this.state.startScale;
-                const wx = (this.state.pinchCenter.x - this.state.startCamX) / safeStartScale; const wy = (this.state.pinchCenter.y - this.state.startCamY) / safeStartScale;
-                if (isNaN(wx) || isNaN(wy)) { this.state.cam.x = this.state.startCamX; this.state.cam.y = this.state.startCamY; } 
-                else { this.state.cam.x = this.state.pinchCenter.x - wx * this.state.cam.scale; this.state.cam.y = this.state.pinchCenter.y - wy * this.state.cam.scale; }
+                const wx = (this.state.pinchCenter.x - this.state.startCamX) / safeStartScale; 
+                const wy = (this.state.pinchCenter.y - this.state.startCamY) / safeStartScale;
+                if (isNaN(wx) || isNaN(wy)) { 
+                    this.state.cam.x = this.state.startCamX; 
+                    this.state.cam.y = this.state.startCamY; 
+                } else { 
+                    this.state.cam.x = this.state.pinchCenter.x - wx * this.state.cam.scale; 
+                    this.state.cam.y = this.state.pinchCenter.y - wy * this.state.cam.scale; 
+                }
                 this.clampCamera();
             }
         },
 
         handleTouchEnd(e) {
-            // Always clear the long press timer when a touch ends.
             clearTimeout(this.state.longPressTimeout);
 
-            // If a long press just happened, don't also process a tap.
+            if (this.state.touchMode === 'draw' && this.state.currentDrawing) {
+                if (this.state.currentDrawing.tool !== 'eraser') {
+                    this.state.drawings.push(this.state.currentDrawing);
+                    this.savePlanToLocalStorage();
+                }
+                this.state.currentDrawing = null;
+                this.state.touchMode = null;
+                return;
+            }
+
             if (this.state.touchMode === 'longpress') {
                 this.state.touchMode = null;
                 return;
             }
 
             if (this.state.touchMode === 'pan' && e.changedTouches.length === 1) {
-                const t = e.changedTouches[0]; const dist = Math.hypot(t.clientX - this.state.clickStartX, t.clientY - this.state.clickStartY);
+                const t = e.changedTouches[0]; 
+                const dist = Math.hypot(t.clientX - this.state.clickStartX, t.clientY - this.state.clickStartY);
                 const duration = performance.now() - this.state.touchStartTime;
                 if (duration < 200 && dist < 10) {
-                    // This is a tap. Check if we are on a touch device in build mode.
                     const isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
                     if (isTouchDevice && this.state.isBuildMode && this.state.selectedBuildingType) {
-                        // On mobile, taps do not place buildings. The dedicated button does. So we do nothing.
                         return;
                     }
 
@@ -4295,7 +4332,7 @@ canvas#map.build-cursor {
                 requestAnimationFrame(this.mainLoop.bind(this));
             }
         },
-            
+
     };
     KingshotPlanner.init();
   </script>
