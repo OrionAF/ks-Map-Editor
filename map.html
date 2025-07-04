@@ -438,6 +438,44 @@ canvas#map.build-cursor {
     transform: translateX(-105%);
 }
 
+/* --- DRAWING PANEL --- */
+#bottomToolbar button#drawToggleBtn.active {
+    background-color: #ffdd00;
+    color: #000;
+}
+#drawPanel {
+    left: 275px; /* Position it next to the nav panel */
+    width: 260px;
+}
+.draw-tools-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.draw-tools-grid button {
+    width: 100%;
+}
+.draw-tools-grid button.active {
+    background-color: var(--highlight-color);
+    font-weight: bold;
+}
+.draw-style-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    align-items: center;
+}
+.draw-style-grid input[type="color"] {
+    padding: 0;
+    height: 30px;
+    width: 50px;
+    border: none;
+    background: none;
+}
+.draw-style-grid input[type="range"] {
+    width: 100%;
+}
+
 /* --- PLAYER MANAGEMENT PANEL --- */
 #playerPanel {
     left: 0;
@@ -633,6 +671,7 @@ canvas#map.build-cursor {
             <button id="allianceMgtToggleBtn" title="Alliance Management">🏰</button>
             <button id="buildMenuToggleBtn" title="Build Menu">🛠️</button>
             <button id="placePlayerToggleBtn" title="Player Management">👤</button>
+            <button id="drawToggleBtn" title="Drawing Tools">✏️</button> <!-- ADD THIS BUTTON -->
             <button id="pinnedBookmarksToggleBtn" title="Pinned Landmarks">📌</button>
             <button id="navPanelToggleBtn" title="Navigation">🧭</button>
         </div>
@@ -736,6 +775,7 @@ canvas#map.build-cursor {
             <div class="plan-buttons">
                 <button id="importPlanBtn">Import</button>
                 <button id="exportPlanBtn">Export</button>
+                <button id="sharePlanBtn">Share View</button>
                 <button id="clearPlanBtn" class="danger">Clear Plan</button> 
                 <input type="file" id="planFileInput" accept=".json" style="display: none;">
             </div>
@@ -745,7 +785,6 @@ canvas#map.build-cursor {
             <button id="infoBtn">Controls</button>
             <button id="patchNotesBtn">Patch Notes</button>
         </div>
-    </div>
 
     <!-- Zoom Presets Panel -->
     <div id="zoomPresetsPanel" class="toolbar-panel">
@@ -756,6 +795,29 @@ canvas#map.build-cursor {
     <div id="overwatchPanel" class="toolbar-panel">
         <h4>Overwatch</h4>
         <div id="overwatchList" class="overwatch-list"></div>
+    </div>
+
+    <!-- *** NEW DRAWING PANEL *** -->
+    <div id="drawPanel" class="toolbar-panel">
+        <h4>Drawing Tools</h4>
+        <div class="panel-section draw-tools-grid">
+            <button id="drawPenBtn" data-tool="pen" class="active">Pen</button>
+            <button id="drawLineBtn" data-tool="line">Line</button>
+            <button id="drawCircleBtn" data-tool="circle">Circle</button>
+            <button id="drawEraserBtn" data-tool="eraser">Eraser</button>
+        </div>
+        <div class="panel-section">
+            <h4>Stroke Style</h4>
+            <div class="draw-style-grid">
+                <label for="drawColorInput">Color:</label>
+                <input type="color" id="drawColorInput" value="#ffdd00">
+                <label for="drawWidthInput">Width:</label>
+                <input type="range" id="drawWidthInput" min="1" max="20" value="5" step="1">
+            </div>
+        </div>
+        <div class="panel-section">
+            <button id="clearDrawingsBtn" class="danger" style="width: 100%;">Clear All Drawings</button>
+        </div>
     </div>
 
     <!-- *** BUILD PANEL IS NOW THE ALLIANCE MANAGEMENT SIDEBAR *** -->
@@ -1167,6 +1229,12 @@ canvas#map.build-cursor {
             overwatchSettings: {}, 
             isDevMode: false,
             activeDevTool: null,
+            isDrawMode: false,
+            activeDrawTool: 'pen',
+            drawColor: '#ffdd00',
+            drawWidth: 5,
+            drawings: [],
+            currentDrawing: null,
         },
         dom: {}, // Will be populated in init()
 
@@ -1281,6 +1349,16 @@ canvas#map.build-cursor {
             mobileBuildControls:              document.getElementById('mobileBuildControls'),
             confirmBuildBtn:                  document.getElementById('confirmBuildBtn'),
             cancelBuildBtn:                   document.getElementById('cancelBuildBtn'),
+            drawToggleBtn:                    document.getElementById('drawToggleBtn'),
+            drawPanel:                        document.getElementById('drawPanel'),
+            drawPenBtn:                       document.getElementById('drawPenBtn'),
+            drawLineBtn:                      document.getElementById('drawLineBtn'),
+            drawCircleBtn:                    document.getElementById('drawCircleBtn'),
+            drawEraserBtn:                    document.getElementById('drawEraserBtn'),
+            drawColorInput:                   document.getElementById('drawColorInput'),
+            drawWidthInput:                   document.getElementById('drawWidthInput'),
+            clearDrawingsBtn:                 document.getElementById('clearDrawingsBtn'),
+            sharePlanBtn:                     document.getElementById('sharePlanBtn'),
             };
 
             this.dom.ctx = this.dom.canvas.getContext('2d');
@@ -1337,11 +1415,11 @@ canvas#map.build-cursor {
 
         initializeUI() {
             // --- 1. DEFINE ALL UI PANELS ---
-            // Moved panelMap to this.dom for global access
             this.dom.panelMap = {
                 'allianceMgt': { btn: this.dom.allianceMgtToggleBtn, panel: this.dom.buildPanel, persistent: true },
                 'buildMenu': { btn: this.dom.buildMenuToggleBtn, panel: this.dom.buildMenuPanel, persistent: true },
                 'playerMgt': { btn: this.dom.placePlayerToggleBtn, panel: this.dom.playerPanel, persistent: true },
+                'draw': { btn: this.dom.drawToggleBtn, panel: this.dom.drawPanel, persistent: true }, // Add draw panel
                 'devMode': { btn: null, panel: this.dom.devModePanel, persistent: true },
                 'pinnedBookmarks': { btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel },
                 'nav': { btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel, persistent: true },
@@ -1371,6 +1449,7 @@ canvas#map.build-cursor {
                     if (key === 'buildMenu') this.renderBuildMenu();
                     if (key === 'playerMgt') this.renderPlayerPanel();
                     if (key === 'overwatch') this.buildOverwatchPanel();
+                    if (key === 'draw') this.toggleDrawMode();
                     this.togglePanel(key); 
                 });
             });
@@ -1418,14 +1497,26 @@ canvas#map.build-cursor {
             if (this.dom.saveAllianceChangesBtn) this.dom.saveAllianceChangesBtn.addEventListener('click', this.saveAllianceChanges.bind(this));
             if (this.dom.savePlayerChangesBtn) this.dom.savePlayerChangesBtn.addEventListener('click', this.savePlayerChanges.bind(this));
             if (this.dom.startPlayerPlacementBtn) this.dom.startPlayerPlacementBtn.addEventListener('click', this.startPlayerPlacement.bind(this));
-
-            // --- NEW: Mobile Build Control Listeners ---
             if (this.dom.confirmBuildBtn) this.dom.confirmBuildBtn.addEventListener('click', this.confirmMobilePlacement.bind(this));
             if (this.dom.cancelBuildBtn) this.dom.cancelBuildBtn.addEventListener('click', () => {
                 if (this.state.selectedBuildingType) {
                     this.selectBuildingToPlace(this.state.selectedBuildingType); // This deselects the current building
                 }
             });
+
+            // --- NEW: Drawing Panel Listeners ---
+            if (this.dom.drawPanel) {
+                this.dom.drawPanel.addEventListener('click', e => {
+                    const button = e.target.closest('button');
+                    if (button && button.dataset.tool) {
+                        this.selectDrawTool(button.dataset.tool);
+                    }
+                });
+                this.dom.drawColorInput.addEventListener('input', e => this.state.drawColor = e.target.value);
+                this.dom.drawWidthInput.addEventListener('input', e => this.state.drawWidth = parseInt(e.target.value, 10));
+                this.dom.clearDrawingsBtn.addEventListener('click', this.clearDrawings.bind(this));
+            }
+            if (this.dom.sharePlanBtn) this.dom.sharePlanBtn.addEventListener('click', this.exportSnapshot.bind(this));
 
 
             // D. Dev Mode Activation and Listeners
@@ -1522,7 +1613,7 @@ canvas#map.build-cursor {
 
             window.addEventListener('resize', this.resize.bind(this));
             window.addEventListener('mousemove', this.handleMouseMove.bind(this));
-            window.addEventListener('mouseup', () => { this.state.dragging = false; });
+            window.addEventListener('mouseup', this.handleMouseUp.bind(this));
             this.dom.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
             this.dom.canvas.addEventListener('click', this.handleCanvasClick.bind(this));
             this.dom.canvas.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
@@ -1550,7 +1641,9 @@ canvas#map.build-cursor {
                     case 'ArrowLeft':   this.state.cam.x += this.config.tileW * 5; this.clampCamera(); break;
                     case 'ArrowRight':  this.state.cam.x -= this.config.tileW * 5; this.clampCamera(); break;
                     case 'Escape':
-                        if (this.state.isPlacingPlayer) {
+                        if (this.state.isDrawMode) {
+                            this.state.currentDrawing = null; // Cancel in-progress drawing
+                        } else if (this.state.isPlacingPlayer) {
                             this.state.isPlacingPlayer = false;
                             this.state.playerToPlace = null;
                             this.dom.canvas.classList.remove('build-cursor');
@@ -1601,7 +1694,6 @@ canvas#map.build-cursor {
             }
         },
 
-        // Add this function
         getControlledResources(allianceId) {
             const counts = { food: 0, wood: 0, stone: 0, iron: 0 };
             const claimedSet = this.state.claimedTerritory.get(allianceId);
@@ -1631,7 +1723,6 @@ canvas#map.build-cursor {
             return counts;
         },
 
-        // Add this function
         getControlledOutposts(allianceId) {
             const controlled = [];
             const claimedSet = this.state.claimedTerritory.get(allianceId);
@@ -1680,7 +1771,6 @@ canvas#map.build-cursor {
             return controlled;
         },
 
-        // Add this function to create list items dynamically
         createBookmarkHTML(building) {
             return `
                 <div class="hq-list-item">
@@ -1691,6 +1781,86 @@ canvas#map.build-cursor {
                     </div>
                 </div>
             `;
+        },
+
+        toggleDrawMode() {
+            this.state.isDrawMode = !this.state.isDrawMode;
+            this.dom.drawToggleBtn.classList.toggle('active', this.state.isDrawMode);
+            this.dom.canvas.classList.toggle('build-cursor', this.state.isDrawMode);
+
+            // When entering draw mode, if build mode is active, disable it.
+            if (this.state.isDrawMode && this.state.isBuildMode) {
+                this.setBuildModeActive(); // This toggles it off
+            }
+        },
+
+        selectDrawTool(tool) {
+            this.state.activeDrawTool = tool;
+            this.dom.drawPanel.querySelectorAll('[data-tool]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tool === tool);
+            });
+        },
+
+        clearDrawings() {
+            if (confirm('Are you sure you want to clear all drawings? This cannot be undone.')) {
+                this.state.drawings = [];
+                this.savePlanToLocalStorage(); // Drawings are part of the plan
+            }
+        },
+
+        exportSnapshot() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = this.dom.canvas.width;
+            tempCanvas.height = this.dom.canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Temporarily set a flag to prevent drawing UI elements like selection
+            this.state.isExporting = true;
+            
+            // Re-run the main loop's drawing logic on the temporary canvas
+            this.mainLoop(performance.now(), tempCtx);
+
+            // Reset the flag
+            this.state.isExporting = false;
+
+            // Trigger download
+            const dataUrl = tempCanvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = `kingshot-view-${new Date().toISOString().slice(0,10)}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        },
+
+        drawAnnotation(drawing, ctx) {
+            if (!drawing) return;
+            ctx.strokeStyle = drawing.color;
+            ctx.lineWidth = drawing.width;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.globalAlpha = 0.85;
+            
+            ctx.beginPath();
+            switch(drawing.tool) {
+                case 'pen':
+                    if (drawing.points.length < 2) return;
+                    ctx.moveTo(drawing.points[0].x, drawing.points[0].y);
+                    for (let i = 1; i < drawing.points.length; i++) {
+                        ctx.lineTo(drawing.points[i].x, drawing.points[i].y);
+                    }
+                    break;
+                case 'line':
+                    ctx.moveTo(drawing.start.x, drawing.start.y);
+                    ctx.lineTo(drawing.end.x, drawing.end.y);
+                    break;
+                case 'circle':
+                    const radius = Math.hypot(drawing.end.x - drawing.start.x, drawing.end.y - drawing.start.y);
+                    ctx.arc(drawing.start.x, drawing.start.y, radius, 0, Math.PI * 2);
+                    break;
+            }
+            ctx.stroke();
+            ctx.globalAlpha = 1.0; // Reset alpha
         },
 
         createAlliance() {
@@ -1884,13 +2054,11 @@ canvas#map.build-cursor {
             this.hideAllModals();
         },
 
-        // New function to show the modal
         showPlacePlayerModal() {
             this.dom.modalOverlay.style.display = 'block';
             this.dom.placePlayerModal.style.display = 'block';
         },
 
-        // New function to start the placement process
         startPlayerPlacement() {
             const name = this.dom.playerNameInput.value.trim();
             const power = this.dom.playerPowerInput.value.trim();
@@ -1917,7 +2085,6 @@ canvas#map.build-cursor {
             this.state.openPanel = null;
         },
 
-        // New helper function to check for player collisions
         getPlayerAtCoords(x, y) {
             for (const p of this.state.placedPlayers) {
                 if (x >= p.x && x < p.x + p.w && y >= p.y && y < p.y + p.h) {
@@ -1927,7 +2094,6 @@ canvas#map.build-cursor {
             return null;
         },
 
-        // New function to perform validity checks and add the player to the state
         placePlayer(x, y) {
             if (!this.state.playerToPlace) return;
 
@@ -2103,7 +2269,6 @@ canvas#map.build-cursor {
             this.dom.editPlayerModal.style.display = 'none';
         },
 
-        // Add this as a new method to the main KingshotPlanner object
         togglePanel(panelName, forceClose = false) {
             const panelInfo = this.dom.panelMap[panelName];
             if (!panelInfo) return;
@@ -2129,7 +2294,6 @@ canvas#map.build-cursor {
             }
         },
 
-        // --- OVERWATCH SYSTEM ---
         buildOverwatchPanel() {
             this.dom.overwatchList.innerHTML = '';
             const categories = {
@@ -2300,13 +2464,14 @@ canvas#map.build-cursor {
                 buildingList.appendChild(btn);
             }
         },
-
+        
         savePlanToLocalStorage() {
             try {
                 const planData = {
                     alliances: this.state.alliances,
                     buildings: this.state.buildModeBuildings,
-                    placedPlayers: this.state.placedPlayers
+                    placedPlayers: this.state.placedPlayers,
+                    drawings: this.state.drawings, // Add drawings
                 };
                 localStorage.setItem('kingshot_build_plan', JSON.stringify(planData));
             } catch(e) {
@@ -2323,6 +2488,7 @@ canvas#map.build-cursor {
                         this.state.alliances = data.alliances;
                         this.state.buildModeBuildings = data.buildings;
                         this.state.placedPlayers = data.placedPlayers || [];
+                        this.state.drawings = data.drawings || []; // Load drawings
                         this.updateVisibleBuildingsList();
                         this.recalculateAllClaimedTerritory();
                         console.log("Backup plan loaded from browser storage.");
@@ -2335,10 +2501,11 @@ canvas#map.build-cursor {
         },
 
         clearPlan() {
-            if (confirm("Are you sure you want to clear the entire plan? This will delete all alliances, buildings, and placed players and cannot be undone.")) {
+            if (confirm("Are you sure you want to clear the entire plan? This will delete all alliances, buildings, placed players, and drawings and cannot be undone.")) {
                 this.state.alliances = [];
                 this.state.buildModeBuildings = [];
                 this.state.placedPlayers = [];
+                this.state.drawings = []; // Clear drawings
                 this.state.activeAllianceId = null;
                 
                 if(this.state.isBuildMode) {
@@ -2350,7 +2517,7 @@ canvas#map.build-cursor {
                 localStorage.removeItem('kingshot_build_plan');
                 
                 if(this.dom.buildPanel.classList.contains('open')) {
-                this.renderAlliancePanel();
+                    this.renderAlliancePanel();
                 }
                 if(this.dom.playerPanel.classList.contains('open')) {
                     this.renderPlayerPanel();
@@ -2812,7 +2979,6 @@ canvas#map.build-cursor {
             this.updateVisibleBuildingsList();
         },
 
-        // Add this new function to the KingshotPlanner object
         preProcessSpecialAreas() {
             this.state.specialTileMap.clear();
             if (!this.state.baseMap.defaultBuildings) return;
@@ -3061,15 +3227,28 @@ canvas#map.build-cursor {
         },
 
         handleMouseDown(e) {
-            if (e.button === 0) {
-                this.state.clickStartX = e.clientX;
-                this.state.clickStartY = e.clientY;
-                this.state.lastX = e.clientX;
-                this.state.lastY = e.clientY;
+            if (e.button !== 0) return; // Only handle left-clicks
 
-                if (!(this.state.isBuildMode && this.state.selectedBuildingType)) {
-                    this.state.dragging = true;
-                }
+            if (this.state.isDrawMode) {
+                const [worldX, worldY] = this.screenToWorld(e.offsetX, e.offsetY);
+                this.state.currentDrawing = {
+                    tool: this.state.activeDrawTool,
+                    color: this.state.drawColor,
+                    width: this.state.drawWidth / this.state.cam.scale, // Scale width for consistent look
+                    start: { x: worldX, y: worldY },
+                    end: { x: worldX, y: worldY },
+                    points: [{ x: worldX, y: worldY }]
+                };
+                return;
+            }
+
+            this.state.clickStartX = e.clientX;
+            this.state.clickStartY = e.clientY;
+            this.state.lastX = e.clientX;
+            this.state.lastY = e.clientY;
+
+            if (!(this.state.isBuildMode && this.state.selectedBuildingType)) {
+                this.state.dragging = true;
             }
         },
 
@@ -3077,12 +3256,40 @@ canvas#map.build-cursor {
             const [wx, wy] = this.screenToWorld(e.offsetX, e.offsetY);
             this.state.mouseWorldPos = {x: wx, y: wy};
 
+            if (this.state.isDrawMode && this.state.currentDrawing) {
+                this.state.currentDrawing.end = { x: wx, y: wy };
+                if (this.state.currentDrawing.tool === 'pen') {
+                    this.state.currentDrawing.points.push({ x: wx, y: wy });
+                } else if (this.state.currentDrawing.tool === 'eraser') {
+                    // Erase any drawing that intersects with the current mouse position
+                    this.state.drawings = this.state.drawings.filter(drawing => {
+                        if (drawing.tool === 'pen') {
+                            return !drawing.points.some(p => Math.hypot(p.x - wx, p.y - wy) < drawing.width);
+                        } else { // Simple check for lines and circles
+                            return Math.hypot(drawing.start.x - wx, drawing.start.y - wy) > drawing.width * 2;
+                        }
+                    });
+                }
+                return;
+            }
+
             if (!this.state.dragging) return; 
             this.state.cam.x += e.clientX - this.state.lastX; 
             this.state.cam.y += e.clientY - this.state.lastY; 
             this.state.lastX = e.clientX; 
             this.state.lastY = e.clientY; 
             this.clampCamera(); 
+        },
+
+        handleMouseUp(e) {
+            this.state.dragging = false;
+            if (this.state.isDrawMode && this.state.currentDrawing) {
+                if (this.state.currentDrawing.tool !== 'eraser') {
+                    this.state.drawings.push(this.state.currentDrawing);
+                    this.savePlanToLocalStorage();
+                }
+                this.state.currentDrawing = null;
+            }
         },
 
         handleCanvasClick(e) {
@@ -3240,6 +3447,7 @@ canvas#map.build-cursor {
                 }
             }
         },
+
         handleWheel(e) { 
             e.preventDefault(); 
             const factor = e.deltaY < 0 ? 1.2 : 0.8; 
@@ -3743,7 +3951,6 @@ canvas#map.build-cursor {
             }
         },
         
-        // The entire drawBuildModeOverlays function, rewritten for clarity and performance
         drawBuildModeOverlays(viewBounds) {
             const currentZoomPct = (this.state.cam.scale / this.config.baseScale) * 100;
 
@@ -3802,6 +4009,7 @@ canvas#map.build-cursor {
             }
             ctx.lineWidth = this.config.strokeW; // Reset line width
         },
+        
         updateInfoBanner() {
             const { config, state, dom } = this;
 
@@ -3866,7 +4074,6 @@ canvas#map.build-cursor {
             }
         },
 
-        // Add this new function
         renderDevModePanel() {
             const toolsContainer = this.dom.devModeTools;
             toolsContainer.innerHTML = ''; // Clear existing tools
@@ -3897,7 +4104,6 @@ canvas#map.build-cursor {
             }
         },
 
-        // Add this new function
         selectDevTool(tool, type) {
             const isDeselecting = this.state.activeDevTool && this.state.activeDevTool.tool === tool && this.state.activeDevTool.type === type;
             
@@ -3912,7 +4118,6 @@ canvas#map.build-cursor {
             this.renderDevModePanel(); // Re-render to update active button styles
         },
 
-        // Add this new function
         exportDevMap() {
             const mapData = {
                 size: this.config.N,
@@ -3933,34 +4138,48 @@ canvas#map.build-cursor {
             alert('Map data has been exported! Check your downloads.');
         },
 
-        // The entire mainLoop function, for context
-        mainLoop(now) {
-            const { dom, state, config } = this; const ctx = dom.ctx;
+        mainLoop(now, overrideCtx = null) {
+            const { dom, state, config } = this; 
+            const isExport = !!overrideCtx;
+            const ctx = overrideCtx || dom.ctx;
+
             try {
-                ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, dom.canvas.width, dom.canvas.height);
-                const [centerX, centerY] = this.screenToWorld(dom.canvas.width / 2, dom.canvas.height / 2);
-                if (dom.centerTileEl) dom.centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
+                if (!isExport) {
+                    ctx.setTransform(1, 0, 0, 1, 0, 0); 
+                    ctx.clearRect(0, 0, dom.canvas.width, dom.canvas.height);
+                    const [centerX, centerY] = this.screenToWorld(dom.canvas.width / 2, dom.canvas.height / 2);
+                    if (dom.centerTileEl) dom.centerTileEl.textContent = `Center: X${Math.round(centerX)} Y${Math.round(centerY)}`;
+                }
+
                 const currentCamScale = (isNaN(state.cam.scale) || state.cam.scale === 0) ? state.minFitScale : state.cam.scale;
                 const pct = Math.round((currentCamScale / config.baseScale) * 100);
-                if (dom.zoomLevelEl) dom.zoomLevelEl.textContent = `Zoom: ${pct}%`;
-                if (dom.zoomSlider) {
-                    const minScalePct = Math.round((state.minFitScale / config.baseScale) * 100);
-                    const maxScalePct = Math.round((config.maxPct / 100 * config.baseScale / config.baseScale) * 100);
-                    dom.zoomSlider.min = minScalePct; dom.zoomSlider.max = maxScalePct;
-                    if (document.activeElement !== dom.zoomSlider) dom.zoomSlider.value = pct;
+                
+                if (!isExport) {
+                    if (dom.zoomLevelEl) dom.zoomLevelEl.textContent = `Zoom: ${pct}%`;
+                    if (dom.zoomSlider) {
+                        const minScalePct = Math.round((state.minFitScale / config.baseScale) * 100);
+                        const maxScalePct = Math.round((config.maxPct / 100 * config.baseScale / config.baseScale) * 100);
+                        dom.zoomSlider.min = minScalePct; dom.zoomSlider.max = maxScalePct;
+                        if (document.activeElement !== dom.zoomSlider) dom.zoomSlider.value = pct;
+                    }
                 }
+
                 state.tileCount = 0; ctx.save();
                 ctx.setTransform(currentCamScale, 0, 0, currentCamScale, state.cam.x, state.cam.y);
                 ctx.strokeStyle = config.borderColor; ctx.lineWidth = config.strokeW;
-                const [tl_x, tl_y] = this.screenToWorld(0, 0); const [tr_x, tr_y] = this.screenToWorld(dom.canvas.width, 0);
-                const [bl_x, bl_y] = this.screenToWorld(0, dom.canvas.height); const [br_x, br_y] = this.screenToWorld(dom.canvas.width, dom.canvas.height);
+                
+                const canvasWidth = isExport ? ctx.canvas.width : dom.canvas.width;
+                const canvasHeight = isExport ? ctx.canvas.height : dom.canvas.height;
+
+                const [tl_x, tl_y] = this.screenToWorld(0, 0); const [tr_x, tr_y] = this.screenToWorld(canvasWidth, 0);
+                const [bl_x, bl_y] = this.screenToWorld(0, canvasHeight); const [br_x, br_y] = this.screenToWorld(canvasWidth, canvasHeight);
                 const viewBounds = {
                     minX: Math.min(tl_x, tr_x, bl_x, br_x) - 2, maxX: Math.max(tl_x, tr_x, bl_x, br_x) + 2,
                     minY: Math.min(tl_y, tr_y, bl_y, br_y) - 2, maxY: Math.max(tl_y, tr_y, bl_y, br_y) + 2,
                 };
                 const viewportCorners = { tl: { x: tl_x, y: tl_y }, tr: { x: tr_x, y: tr_y }, bl: { x: bl_x, y: bl_y }, br: { x: br_x, y: br_y } };
                 if (isNaN(viewBounds.minX) || isNaN(viewBounds.maxX) || isNaN(viewBounds.minY) || isNaN(viewBounds.maxY)) {
-                    ctx.restore(); this.drawIsometricMinimap(null); requestAnimationFrame(this.mainLoop.bind(this)); return;
+                    ctx.restore(); if (!isExport) this.drawIsometricMinimap(null); requestAnimationFrame(this.mainLoop.bind(this)); return;
                 }
                 const chunkLevel = this.getChunkLevelForZoom(pct);
                 const showGrid = dom.gridlinesToggle ? dom.gridlinesToggle.checked : false;
@@ -3973,9 +4192,7 @@ canvas#map.build-cursor {
                     for (let x = viewBounds.minX; x <= viewBounds.maxX; x++) {
                         for (let y = viewBounds.minY; y <= viewBounds.maxY; y++) {
                             if (x < 0 || x >= config.N || y < 0 || y >= config.N) continue;
-                            if (this.getBuildingAt(x, y)) {
-                                continue;
-                            }
+                            if (this.getBuildingAt(x, y)) continue;
                             this.drawTile(x, y, shouldDrawBorders);
                         }
                     }
@@ -3990,7 +4207,7 @@ canvas#map.build-cursor {
                         for (let x = startChunkX; x <= endChunkX; x += chunkSize) {
                             for (let y = startChunkY; y <= endChunkY; y += chunkSize) {
                                 const chunk = chunksToDraw.get(`${x},${y}`);
-                                if (chunk) this.drawChunk(chunk, false);
+                                if (chunk) this.drawChunk(chunk, false, ctx);
                             }
                         }
                     }
@@ -3999,134 +4216,86 @@ canvas#map.build-cursor {
                 // --- Pass 2: Draw Buildings ---
                 state.allVisibleBuildings
                     .filter(b => !(b.x > viewBounds.maxX || b.x + b.w - 1 < viewBounds.minX || b.y > viewBounds.maxY || b.y + b.h - 1 < viewBounds.minY))
-                    .filter(b => { 
-                        if (!b.isRss) return true;
-                        return showRss && (alwaysShowRss || chunkLevel === -1);
-                    })
-                    .forEach(b => this.drawBuildingFootprint(b, null, chunkLevel === -1 && showGrid && pct > 50));
+                    .filter(b => { if (!b.isRss) return true; return showRss && (alwaysShowRss || chunkLevel === -1); })
+                    .forEach(b => this.drawBuildingFootprint(b, null, chunkLevel === -1 && showGrid && pct > 50, ctx));
                 
                 // --- Pass 3: Draw Players ---
                 state.placedPlayers
                     .filter(p => !(p.x > viewBounds.maxX || p.x + p.w - 1 < viewBounds.minX || p.y > viewBounds.maxY || p.y + p.h - 1 < viewBounds.minY))
-                    .forEach(p => {
-                        const buildingLikeObject = { ...p };
-                        this.drawBuildingFootprint(buildingLikeObject, null, true);
-                    });
+                    .forEach(p => this.drawBuildingFootprint({ ...p }, null, true, ctx));
                     
                 // --- Pass 4: Draw Territory Overlays ---
                 this.drawBuildModeOverlays(viewBounds);
 
-                // --- Pass 5: Draw Build Placement Ghost & Coverage Preview ---
-                const isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+                // --- Pass 5: Draw Annotations ---
+                state.drawings.forEach(d => this.drawAnnotation(d, ctx));
+                if (state.currentDrawing) this.drawAnnotation(state.currentDrawing, ctx);
 
-                if (state.isBuildMode && state.selectedBuildingType) {
-                    // Toggle mobile-specific UI elements
-                    if (dom.buildReticle) dom.buildReticle.style.display = isTouchDevice ? 'block' : 'none';
-                    if (dom.mobileBuildControls) dom.mobileBuildControls.classList.toggle('visible', isTouchDevice);
-
-                    // Determine ghost position: center of screen for touch, mouse position for desktop
-                    const ghostWorldCoords = isTouchDevice 
-                        ? this.screenToWorld(dom.canvas.width / 2, dom.canvas.height / 2)
-                        : [state.mouseWorldPos.x, state.mouseWorldPos.y];
-                    
-                    const [ghostX, ghostY] = ghostWorldCoords;
-
-                    const def = this.BUILDING_CATALOG[state.selectedBuildingType];
-                    const { canPlace } = this.checkPlacementValidity(state.selectedBuildingType, ghostX, ghostY);
-                    
-                    if (def) {
-                        // Draw coverage preview
-                        if (def.coverage > 0) {
-                            const radius = Math.floor(def.coverage / 2);
-                            const centerX = ghostX + Math.floor(def.w / 2);
-                            const centerY = ghostY + Math.floor(def.h / 2);
-                            const coverageX = centerX - radius;
-                            const coverageY = centerY - radius;
-                            const coverageSize = def.coverage;
-                            const [sbx, sby] = this.worldToScreen(coverageX, coverageY);
-                            const [srx, sry] = this.worldToScreen(coverageX + coverageSize - 1, coverageY);
-                            const [stx, sty] = this.worldToScreen(coverageX + coverageSize - 1, coverageY + coverageSize - 1);
-                            const [slx, sly] = this.worldToScreen(coverageX, coverageY + coverageSize - 1);
-                            const p_bottom = { x: sbx, y: sby + config.tileH / 2 };
-                            const p_right = { x: srx + config.tileW / 2, y: sry };
-                            const p_top = { x: stx, y: sty - config.tileH / 2 };
-                            const p_left = { x: slx - config.tileW / 2, y: sly };
-                            ctx.beginPath();
-                            ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x, p_right.y);
-                            ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y);
-                            ctx.closePath();
-                            ctx.fillStyle = canPlace ? this.hexToRgba('#28a745', 0.15) : this.hexToRgba('#dc3545', 0.15);
-                            ctx.fill();
-                        }
-                        // Draw ghost building
-                        const ghostBuilding = {
-                            x: ghostX, y: ghostY,
-                            w: def.w, h: def.h,
-                            fillColor: canPlace ? this.hexToRgba('#28a745', 0.6) : this.hexToRgba('#dc3545', 0.6),
-                            borderColor: canPlace ? this.darkenColor('#28a745', 40) : this.darkenColor('#dc3545', 40)
-                        };
-                        this.drawBuildingFootprint(ghostBuilding, null, true);
-                    }
-                } else {
-                    // Ensure mobile UI is hidden when not in build mode
-                    if (dom.buildReticle) dom.buildReticle.style.display = 'none';
-                    if (dom.mobileBuildControls) dom.mobileBuildControls.classList.remove('visible');
-                }
-                
-                if (state.isPlacingPlayer && state.playerToPlace) {
-                    const def = this.PLAYER_CATALOG['player_castle'];
-                    let canPlace = true;
-                    for (let dx = 0; dx < def.w; dx++) {
-                        for (let dy = 0; dy < def.h; dy++) {
-                            if (this.state.specialTileMap.has(`${state.mouseWorldPos.x + dx},${state.mouseWorldPos.y + dy}`) ||
-                                this.getBuildingAtCoords(state.mouseWorldPos.x + dx, state.mouseWorldPos.y + dy) ||
-                                this.getPlayerAtCoords(state.mouseWorldPos.x + dx, state.mouseWorldPos.y + dy) ) {
-                                canPlace = false;
-                                break;
+                // --- Pass 6: Draw UI (ghosts, selection) - NOT during export ---
+                if (!isExport) {
+                    const isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+                    if (state.isBuildMode && state.selectedBuildingType) {
+                        if (dom.buildReticle) dom.buildReticle.style.display = isTouchDevice ? 'block' : 'none';
+                        if (dom.mobileBuildControls) dom.mobileBuildControls.classList.toggle('visible', isTouchDevice);
+                        const ghostWorldCoords = isTouchDevice ? this.screenToWorld(dom.canvas.width / 2, dom.canvas.height / 2) : [state.mouseWorldPos.x, state.mouseWorldPos.y];
+                        const [ghostX, ghostY] = ghostWorldCoords;
+                        const def = this.BUILDING_CATALOG[state.selectedBuildingType];
+                        const { canPlace } = this.checkPlacementValidity(state.selectedBuildingType, ghostX, ghostY);
+                        if (def) {
+                            if (def.coverage > 0) {
+                                const radius = Math.floor(def.coverage / 2);
+                                const centerX = ghostX + Math.floor(def.w / 2);
+                                const centerY = ghostY + Math.floor(def.h / 2);
+                                const [sbx, sby] = this.worldToScreen(centerX - radius, centerY - radius);
+                                const [srx, sry] = this.worldToScreen(centerX + radius, centerY - radius);
+                                const [stx, sty] = this.worldToScreen(centerX + radius, centerY + radius);
+                                const [slx, sly] = this.worldToScreen(centerX - radius, centerY + radius);
+                                ctx.beginPath(); ctx.moveTo(sbx, sby); ctx.lineTo(srx, sry); ctx.lineTo(stx, sty); ctx.lineTo(slx, sly); ctx.closePath();
+                                ctx.fillStyle = canPlace ? this.hexToRgba('#28a745', 0.15) : this.hexToRgba('#dc3545', 0.15);
+                                ctx.fill();
                             }
+                            this.drawBuildingFootprint({ x: ghostX, y: ghostY, w: def.w, h: def.h, fillColor: canPlace ? this.hexToRgba('#28a745', 0.6) : this.hexToRgba('#dc3545', 0.6), borderColor: canPlace ? this.darkenColor('#28a745', 40) : this.darkenColor('#dc3545', 40) }, null, true, ctx);
                         }
-                        if (!canPlace) break;
+                    } else {
+                        if (dom.buildReticle) dom.buildReticle.style.display = 'none';
+                        if (dom.mobileBuildControls) dom.mobileBuildControls.classList.remove('visible');
+                    }
+                    
+                    if (state.isPlacingPlayer && state.playerToPlace) {
+                        const def = this.PLAYER_CATALOG['player_castle'];
+                        let canPlace = true;
+                        for (let dx = 0; dx < def.w; dx++) { for (let dy = 0; dy < def.h; dy++) { if (this.state.specialTileMap.has(`${state.mouseWorldPos.x + dx},${state.mouseWorldPos.y + dy}`) || this.getBuildingAtCoords(state.mouseWorldPos.x + dx, state.mouseWorldPos.y + dy) || this.getPlayerAtCoords(state.mouseWorldPos.x + dx, state.mouseWorldPos.y + dy) ) { canPlace = false; break; } } if (!canPlace) break; }
+                        this.drawBuildingFootprint({ x: state.mouseWorldPos.x, y: state.mouseWorldPos.y, w: def.w, h: def.h, type: 'player_castle', fillColor: canPlace ? this.hexToRgba(state.playerToPlace.color, 0.6) : this.hexToRgba('#dc3545', 0.6), borderColor: canPlace ? this.darkenColor(state.playerToPlace.color, 40) : this.darkenColor('#dc3545', 40), name: state.playerToPlace.name, power: state.playerToPlace.power, color: state.playerToPlace.color }, null, true, ctx);
                     }
 
-                    const ghostPlayer = {
-                        x: state.mouseWorldPos.x, y: state.mouseWorldPos.y,
-                        w: def.w, h: def.h,
-                        type: 'player_castle',
-                        fillColor: canPlace ? this.hexToRgba(state.playerToPlace.color, 0.6) : this.hexToRgba('#dc3545', 0.6),
-                        borderColor: canPlace ? this.darkenColor(state.playerToPlace.color, 40) : this.darkenColor('#dc3545', 40),
-                        name: state.playerToPlace.name,
-                        power: state.playerToPlace.power,
-                        color: state.playerToPlace.color
-                    };
-                    this.drawBuildingFootprint(ghostPlayer, null, true);
+                    if (now - state.infoBannerUpdateTime > 100) { this.updateInfoBanner(); state.infoBannerUpdateTime = now; }
+
+                    if (state.selection && !state.isBuildMode) {
+                        let highlightColor = config.selectionColor;
+                        if (state.selection.pingStart && now - state.selection.pingStart < config.pingDuration) { if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) { highlightColor = config.pingColor; } }
+                        if (state.selection.w) { this.drawBuildingFootprint(state.selection, highlightColor, true, ctx); } 
+                        else { const [sx, sy] = this.worldToScreen(state.selection.x, state.selection.y); ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy); ctx.closePath(); ctx.strokeStyle = highlightColor; ctx.lineWidth = config.strokeW * 1.5; ctx.stroke(); }
+                    }
                 }
 
-                if (now - state.infoBannerUpdateTime > 100) {
-                    this.updateInfoBanner();
-                    state.infoBannerUpdateTime = now;
-                }
-
-                // --- Draw Selection ---
-                if (state.selection && !state.isBuildMode) {
-                    let highlightColor = config.selectionColor;
-                    if (state.selection.pingStart && now - state.selection.pingStart < config.pingDuration) { if (Math.floor((now - state.selection.pingStart) / 100) % 2 === 0) { highlightColor = config.pingColor; } }
-                    if (state.selection.w) { this.drawBuildingFootprint(state.selection, highlightColor, true); } 
-                    else { const [sx, sy] = this.worldToScreen(state.selection.x, state.selection.y); ctx.beginPath(); ctx.moveTo(sx, sy - config.tileH / 2); ctx.lineTo(sx + config.tileW / 2, sy); ctx.lineTo(sx, sy + config.tileH / 2); ctx.lineTo(sx - config.tileW / 2, sy); ctx.closePath(); ctx.strokeStyle = highlightColor; ctx.lineWidth = config.strokeW * 1.5; ctx.stroke(); }
-                }
                 ctx.restore();
-                this.drawIsometricMinimap(viewportCorners);
-                const dt = now - state.lastFrame; state.lastFrame = now;
-                if (dt > 0) { state.lastFPS = Math.round(1000 / dt); }
-                state.lastTiles = state.tileCount;
-                if (now - state.statsUpdateTime > 500) {
-                    if (dom.statsFPSEl) dom.statsFPSEl.textContent = `FPS:   ${state.lastFPS}`;
-                    if (dom.statsTilesEl) dom.statsTilesEl.textContent = `Tiles: ${state.lastTiles}`;
-                    state.statsUpdateTime = now;
+                if (!isExport) {
+                    this.drawIsometricMinimap(viewportCorners);
+                    const dt = now - state.lastFrame; state.lastFrame = now;
+                    if (dt > 0) { state.lastFPS = Math.round(1000 / dt); }
+                    state.lastTiles = state.tileCount;
+                    if (now - state.statsUpdateTime > 500) {
+                        if (dom.statsFPSEl) dom.statsFPSEl.textContent = `FPS:   ${state.lastFPS}`;
+                        if (dom.statsTilesEl) dom.statsTilesEl.textContent = `Tiles: ${state.lastTiles}`;
+                        state.statsUpdateTime = now;
+                    }
                 }
             } catch (error) { console.error("Error in mainLoop:", error); }
-            requestAnimationFrame(this.mainLoop.bind(this));
+            if (!isExport) {
+                requestAnimationFrame(this.mainLoop.bind(this));
+            }
         },
-    
+            
     };
     KingshotPlanner.init();
   </script>
