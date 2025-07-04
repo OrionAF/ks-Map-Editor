@@ -780,11 +780,11 @@ canvas#map.build-cursor {
                 <input type="file" id="planFileInput" accept=".json" style="display: none;">
             </div>
         </div>
-
         <div class="panel-section info-buttons">
             <button id="infoBtn">Controls</button>
             <button id="patchNotesBtn">Patch Notes</button>
         </div>
+    </div> 
 
     <!-- Zoom Presets Panel -->
     <div id="zoomPresetsPanel" class="toolbar-panel">
@@ -1417,7 +1417,7 @@ canvas#map.build-cursor {
                 'allianceMgt': { btn: this.dom.allianceMgtToggleBtn, panel: this.dom.buildPanel, persistent: true },
                 'buildMenu': { btn: this.dom.buildMenuToggleBtn, panel: this.dom.buildMenuPanel, persistent: true },
                 'playerMgt': { btn: this.dom.placePlayerToggleBtn, panel: this.dom.playerPanel, persistent: true },
-                'draw': { btn: this.dom.drawToggleBtn, panel: this.dom.drawPanel, persistent: true }, // Add draw panel
+                'draw': { btn: this.dom.drawToggleBtn, panel: this.dom.drawPanel, persistent: true },
                 'devMode': { btn: null, panel: this.dom.devModePanel, persistent: true },
                 'pinnedBookmarks': { btn: this.dom.pinnedBookmarksToggleBtn, panel: this.dom.pinnedBookmarksPanel },
                 'nav': { btn: this.dom.navPanelToggleBtn, panel: this.dom.navPanel, persistent: true },
@@ -1814,9 +1814,6 @@ canvas#map.build-cursor {
             
             // Re-run the main loop's drawing logic on the temporary canvas
             this.mainLoop(performance.now(), tempCtx);
-
-            // Reset the flag
-            this.state.isExporting = false;
 
             // Trigger download
             const dataUrl = tempCanvas.toDataURL('image/png');
