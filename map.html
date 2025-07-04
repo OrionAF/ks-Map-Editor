@@ -372,7 +372,64 @@ canvas#map.build-cursor {
 .modal-footer { padding: 10px 15px; border-top: 1px solid #444; background: #333; border-radius: 0 0 8px 8px; }
 .modal-footer label { user-select: none; font-size: 14px; }
 
-/* Add these new rules to your <style> tag */
+/* --- MOBILE BUILD CONTROLS --- */
+#mobileBuildControls {
+    position: fixed;
+    bottom: calc(var(--toolbar-height) * 2 + 20px); /* Sits above the mobile toolbars */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1001;
+    background: var(--panel-bg);
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    display: none; /* Hidden by default */
+    gap: 10px;
+}
+
+#mobileBuildControls.visible {
+    display: flex;
+}
+
+#mobileBuildControls button {
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* A reticle to show the center of the screen for placement */
+#buildReticle {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 32px;
+    height: 32px;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    transform: translate(-50%, -50%);
+    pointer-events: none; /* So it doesn't interfere with map interaction */
+    z-index: 950;
+    display: none; /* Hidden by default */
+    box-sizing: border-box;
+}
+#buildReticle::before, #buildReticle::after {
+    content: '';
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.8);
+}
+#buildReticle::before { /* horizontal line */
+    top: 50%;
+    left: -6px;
+    width: 44px;
+    height: 2px;
+    transform: translateY(-50%);
+}
+#buildReticle::after { /* vertical line */
+    top: -6px;
+    left: 50%;
+    width: 2px;
+    height: 44px;
+    transform: translateX(-50%);
+}
 
 /* --- SIDEBAR PANEL (Alliance Management) --- */
 #buildPanel, #devModePanel {
@@ -584,7 +641,6 @@ canvas#map.build-cursor {
 
         <div class="toolbar-group right">
             <button id="overwatchToggleBtn" title="Overwatch">👁️</button>
-            <button id="marchCalcToggleBtn" title="March Calculator">👢</button>
             <button id="minimapToggleBtn" title="Toggle Minimap">🗺️</button>
             <button id="settingsToggleBtn" title="Settings">⚙️</button>
         </div>
@@ -824,30 +880,6 @@ canvas#map.build-cursor {
         </div>
     </div>
 
-    <!-- March Calculator Modal -->
-    <div id="marchBonusModal" class="modal">
-        <div class="modal-header">
-            <h3>March Speed Bonuses</h3><button class="close-btn">×</button>
-        </div>
-        <div class="modal-body">
-            <p>Enter your total march speed bonuses as percentages (e.g., enter '25' for 25%).</p>
-            <div class="form-grid">
-                <label for="marchBonusPvp">March Speed (PvP):</label>
-                <input type="number" id="marchBonusPvp" min="0" value="6">
-                <label for="marchBonusPve">Hunting March Speed (PvE):</label>
-                <input type="number" id="marchBonusPve" min="0" value="20">
-            </div>
-            <p style="font-size: 12px; opacity: 0.8; margin-top: 15px;">
-                <strong>Note:</strong> Your total PvE speed will be the sum of both bonuses.
-                Right-click on a building or player to start a march calculation. Right-click again to cancel.
-            </p>
-        </div>
-        <div class="modal-footer" style="display: flex; justify-content: space-between;">
-            <button id="clearAllMarchesBtn" class="danger">Clear All Marches</button>
-            <button id="saveMarchBonusesBtn" class="primary">Save & Close</button>
-        </div>
-    </div>
-
     <div id="devModePanel" class="sidebar-panel">
         <div class="panel-section">
             <button id="exportDevMapBtn" class="primary">Export Map Data</button>
@@ -859,6 +891,14 @@ canvas#map.build-cursor {
             </div>
         </div>
     </div>
+
+    <div id="buildReticle"></div>
+        <div id="mobileBuildControls">
+            <button id="cancelBuildBtn" class="danger">Cancel</button>
+            <button id="confirmBuildBtn" class="primary">Place</button>
+        </div>
+
+        <div id="devModePanel" class="sidebar-panel">
 
 <script>
     const KingshotPlanner = {
@@ -1236,6 +1276,10 @@ canvas#map.build-cursor {
             editPlayerPowerInput: document.getElementById('editPlayerPower'),
             editPlayerColorInput: document.getElementById('editPlayerColor'),
             savePlayerChangesBtn: document.getElementById('savePlayerChangesBtn'),
+            buildReticle:                     document.getElementById('buildReticle'),
+            mobileBuildControls:              document.getElementById('mobileBuildControls'),
+            confirmBuildBtn:                  document.getElementById('confirmBuildBtn'),
+            cancelBuildBtn:                   document.getElementById('cancelBuildBtn'),
             };
 
             this.dom.ctx = this.dom.canvas.getContext('2d');
@@ -1373,6 +1417,14 @@ canvas#map.build-cursor {
             if (this.dom.saveAllianceChangesBtn) this.dom.saveAllianceChangesBtn.addEventListener('click', this.saveAllianceChanges.bind(this));
             if (this.dom.savePlayerChangesBtn) this.dom.savePlayerChangesBtn.addEventListener('click', this.savePlayerChanges.bind(this));
             if (this.dom.startPlayerPlacementBtn) this.dom.startPlayerPlacementBtn.addEventListener('click', this.startPlayerPlacement.bind(this));
+
+            // --- NEW: Mobile Build Control Listeners ---
+            if (this.dom.confirmBuildBtn) this.dom.confirmBuildBtn.addEventListener('click', this.confirmMobilePlacement.bind(this));
+            if (this.dom.cancelBuildBtn) this.dom.cancelBuildBtn.addEventListener('click', () => {
+                if (this.state.selectedBuildingType) {
+                    this.selectBuildingToPlace(this.state.selectedBuildingType); // This deselects the current building
+                }
+            });
 
 
             // D. Dev Mode Activation and Listeners
@@ -2169,6 +2221,13 @@ canvas#map.build-cursor {
                     this.state.overwatchSettings = {};
                 }
             }
+        },
+
+        confirmMobilePlacement() {
+            if (!this.state.isBuildMode || !this.state.selectedBuildingType) return;
+
+            const [worldX, worldY] = this.screenToWorld(this.dom.canvas.width / 2, this.dom.canvas.height / 2);
+            this.placeBuilding(this.state.selectedBuildingType, worldX, worldY);
         },
         
         selectBuildingToPlace(type) {
@@ -3241,6 +3300,13 @@ canvas#map.build-cursor {
                 const t = e.changedTouches[0]; const dist = Math.hypot(t.clientX - this.state.clickStartX, t.clientY - this.state.clickStartY);
                 const duration = performance.now() - this.state.touchStartTime;
                 if (duration < 200 && dist < 10) {
+                    // This is a tap. Check if we are on a touch device in build mode.
+                    const isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+                    if (isTouchDevice && this.state.isBuildMode && this.state.selectedBuildingType) {
+                        // On mobile, taps do not place buildings. The dedicated button does. So we do nothing.
+                        return;
+                    }
+
                     const [worldX, worldY] = this.screenToWorld(t.clientX, t.clientY);
                 
                     if (this.state.isBuildMode && this.state.selectedBuildingType) {
@@ -3866,8 +3932,6 @@ canvas#map.build-cursor {
                 state.placedPlayers
                     .filter(p => !(p.x > viewBounds.maxX || p.x + p.w - 1 < viewBounds.minX || p.y > viewBounds.maxY || p.y + p.h - 1 < viewBounds.minY))
                     .forEach(p => {
-                        // THE FIX IS HERE: We simply pass a copy of the player object.
-                        // The drawing function will handle deriving all colors from the custom 'p.color'.
                         const buildingLikeObject = { ...p };
                         this.drawBuildingFootprint(buildingLikeObject, null, true);
                     });
@@ -3876,14 +3940,29 @@ canvas#map.build-cursor {
                 this.drawBuildModeOverlays(viewBounds);
 
                 // --- Pass 5: Draw Build Placement Ghost & Coverage Preview ---
+                const isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
                 if (state.isBuildMode && state.selectedBuildingType) {
+                    // Toggle mobile-specific UI elements
+                    if (dom.buildReticle) dom.buildReticle.style.display = isTouchDevice ? 'block' : 'none';
+                    if (dom.mobileBuildControls) dom.mobileBuildControls.classList.toggle('visible', isTouchDevice);
+
+                    // Determine ghost position: center of screen for touch, mouse position for desktop
+                    const ghostWorldCoords = isTouchDevice 
+                        ? this.screenToWorld(dom.canvas.width / 2, dom.canvas.height / 2)
+                        : [state.mouseWorldPos.x, state.mouseWorldPos.y];
+                    
+                    const [ghostX, ghostY] = ghostWorldCoords;
+
                     const def = this.BUILDING_CATALOG[state.selectedBuildingType];
-                    const { canPlace } = this.checkPlacementValidity(state.selectedBuildingType, state.mouseWorldPos.x, state.mouseWorldPos.y);
+                    const { canPlace } = this.checkPlacementValidity(state.selectedBuildingType, ghostX, ghostY);
+                    
                     if (def) {
+                        // Draw coverage preview
                         if (def.coverage > 0) {
                             const radius = Math.floor(def.coverage / 2);
-                            const centerX = state.mouseWorldPos.x + Math.floor(def.w / 2);
-                            const centerY = state.mouseWorldPos.y + Math.floor(def.h / 2);
+                            const centerX = ghostX + Math.floor(def.w / 2);
+                            const centerY = ghostY + Math.floor(def.h / 2);
                             const coverageX = centerX - radius;
                             const coverageY = centerY - radius;
                             const coverageSize = def.coverage;
@@ -3896,22 +3975,25 @@ canvas#map.build-cursor {
                             const p_top = { x: stx, y: sty - config.tileH / 2 };
                             const p_left = { x: slx - config.tileW / 2, y: sly };
                             ctx.beginPath();
-                            ctx.moveTo(p_bottom.x, p_bottom.y);
-                            ctx.lineTo(p_right.x, p_right.y);
-                            ctx.lineTo(p_top.x, p_top.y);
-                            ctx.lineTo(p_left.x, p_left.y);
+                            ctx.moveTo(p_bottom.x, p_bottom.y); ctx.lineTo(p_right.x, p_right.y);
+                            ctx.lineTo(p_top.x, p_top.y); ctx.lineTo(p_left.x, p_left.y);
                             ctx.closePath();
                             ctx.fillStyle = canPlace ? this.hexToRgba('#28a745', 0.15) : this.hexToRgba('#dc3545', 0.15);
                             ctx.fill();
                         }
+                        // Draw ghost building
                         const ghostBuilding = {
-                            x: state.mouseWorldPos.x, y: state.mouseWorldPos.y,
+                            x: ghostX, y: ghostY,
                             w: def.w, h: def.h,
                             fillColor: canPlace ? this.hexToRgba('#28a745', 0.6) : this.hexToRgba('#dc3545', 0.6),
                             borderColor: canPlace ? this.darkenColor('#28a745', 40) : this.darkenColor('#dc3545', 40)
                         };
                         this.drawBuildingFootprint(ghostBuilding, null, true);
                     }
+                } else {
+                    // Ensure mobile UI is hidden when not in build mode
+                    if (dom.buildReticle) dom.buildReticle.style.display = 'none';
+                    if (dom.mobileBuildControls) dom.mobileBuildControls.classList.remove('visible');
                 }
                 
                 if (state.isPlacingPlayer && state.playerToPlace) {
